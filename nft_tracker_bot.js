@@ -17,7 +17,11 @@ const app = express();
 
 // Redis client creation and connection
 const redisClient = createClient({
-    url: process.env.REDIS_URL
+    url: process.env.REDIS_URL || 'redis://localhost:6379',
+    socket: {
+        tls: process.env.NODE_ENV === 'production',
+        rejectUnauthorized: false
+    }
 });
 redisClient.connect().catch(console.error);
 redisClient.on('error', (err) => console.log('Redis Client Error', err));
