@@ -20,7 +20,10 @@ const redisClient = createClient({
     url: process.env.REDIS_URL,
     socket: {
         tls: true,
-        rejectUnauthorized: false
+        rejectUnauthorized: false,
+        // Add these lines:
+        secureProtocol: 'TLSv1_2_method',
+        ciphers: 'HIGH:!aNULL:!MD5'
     }
 });
 redisClient.connect().catch(console.error);
