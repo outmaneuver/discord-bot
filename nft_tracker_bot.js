@@ -17,9 +17,10 @@ const app = express();
 
 // Redis client creation and connection
 const redisClient = createClient({
-    url: process.env.REDIS_URL || 'redis://localhost:6379'
+    url: process.env.REDIS_URL
 });
 redisClient.connect().catch(console.error);
+redisClient.on('error', (err) => console.log('Redis Client Error', err));
 
 // Express middleware and session setup
 app.use(cors());
@@ -446,3 +447,4 @@ function parseMetadataForCollectionAddress(metadata) {
 process.on('unhandledRejection', (error) => {
   console.error('Unhandled promise rejection:', error);
 });
+
