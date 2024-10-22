@@ -4,6 +4,9 @@ import fetch from 'node-fetch';
 import { Connection, PublicKey } from '@solana/web3.js';
 import express from 'express';
 import cors from 'cors';
+import passport from 'passport';
+import { Strategy as DiscordStrategy } from 'passport-discord';
+import session from 'express-session';
 
 dotenv.config();
 
@@ -37,6 +40,20 @@ const collectionNameMap = {
 };
 
 const connection = new Connection(process.env.SOLANA_RPC_URL);
+
+// Set up Passport
+passport.use(new DiscordStrategy({
+    clientID: process.env.DISCORD_CLIENT_ID,
+    clientSecret: process.env.DISCORD_CLIENT_SECRET,
+    callbackURL: process.env.DISCORD_REDIRECT_URI,
+    scope: ['identify', 'guilds.join']
+}, function(accessToken, refreshToken, profile, done) {
+    // We'll just pass the profile to the next middleware
+    done(null, profile);
+}));
+
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((obj, done) => done(null, obj));
 
 async function getNFTsForOwner(ownerAddress) {
   const nfts = await connection.getParsedTokenAccountsByOwner(
@@ -292,10 +309,37 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isButton()) return;
 
   if (interaction.customId === 'verify') {
-    await interaction.reply({
-      content: `Please click the link below to sign in and verify your wallet:\n${process.env.SIGN_IN_URL}`,
-      ephemeral: true
-    });
+    try {
+      // Check if the interaction has already been replied to or deferred
+      if (interaction.replied || interaction.deferred) {
+        console.log('Interaction already handled, skipping.');
+        return;
+      }
+
+      // Defer the reply immediately
+      await interaction.deferReply({ ephemeral: true });
+      
+      const replyContent = `Please click the link below to sign in and verify your wallet:\n${process.env.SIGN_IN_URL}`;
+      await interaction.editReply({ content: replyContent });
+    } catch (error) {
+      console.error('Error handling interaction:', error);
+      
+      // If we haven't replied yet, try to send an error message
+      if (!interaction.replied && !interaction.deferred) {
+        try {
+          await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
+        } catch (replyError) {
+          console.error('Error sending error reply:', replyError);
+        }
+      } else if (interaction.deferred) {
+        // If we've deferred but not replied, try to edit the reply with an error message
+        try {
+          await interaction.editReply({ content: 'An error occurred while processing your request.' });
+        } catch (editError) {
+          console.error('Error editing deferred reply:', editError);
+        }
+      }
+    }
   }
 });
 
@@ -303,40 +347,72 @@ client.on('interactionCreate', async interaction => {
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(session({
+    secret: 'your_session_secret',
+    resave: false,
+    saveUninitialized: false
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 
+// Serve static files
 app.use('/holder-verify', express.static('public'));
-app.get('/holder-verify', (req, res) => {
-  res.sendFile('index.html', { root: './public' });
-});
 
+// Discord auth route
+app.get('/auth/discord', passport.authenticate('discord'));
+
+// Discord auth callback route
+app.get('/auth/discord/callback', 
+    passport.authenticate('discord', { failureRedirect: '/holder-verify' }),
+    function(req, res) {
+        res.redirect('/holder-verify'); // Redirect to the wallet connection page
+    }
+);
+
+// Update the verification endpoint
 app.post('/holder-verify/verify', async (req, res) => {
-  const { walletAddress } = req.body;
-  
-  try {
-    const nfts = await getNFTsForOwner(walletAddress);
-    const heldCollections = new Set();
-
-    for (const nft of nfts) {
-      const mint = nft.account.data.parsed.info.mint;
-      // Fetch the NFT metadata to get the collection address
-      const metadata = await connection.getAccountInfo(new PublicKey(mint));
-      // You'll need to implement a function to parse the metadata and extract the collection address
-      const collectionAddress = parseMetadataForCollectionAddress(metadata);
-      
-      if (VERIFY_COLLECTION_ADDRESSES.includes(collectionAddress)) {
-        heldCollections.add(collectionAddress);
-      }
+    if (!req.user) {
+        return res.status(401).json({ success: false, error: 'Not authenticated with Discord' });
     }
 
-    const roles = VERIFY_COLLECTION_ADDRESSES.map((address, index) => 
-      heldCollections.has(address) ? VERIFY_ROLE_IDS[index] : null
-    ).filter(role => role !== null);
+    const { walletAddress } = req.body;
+    
+    try {
+        const nfts = await getNFTsForOwner(walletAddress);
+        const heldCollections = new Set();
 
-    res.json({ success: true, roles });
-  } catch (error) {
-    console.error('Error during verification:', error);
-    res.status(500).json({ success: false, error: 'Verification failed' });
-  }
+        for (const nft of nfts) {
+            const mint = nft.account.data.parsed.info.mint;
+            // Fetch the NFT metadata to get the collection address
+            const metadata = await connection.getAccountInfo(new PublicKey(mint));
+            // You'll need to implement a function to parse the metadata and extract the collection address
+            const collectionAddress = parseMetadataForCollectionAddress(metadata);
+            
+            if (VERIFY_COLLECTION_ADDRESSES.includes(collectionAddress)) {
+                heldCollections.add(collectionAddress);
+            }
+        }
+
+        const roles = VERIFY_COLLECTION_ADDRESSES.map((address, index) => 
+            heldCollections.has(address) ? VERIFY_ROLE_IDS[index] : null
+        ).filter(role => role !== null);
+
+        // Update Discord roles
+        const guild = await client.guilds.fetch(process.env.GUILD_ID);
+        const member = await guild.members.fetch(req.user.id);
+        for (const roleId of roles) {
+            await member.roles.add(roleId);
+        }
+
+        res.json({ success: true, roles });
+    } catch (error) {
+        console.error('Error during verification:', error);
+        res.status(500).json({ success: false, error: 'Verification failed' });
+    }
+});
+
+app.get('/auth/status', (req, res) => {
+    res.json({ authenticated: req.isAuthenticated() });
 });
 
 const PORT = process.env.PORT || 5500;
@@ -350,3 +426,9 @@ function parseMetadataForCollectionAddress(metadata) {
   // This is a placeholder function
   return "placeholder_collection_address";
 }
+
+// Add this near the top of your file, after the imports
+process.on('unhandledRejection', (error) => {
+  console.error('Unhandled promise rejection:', error);
+});
+

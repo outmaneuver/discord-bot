@@ -92,6 +92,26 @@
             text-align: center;
             display: none; /* Initially hidden */
         }
+        #discordButton {
+            background-color: #7289DA; /* Discord color */
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        #discordButton:hover {
+            background-color: #5B73C4;
+        }
+        #connectButton {
+            display: none; /* Initially hidden */
+        }
     </style>
 </head>
 <body>
@@ -101,6 +121,7 @@
     </div>
     <div class="container">
         <h1>Verify Your Wallet</h1>
+        <button id="discordButton">Sign in with Discord</button>
         <button id="connectButton">Connect Wallet</button>
         <p id="status"></p>
     </div>
@@ -110,9 +131,28 @@
     </div>
 
     <script>
+        const discordButton = document.getElementById('discordButton');
         const connectButton = document.getElementById('connectButton');
         const statusElement = document.getElementById('status');
         const closeMessageElement = document.getElementById('closeMessage');
+
+        discordButton.addEventListener('click', () => {
+            window.location.href = '/auth/discord';
+        });
+
+        // Check if user is authenticated with Discord
+        fetch('/auth/status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.authenticated) {
+                    discordButton.style.display = 'none';
+                    connectButton.style.display = 'inline-block';
+                }
+            })
+            .catch(error => {
+                console.error('Error checking auth status:', error);
+                statusElement.textContent = 'Error checking authentication status';
+            });
 
         connectButton.addEventListener('click', async () => {
             if (!window.solana || !window.solana.isPhantom) {
