@@ -8,9 +8,35 @@ import passport from 'passport';
 import { Strategy as DiscordStrategy } from 'passport-discord';
 import session from 'express-session';
 import { createClient } from 'redis';
-import connectRedis from 'connect-redis';
+import RedisStore from "connect-redis"
 
 dotenv.config();
+
+// Express app initialization
+const app = express();
+
+// Redis client creation and connection
+const redisClient = createClient({
+    url: process.env.REDIS_URL || 'redis://localhost:6379'
+});
+redisClient.connect().catch(console.error);
+
+// Express middleware and session setup
+app.use(cors());
+app.use(express.json());
+app.use(session({
+    store: new RedisStore({ client: redisClient }),
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Add this near the top of the file, after the imports and before the client initialization
 const lastKnownState = {};
@@ -345,15 +371,6 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
-// Add Express server setup
-const RedisStore = connectRedis(session);
-
-// Create Redis client
-const redisClient = createClient({
-    url: process.env.REDISCLOUD_URL || process.env.REDIS_URL || 'redis://localhost:6379'
-});
-redisClient.connect().catch(console.error);
-
 // Serve static files
 app.use('/holder-verify', express.static('public'));
 
@@ -418,7 +435,6 @@ const PORT = process.env.PORT || 5500;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 client.login(process.env.DISCORD_TOKEN);
-
 // You'll need to implement this function to parse the metadata
 function parseMetadataForCollectionAddress(metadata) {
   // Implementation depends on the structure of your NFT metadata
@@ -430,15 +446,3 @@ function parseMetadataForCollectionAddress(metadata) {
 process.on('unhandledRejection', (error) => {
   console.error('Unhandled promise rejection:', error);
 });
-
-app.use(session({
-    store: new RedisStore({ client: redisClient }),
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
-}));
