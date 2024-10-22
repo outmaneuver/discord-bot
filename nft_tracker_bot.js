@@ -7,6 +7,8 @@ import cors from 'cors';
 import passport from 'passport';
 import { Strategy as DiscordStrategy } from 'passport-discord';
 import session from 'express-session';
+import { createClient } from 'redis';
+import connectRedis from 'connect-redis';
 
 dotenv.config();
 
@@ -344,16 +346,13 @@ client.on('interactionCreate', async interaction => {
 });
 
 // Add Express server setup
-const app = express();
-app.use(cors());
-app.use(express.json());
-app.use(session({
-    secret: 'your_session_secret',
-    resave: false,
-    saveUninitialized: false
-}));
-app.use(passport.initialize());
-app.use(passport.session());
+const RedisStore = connectRedis(session);
+
+// Create Redis client
+const redisClient = createClient({
+    url: process.env.REDISCLOUD_URL || process.env.REDIS_URL || 'redis://localhost:6379'
+});
+redisClient.connect().catch(console.error);
 
 // Serve static files
 app.use('/holder-verify', express.static('public'));
@@ -432,3 +431,14 @@ process.on('unhandledRejection', (error) => {
   console.error('Unhandled promise rejection:', error);
 });
 
+app.use(session({
+    store: new RedisStore({ client: redisClient }),
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
