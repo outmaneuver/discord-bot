@@ -33,7 +33,6 @@ redisClient.on('error', (err) => console.log('Redis Client Error', err));
 app.use(cors());
 app.use(express.json());
 app.use(session({
-    store: new RedisStore({ client: redisClient }),
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
