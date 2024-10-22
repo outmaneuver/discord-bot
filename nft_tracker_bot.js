@@ -1,8 +1,14 @@
-import { Client, GatewayIntentBits, EmbedBuilder } from 'discord.js';
+import { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
+import { Connection, PublicKey } from '@solana/web3.js';
+import express from 'express';
+import cors from 'cors';
 
 dotenv.config();
+
+// Add this near the top of the file, after the imports and before the client initialization
+const lastKnownState = {};
 
 const client = new Client({
   intents: [
@@ -17,6 +23,10 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const SALES_CHANNEL_ID = process.env.SALES_CHANNEL_ID;
 const LISTINGS_CHANNEL_ID = process.env.LISTINGS_CHANNEL_ID;
 const COLLECTIONS = process.env.COLLECTIONS.split(',');
+const VERIFICATION_CHANNEL_ID = process.env.VERIFICATION_CHANNEL_ID;
+const SIGN_IN_URL = process.env.SIGN_IN_URL;
+const VERIFY_COLLECTION_ADDRESSES = process.env.VERIFY_COLLECTION_ADDRESSES.split(',');
+const VERIFY_ROLE_IDS = process.env.VERIFY_ROLE_IDS.split(',');
 
 const collectionNameMap = {
   'fcked_catz': 'Fcked Cat',
@@ -26,11 +36,46 @@ const collectionNameMap = {
   'ai_bitbots': 'A.I. BitBot'
 };
 
-let lastKnownState = {};
+const connection = new Connection(process.env.SOLANA_RPC_URL);
 
-client.once('ready', () => {
+async function getNFTsForOwner(ownerAddress) {
+  const nfts = await connection.getParsedTokenAccountsByOwner(
+    new PublicKey(ownerAddress),
+    {
+      programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+    }
+  );
+
+  return nfts.value.filter(({ account }) => {
+    const amount = account.data.parsed.info.tokenAmount;
+    return amount.uiAmount === 1 && amount.decimals === 0;
+  });
+}
+
+client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}!`);
+  
+  // Initialize lastKnownState for each collection
+  COLLECTIONS.forEach(collection => {
+    lastKnownState[collection] = { lastListingTime: 0, lastSaleTime: 0 };
+  });
+  
   setInterval(checkCollections, 1 * 60 * 1000); // Check every 1 minute
+  
+  // Create verification message with button
+  const channel = await client.channels.fetch(VERIFICATION_CHANNEL_ID);
+  const row = new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder()
+        .setCustomId('verify')
+        .setLabel('Verify Wallet')
+        .setStyle(ButtonStyle.Primary),
+    );
+
+  await channel.send({
+    content: 'Click the button below to verify your wallet and get your roles!',
+    components: [row]
+  });
 });
 
 async function checkCollections() {
@@ -176,6 +221,42 @@ async function testAllListings() {
   }
 }
 
+async function verifyHolder(message, walletAddress) {
+  try {
+    const publicKey = new PublicKey(walletAddress);
+    const nfts = await getNFTsForOwner(publicKey.toString());
+
+    const heldCollections = new Set();
+
+    for (const nft of nfts) {
+      const mint = nft.account.data.parsed.info.mint;
+      // Fetch the NFT metadata to get the collection address
+      const metadata = await connection.getAccountInfo(new PublicKey(mint));
+      // You'll need to implement a function to parse the metadata and extract the collection address
+      const collectionAddress = parseMetadataForCollectionAddress(metadata);
+      
+      if (VERIFY_COLLECTION_ADDRESSES.includes(collectionAddress)) {
+        heldCollections.add(collectionAddress);
+      }
+    }
+
+    if (heldCollections.size > 0) {
+      const member = await message.guild.members.fetch(message.author.id);
+      for (let i = 0; i < VERIFY_COLLECTION_ADDRESSES.length; i++) {
+        if (heldCollections.has(VERIFY_COLLECTION_ADDRESSES[i])) {
+          await member.roles.add(VERIFY_ROLE_IDS[i]);
+        }
+      }
+      await message.reply(`Verification successful! You've been granted roles for your NFT holdings.`);
+    } else {
+      await message.reply(`No NFTs from our collections found in this wallet.`);
+    }
+  } catch (error) {
+    console.error('Error during verification:', error);
+    await message.reply('An error occurred during verification. Please try again later.');
+  }
+}
+
 client.on('messageCreate', async (message) => {
   console.log(`Received message: ${message.content}`);
   if (message.content === '!status') {
@@ -197,7 +278,71 @@ client.on('messageCreate', async (message) => {
   } else if (message.content === '!testalllistings') {
     await testAllListings();
     await message.reply('Test listing messages sent for all collections.');
+  } else if (message.content.startsWith('!verify')) {
+    const walletAddress = message.content.split(' ')[1];
+    if (!walletAddress) {
+      await message.reply('Please provide a wallet address. Usage: !verify <wallet_address>');
+      return;
+    }
+    await verifyHolder(message, walletAddress);
   }
 });
 
-client.login(DISCORD_TOKEN);
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isButton()) return;
+
+  if (interaction.customId === 'verify') {
+    await interaction.reply({
+      content: `Please click the link below to sign in and verify your wallet:\n${SIGN_IN_URL}`,
+      ephemeral: true
+    });
+  }
+});
+
+// Add Express server setup
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+app.post('/verify', async (req, res) => {
+  const { walletAddress } = req.body;
+  
+  try {
+    const nfts = await getNFTsForOwner(walletAddress);
+    const heldCollections = new Set();
+
+    for (const nft of nfts) {
+      const mint = nft.account.data.parsed.info.mint;
+      // Fetch the NFT metadata to get the collection address
+      const metadata = await connection.getAccountInfo(new PublicKey(mint));
+      // You'll need to implement a function to parse the metadata and extract the collection address
+      const collectionAddress = parseMetadataForCollectionAddress(metadata);
+      
+      if (VERIFY_COLLECTION_ADDRESSES.includes(collectionAddress)) {
+        heldCollections.add(collectionAddress);
+      }
+    }
+
+    const roles = VERIFY_COLLECTION_ADDRESSES.map((address, index) => 
+      heldCollections.has(address) ? VERIFY_ROLE_IDS[index] : null
+    ).filter(role => role !== null);
+
+    res.json({ success: true, roles });
+  } catch (error) {
+    console.error('Error during verification:', error);
+    res.status(500).json({ success: false, error: 'Verification failed' });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+client.login(process.env.DISCORD_TOKEN);
+
+// You'll need to implement this function to parse the metadata
+function parseMetadataForCollectionAddress(metadata) {
+  // Implementation depends on the structure of your NFT metadata
+  // This is a placeholder function
+  return "placeholder_collection_address";
+}
