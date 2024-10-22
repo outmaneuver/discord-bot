@@ -293,7 +293,7 @@ client.on('interactionCreate', async interaction => {
 
   if (interaction.customId === 'verify') {
     await interaction.reply({
-      content: `Please click the link below to sign in and verify your wallet:\n${SIGN_IN_URL}`,
+      content: `Please click the link below to sign in and verify your wallet:\n${process.env.SIGN_IN_URL}`,
       ephemeral: true
     });
   }
@@ -303,9 +303,13 @@ client.on('interactionCreate', async interaction => {
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
 
-app.post('/verify', async (req, res) => {
+app.use('/holder-verify', express.static('public'));
+app.get('/holder-verify', (req, res) => {
+  res.sendFile('index.html', { root: './public' });
+});
+
+app.post('/holder-verify/verify', async (req, res) => {
   const { walletAddress } = req.body;
   
   try {
@@ -335,7 +339,7 @@ app.post('/verify', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5500;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 client.login(process.env.DISCORD_TOKEN);
