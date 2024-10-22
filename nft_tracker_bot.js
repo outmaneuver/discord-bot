@@ -15,19 +15,18 @@ dotenv.config();
 // Express app initialization
 const app = express();
 
-// Redis client creation and connection
-const redisClient = createClient({
-    url: process.env.REDIS_URL,
-    socket: {
-        tls: true,
-        rejectUnauthorized: false,
-        // Add these lines:
-        secureProtocol: 'TLSv1_2_method',
-        ciphers: 'HIGH:!aNULL:!MD5'
-    }
-});
-redisClient.connect().catch(console.error);
-redisClient.on('error', (err) => console.log('Redis Client Error', err));
+// Comment out or remove these lines
+// const redisClient = createClient({
+//     url: process.env.REDIS_URL,
+//     socket: {
+//         tls: true,
+//         rejectUnauthorized: false,
+//         secureProtocol: 'TLSv1_2_method',
+//         ciphers: 'HIGH:!aNULL:!MD5'
+//     }
+// });
+// redisClient.connect().catch(console.error);
+// redisClient.on('error', (err) => console.log('Redis Client Error', err));
 
 // Express middleware and session setup
 app.use(cors());
