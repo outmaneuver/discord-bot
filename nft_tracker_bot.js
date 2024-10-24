@@ -580,10 +580,10 @@ async function updateDiscordRoles(userId, heldCollections) {
 
     console.log('Member fetched. Updating roles...');
     for (const [collection, roleId] of Object.entries(ROLE_IDS)) {
-      if (heldCollections.has(collection)) {
+      if (heldCollections[collection] && heldCollections[collection] > 0) {
         await member.roles.add(roleId);
         console.log(`Added role ${roleId} for collection ${collection}`);
-        if (WHALE_ROLE_IDS[collection] && heldCollections.size >= process.env[`WHALE_THRESHOLD_${collection.toUpperCase()}`]) {
+        if (WHALE_ROLE_IDS[collection] && heldCollections[collection] >= process.env[`WHALE_THRESHOLD_${collection.toUpperCase()}`]) {
           await member.roles.add(WHALE_ROLE_IDS[collection]);
           console.log(`Added whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
         }
