@@ -1,7 +1,7 @@
 import { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey, TOKEN_PROGRAM_ID } from '@solana/web3.js';
 import express from 'express';
 import cors from 'cors';
 import passport from 'passport';
@@ -76,6 +76,23 @@ const collectionNameMap = {
 
 const connection = new Connection(process.env.SOLANA_RPC_URL);
 
+// Define role criteria
+const COLLECTION_ROLES = {
+  'fcked_catz': { roleId: 'ROLE_ID_FOR_FCKED_CATZ', whaleThreshold: 25, whaleRoleId: 'WHALE_ROLE_ID_FOR_FCKED_CATZ' },
+  'celebcatz': { roleId: 'ROLE_ID_FOR_CELEBCATZ' },
+  'money_monsters': { roleId: 'ROLE_ID_FOR_MONEY_MONSTERS', whaleThreshold: 25, whaleRoleId: 'WHALE_ROLE_ID_FOR_MONEY_MONSTERS' },
+  'moneymonsters3d': { roleId: 'ROLE_ID_FOR_MONEYMONSTERS3D', whaleThreshold: 25, whaleRoleId: 'WHALE_ROLE_ID_FOR_MONEYMONSTERS3D' },
+  'ai_bitbots': { roleId: 'ROLE_ID_FOR_AI_BITBOTS', whaleThreshold: 10, whaleRoleId: 'WHALE_ROLE_ID_FOR_AI_BITBOTS' }
+};
+
+const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
+const BUX_ROLES = [
+  { threshold: 2500, roleId: process.env.ROLE_ID_2500_BUX },
+  { threshold: 10000, roleId: process.env.ROLE_ID_10000_BUX },
+  { threshold: 25000, roleId: process.env.ROLE_ID_25000_BUX },
+  { threshold: 50000, roleId: process.env.ROLE_ID_50000_BUX }
+];
+
 // Set up Passport
 passport.use(new DiscordStrategy({
     clientID: process.env.DISCORD_CLIENT_ID,
@@ -83,7 +100,6 @@ passport.use(new DiscordStrategy({
     callbackURL: process.env.DISCORD_REDIRECT_URI,
     scope: ['identify', 'guilds.join']
 }, function(accessToken, refreshToken, profile, done) {
-    // Save the user profile information in session
     process.nextTick(function() {
         return done(null, profile);
     });
@@ -415,15 +431,10 @@ app.post('/holder-verify/verify', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Wallet address is required' });
     }
 
-    const ownsRequiredNFTs = await checkNFTOwnership(walletAddress);
-
-    if (ownsRequiredNFTs) {
-      const updatedRoles = await updateDiscordRoles(req.user.id);
-      
-      res.json({ success: true, roles: updatedRoles });
-    } else {
-      res.json({ success: false, error: 'Required NFTs not found in wallet' });
-    }
+    const qualifyingRoles = await checkNFTOwnership(walletAddress);
+    const updatedRoles = await updateDiscordRoles(req.user.id, qualifyingRoles);
+    
+    res.json({ success: true, roles: updatedRoles });
   } catch (error) {
     console.error('Error during wallet verification:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
@@ -433,26 +444,74 @@ app.post('/holder-verify/verify', async (req, res) => {
 async function checkNFTOwnership(walletAddress) {
   try {
     const nfts = await getNFTsForOwner(walletAddress);
+    const collectionCounts = {};
+    const roles = [];
+
     for (const nft of nfts) {
       const metadata = await connection.getParsedAccountInfo(new PublicKey(nft.account.data.parsed.info.mint));
       const collectionAddress = parseMetadataForCollectionAddress(metadata);
-      if (VERIFY_COLLECTION_ADDRESSES.includes(collectionAddress)) {
-        return true;
+      
+      for (const [collection, data] of Object.entries(COLLECTION_ROLES)) {
+        if (VERIFY_COLLECTION_ADDRESSES.includes(collectionAddress)) {
+          collectionCounts[collection] = (collectionCounts[collection] || 0) + 1;
+          if (!roles.includes(data.roleId)) {
+            roles.push(data.roleId);
+          }
+          if (collectionCounts[collection] >= data.whaleThreshold) {
+            roles.push(data.whaleRoleId);
+          }
+        }
       }
     }
-    return false;
+
+    const buxBalance = await getBUXBalance(walletAddress);
+    for (const buxRole of BUX_ROLES) {
+      if (buxBalance >= buxRole.threshold) {
+        roles.push(buxRole.roleId);
+      }
+    }
+
+    return roles;
   } catch (error) {
     console.error('Error checking NFT ownership:', error);
-    return false;
+    return [];
   }
 }
 
-async function updateDiscordRoles(userId) {
+async function getBUXBalance(walletAddress) {
+  try {
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      new PublicKey(walletAddress),
+      { programId: TOKEN_PROGRAM_ID }
+    );
+
+    const buxAccount = tokenAccounts.value.find(
+      account => account.account.data.parsed.info.mint === BUX_TOKEN_MINT
+    );
+
+    return buxAccount ? parseInt(buxAccount.account.data.parsed.info.tokenAmount.amount) : 0;
+  } catch (error) {
+    console.error('Error getting BUX balance:', error);
+    return 0;
+  }
+}
+
+async function updateDiscordRoles(userId, roles) {
   try {
     const guild = await client.guilds.fetch(process.env.GUILD_ID);
     const member = await guild.members.fetch(userId);
-    await member.roles.add(VERIFY_ROLE_IDS);
-    return VERIFY_ROLE_IDS.map(roleId => guild.roles.cache.get(roleId).name);
+
+    // Remove all existing roles that are part of our verification system
+    const allVerificationRoles = [
+      ...Object.values(COLLECTION_ROLES).flatMap(data => [data.roleId, data.whaleRoleId]),
+      ...BUX_ROLES.map(role => role.roleId)
+    ];
+    await member.roles.remove(allVerificationRoles);
+
+    // Add the roles that the user qualifies for
+    await member.roles.add(roles);
+
+    return roles.map(roleId => guild.roles.cache.get(roleId).name);
   } catch (error) {
     console.error('Error updating Discord roles:', error);
     return [];
