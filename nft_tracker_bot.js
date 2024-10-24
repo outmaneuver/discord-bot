@@ -549,7 +549,9 @@ async function getBUXBalance(walletAddress) {
 
 async function updateDiscordRoles(userId, heldCollections) {
   try {
-    // Ensure the client is ready
+    console.log('Updating Discord roles for user:', userId);
+    console.log('Held collections:', heldCollections);
+
     if (!client.isReady()) {
       console.log('Discord client is not ready. Waiting...');
       await new Promise(resolve => client.once('ready', resolve));
@@ -558,15 +560,22 @@ async function updateDiscordRoles(userId, heldCollections) {
     console.log('Discord client is ready. Fetching guild...');
     const guild = await client.guilds.fetch(GUILD_ID);
     if (!guild) {
-      console.error('Guild not found');
-      return;
+      console.error('Guild not found. GUILD_ID:', GUILD_ID);
+      return false;
     }
 
     console.log('Guild fetched. Fetching member...');
-    const member = await guild.members.fetch(userId);
+    let member;
+    try {
+      member = await guild.members.fetch(userId);
+    } catch (error) {
+      console.error('Error fetching member:', error);
+      return false;
+    }
+
     if (!member) {
-      console.error('Member not found');
-      return;
+      console.error('Member not found. User ID:', userId);
+      return false;
     }
 
     console.log('Member fetched. Updating roles...');
