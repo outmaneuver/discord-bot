@@ -78,11 +78,29 @@ const connection = new Connection(process.env.SOLANA_RPC_URL);
 
 // Define role criteria
 const COLLECTION_ROLES = {
-  'fcked_catz': { roleId: 'ROLE_ID_FOR_FCKED_CATZ', whaleThreshold: 25, whaleRoleId: 'WHALE_ROLE_ID_FOR_FCKED_CATZ' },
-  'celebcatz': { roleId: 'ROLE_ID_FOR_CELEBCATZ' },
-  'money_monsters': { roleId: 'ROLE_ID_FOR_MONEY_MONSTERS', whaleThreshold: 25, whaleRoleId: 'WHALE_ROLE_ID_FOR_MONEY_MONSTERS' },
-  'moneymonsters3d': { roleId: 'ROLE_ID_FOR_MONEYMONSTERS3D', whaleThreshold: 25, whaleRoleId: 'WHALE_ROLE_ID_FOR_MONEYMONSTERS3D' },
-  'ai_bitbots': { roleId: 'ROLE_ID_FOR_AI_BITBOTS', whaleThreshold: 10, whaleRoleId: 'WHALE_ROLE_ID_FOR_AI_BITBOTS' }
+  'fcked_catz': { 
+    roleId: process.env.ROLE_ID_FCKED_CATZ, 
+    whaleThreshold: parseInt(process.env.WHALE_THRESHOLD_FCKED_CATZ), 
+    whaleRoleId: process.env.WHALE_ROLE_ID_FCKED_CATZ 
+  },
+  'celebcatz': { 
+    roleId: process.env.ROLE_ID_CELEBCATZ 
+  },
+  'money_monsters': { 
+    roleId: process.env.ROLE_ID_MONEY_MONSTERS, 
+    whaleThreshold: parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS), 
+    whaleRoleId: process.env.WHALE_ROLE_ID_MONEY_MONSTERS 
+  },
+  'moneymonsters3d': { 
+    roleId: process.env.ROLE_ID_MONEYMONSTERS3D, 
+    whaleThreshold: parseInt(process.env.WHALE_THRESHOLD_MONEYMONSTERS3D), 
+    whaleRoleId: process.env.WHALE_ROLE_ID_MONEYMONSTERS3D 
+  },
+  'ai_bitbots': { 
+    roleId: process.env.ROLE_ID_AI_BITBOTS, 
+    whaleThreshold: parseInt(process.env.WHALE_THRESHOLD_AI_BITBOTS), 
+    whaleRoleId: process.env.WHALE_ROLE_ID_AI_BITBOTS 
+  }
 };
 
 const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
