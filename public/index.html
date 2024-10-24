@@ -225,17 +225,18 @@
                     const dailyYield = (fckedCatzCount * 2) + (celebCatzCount * 8) + (moneyMonstersCount * 2) + (moneyMonsters3DCount * 4) + (aiBitBotsCount * 1);
 
                     const verifiedAssets = `
-                        VERIFIED ASSETS:
-                        Fcked Catz - ${fckedCatzCount}
-                        Celeb Catz - ${celebCatzCount}
-                        Money Monsters - ${moneyMonstersCount}
-                        Money Monsters 3D - ${moneyMonsters3DCount}
-                        A.I. BitBots - ${aiBitBotsCount}
-                        $BUX - ${data.buxBalance}
-
+                        VERIFIED ASSETS:<br>
+                        Fcked Catz - ${fckedCatzCount}<br>
+                        Celeb Catz - ${celebCatzCount}<br>
+                        Money Monsters - ${moneyMonstersCount}<br>
+                        Money Monsters 3D - ${moneyMonsters3DCount}<br>
+                        A.I. BitBots - ${aiBitBotsCount}<br>
+                        $BUX - ${data.buxBalance}<br><br>
                         Potential daily staking yield = ${dailyYield} $BUX
                     `;
-                    statusElement.textContent = verifiedAssets;
+                    statusElement.innerHTML = verifiedAssets; // Use innerHTML to render HTML tags
+                    connectButton.disabled = true; // Disable the button
+                    connectButton.textContent = 'CONNECTED'; // Change button text
                     closeMessageElement.style.display = 'block';
                 } else {
                     statusElement.textContent = `Verification failed: ${data.error || 'Please try again.'}`;
