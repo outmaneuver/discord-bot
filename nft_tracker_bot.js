@@ -390,13 +390,22 @@ app.get('/auth/discord/callback',
     passport.authenticate('discord', { failureRedirect: '/holder-verify' }),
     function(req, res) {
         console.log('Discord auth callback. User:', req.user);
+        console.log('Session before login:', req.session);
         req.login(req.user, function(err) {
             if (err) {
                 console.error('Error logging in user:', err);
                 return res.redirect('/holder-verify?auth=failed');
             }
             console.log('User logged in successfully');
-            res.redirect('/holder-verify');
+            console.log('Session after login:', req.session);
+            req.session.save((err) => {
+                if (err) {
+                    console.error('Error saving session:', err);
+                    return res.redirect('/holder-verify?auth=failed');
+                }
+                console.log('Session saved successfully');
+                res.redirect('/holder-verify');
+            });
         });
     }
 );

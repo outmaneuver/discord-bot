@@ -147,8 +147,8 @@
             statusElement.textContent = 'You are logged in with Discord. Please connect your wallet.';
         }
 
-        function checkAuthStatus() {
-            console.log('Checking auth status...');
+        function checkAuthStatus(retries = 3) {
+            console.log('Checking auth status... Retries left:', retries);
             setTimeout(() => {
                 fetch('/auth/status', { 
                     credentials: 'include',
@@ -173,15 +173,22 @@
                             updateUIForAuthenticatedUser(data.username);
                         } else {
                             console.log('User not authenticated');
-                            discordButton.style.display = 'inline-block';
-                            connectButton.style.display = 'none';
-                            pageTitle.style.display = 'block';
-                            welcomeMessage.style.display = 'none';
+                            if (retries > 0) {
+                                checkAuthStatus(retries - 1);
+                            } else {
+                                discordButton.style.display = 'inline-block';
+                                connectButton.style.display = 'none';
+                                pageTitle.style.display = 'block';
+                                welcomeMessage.style.display = 'none';
+                            }
                         }
                     })
                     .catch(error => {
                         console.error('Error checking auth status:', error);
                         statusElement.textContent = 'Error checking authentication status';
+                        if (retries > 0) {
+                            checkAuthStatus(retries - 1);
+                        }
                     });
             }, 1000); // 1 second delay
         }
