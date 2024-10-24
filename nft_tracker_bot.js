@@ -323,44 +323,25 @@ async function testAllListings() {
 
 async function verifyHolder(message, walletAddress) {
   try {
-    const publicKey = new PublicKey(walletAddress);
-    const nfts = await getNFTsForOwner(publicKey.toString());
+    const nftCounts = await checkNFTOwnership(walletAddress);
+    const buxBalance = await getBUXBalance(walletAddress);
 
-    const heldCollections = new Set();
-    let buxBalance = 0;
-
-    for (const nft of nfts) {
-      const mint = nft.account.data.parsed.info.mint.trim();
-      console.log(`Checking NFT with mint: ${mint}`);
-
-      if (moneyMonsters3DHashlist.includes(mint)) {
-        console.log(`Found Money Monsters 3D NFT: ${mint}`);
-        heldCollections.add('money_monsters3d');
-      }
-      // Add similar checks for other collections
-    }
-
-    // Example logic to check $BUX balance
-    // Replace with actual logic to fetch $BUX balance
-    buxBalance = await getBuxBalance(walletAddress);
-    console.log(`$BUX Balance: ${buxBalance}`);
-
-    // Convert balance to correct unit if necessary
+    // Convert balance to correct unit
     const formattedBuxBalance = buxBalance / 1e9; // Assuming balance is in smallest unit
 
     let response = `Hi ${message.author.username}!\n\nVERIFIED ASSETS:\n`;
-    response += `Fcked Catz - ${heldCollections.has('fcked_catz') ? 1 : 0}\n`;
-    response += `Celeb Catz - ${heldCollections.has('celebcatz') ? 1 : 0}\n`;
-    response += `Money Monsters - ${heldCollections.has('money_monsters') ? 1 : 0}\n`;
-    response += `Money Monsters 3D - ${heldCollections.has('money_monsters3d') ? 1 : 0}\n`;
-    response += `A.I. BitBots - ${heldCollections.has('ai_bitbots') ? 1 : 0}\n`;
+    response += `Fcked Catz - ${nftCounts['fcked_catz'] || 0}\n`;
+    response += `Celeb Catz - ${nftCounts['celebcatz'] || 0}\n`;
+    response += `Money Monsters - ${nftCounts['money_monsters'] || 0}\n`;
+    response += `Money Monsters 3D - ${nftCounts['money_monsters3d'] || 0}\n`;
+    response += `A.I. BitBots - ${nftCounts['ai_bitbots'] || 0}\n`;
     response += `$BUX - ${formattedBuxBalance}\n\n`;
-    response += `Potential daily staking yield = 0 $BUX`;
+    response += `Potential daily staking yield = 0 $BUX`; // You may want to calculate this based on holdings
 
     await message.reply(response);
 
     // Update Discord roles
-    await updateDiscordRoles(message.author.id, heldCollections);
+    await updateDiscordRoles(message.author.id, nftCounts);
   } catch (error) {
     console.error('Error during verification:', error);
     await message.reply('An error occurred during verification. Please try again later.');
@@ -580,20 +561,24 @@ async function updateDiscordRoles(userId, heldCollections) {
 
     console.log('Member fetched. Updating roles...');
     for (const [collection, roleId] of Object.entries(ROLE_IDS)) {
-      if (heldCollections[collection] && heldCollections[collection] > 0) {
-        await member.roles.add(roleId);
-        console.log(`Added role ${roleId} for collection ${collection}`);
-        if (WHALE_ROLE_IDS[collection] && heldCollections[collection] >= process.env[`WHALE_THRESHOLD_${collection.toUpperCase()}`]) {
-          await member.roles.add(WHALE_ROLE_IDS[collection]);
-          console.log(`Added whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
+      try {
+        if (heldCollections[collection] && heldCollections[collection] > 0) {
+          await member.roles.add(roleId);
+          console.log(`Added role ${roleId} for collection ${collection}`);
+          if (WHALE_ROLE_IDS[collection] && heldCollections[collection] >= process.env[`WHALE_THRESHOLD_${collection.toUpperCase()}`]) {
+            await member.roles.add(WHALE_ROLE_IDS[collection]);
+            console.log(`Added whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
+          }
+        } else {
+          await member.roles.remove(roleId);
+          console.log(`Removed role ${roleId} for collection ${collection}`);
+          if (WHALE_ROLE_IDS[collection]) {
+            await member.roles.remove(WHALE_ROLE_IDS[collection]);
+            console.log(`Removed whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
+          }
         }
-      } else {
-        await member.roles.remove(roleId);
-        console.log(`Removed role ${roleId} for collection ${collection}`);
-        if (WHALE_ROLE_IDS[collection]) {
-          await member.roles.remove(WHALE_ROLE_IDS[collection]);
-          console.log(`Removed whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
-        }
+      } catch (error) {
+        console.error(`Error updating role for collection ${collection}:`, error);
       }
     }
 
