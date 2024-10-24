@@ -10,6 +10,11 @@ import { Strategy as DiscordStrategy } from 'passport-discord';
 import session from 'express-session';
 import helmet from 'helmet';
 import crypto from 'crypto';
+import fckedCatzHashlist from './public/fcked_catz.json';
+import celebCatzHashlist from './public/celebcatz.json';
+import moneyMonstersHashlist from './public/money_monsters.json';
+import moneyMonsters3DHashlist from './public/moneymonsters3d.json';
+import aiBitBotsHashlist from './public/ai_bitbots.json';
 
 dotenv.config();
 
@@ -474,36 +479,21 @@ async function checkNFTOwnership(walletAddress) {
   try {
     const nfts = await getNFTsForOwner(walletAddress);
     const collectionCounts = {};
-    const roles = [];
 
     for (const nft of nfts) {
-      const metadata = await connection.getParsedAccountInfo(new PublicKey(nft.account.data.parsed.info.mint));
-      const collectionAddress = parseMetadataForCollectionAddress(metadata);
+      const mint = nft.account.data.parsed.info.mint;
       
-      for (const [collection, data] of Object.entries(COLLECTION_ROLES)) {
-        if (COLLECTION_ADDRESSES[collection] === collectionAddress) {
+      for (const [collection, hashlist] of Object.entries(COLLECTION_HASHLISTS)) {
+        if (hashlist.includes(mint)) {
           collectionCounts[collection] = (collectionCounts[collection] || 0) + 1;
-          if (!roles.includes(data.roleId)) {
-            roles.push(data.roleId);
-          }
-          if (collectionCounts[collection] >= data.whaleThreshold) {
-            roles.push(data.whaleRoleId);
-          }
         }
       }
     }
 
-    const buxBalance = await getBUXBalance(walletAddress);
-    for (const buxRole of BUX_ROLES) {
-      if (buxBalance >= buxRole.threshold) {
-        roles.push(buxRole.roleId);
-      }
-    }
-
-    return roles;
+    return collectionCounts;
   } catch (error) {
     console.error('Error checking NFT ownership:', error);
-    return [];
+    return {};
   }
 }
 
@@ -643,3 +633,10 @@ const COLLECTION_ADDRESSES = {
   'ai_bitbots': process.env.COLLECTION_ADDRESS_AI_BITBOTS
 };
 
+const COLLECTION_HASHLISTS = {
+  'fcked_catz': fckedCatzHashlist,
+  'celebcatz': celebCatzHashlist,
+  'money_monsters': moneyMonstersHashlist,
+  'moneymonsters3d': moneyMonsters3DHashlist,
+  'ai_bitbots': aiBitBotsHashlist
+};
