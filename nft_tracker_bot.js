@@ -629,7 +629,7 @@ const COLLECTION_ADDRESSES = {
   'fcked_catz': process.env.COLLECTION_ADDRESS_FCKED_CATZ,
   'celebcatz': process.env.COLLECTION_ADDRESS_CELEBCATZ,
   'money_monsters': process.env.COLLECTION_ADDRESS_MONEY_MONSTERS,
-  'moneymonsters3d': process.env.COLLECTION_ADDRESS_MONEYMONSTERS3D,
+  'money_monsters3d': process.env.COLLECTION_ADDRESS_MONEYMONSTERS3D,
   'ai_bitbots': process.env.COLLECTION_ADDRESS_AI_BITBOTS
 };
 
@@ -637,7 +637,22 @@ const COLLECTION_HASHLISTS = {
   'fcked_catz': fckedCatzHashlist,
   'celebcatz': celebCatzHashlist,
   'money_monsters': moneyMonstersHashlist,
-  'moneymonsters3d': moneyMonsters3DHashlist,
+  'money_monsters3d': moneyMonsters3DHashlist,
   'ai_bitbots': aiBitBotsHashlist
 };
 
+const ROLE_IDS = {
+  'fcked_catz': process.env.ROLE_ID_FCKED_CATZ,
+  'celebcatz': process.env.ROLE_ID_CELEBCATZ,
+  'money_monsters': process.env.ROLE_ID_MONEY_MONSTERS,
+  'money_monsters3d': process.env.ROLE_ID_MONEY_MONSTERS3D,
+  'ai_bitbots': process.env.ROLE_ID_AI_BITBOTS
+};
+
+const WHALE_ROLE_IDS = {
+  'fcked_catz': process.env.WHALE_ROLE_ID_FCKED_CATZ,
+  'celebcatz': process.env.WHALE_ROLE_ID_CELEBCATZ,
+  'money_monsters': process.env.WHALE_ROLE_ID_MONEY_MONSTERS,
+  'money_monsters3d': process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D,
+  'ai_bitbots': process.env.WHALE_ROLE_ID_AI_BITBOTS
+};
