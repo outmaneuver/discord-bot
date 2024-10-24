@@ -458,11 +458,23 @@ app.post('/holder-verify/verify', async (req, res) => {
     console.log('BUX Balance:', buxBalance);
     console.log('Roles Updated:', rolesUpdated);
 
+    // Format the response
+    const formattedBuxBalance = buxBalance / 1e9;
+    let response = `Hi ${req.user.username}!\n\nVERIFIED ASSETS:\n`;
+    response += `Fcked Catz - ${nftCounts['fcked_catz'] || 0}\n`;
+    response += `Celeb Catz - ${nftCounts['celebcatz'] || 0}\n`;
+    response += `Money Monsters - ${nftCounts['money_monsters'] || 0}\n`;
+    response += `Money Monsters 3D - ${nftCounts['money_monsters3d'] || 0}\n`;
+    response += `A.I. BitBots - ${nftCounts['ai_bitbots'] || 0}\n`;
+    response += `$BUX - ${formattedBuxBalance}\n\n`;
+    response += `Potential daily staking yield = 0 $BUX`; // You may want to calculate this based on holdings
+
     res.json({ 
       success: true, 
       rolesUpdated,
       nftCounts,
-      buxBalance
+      buxBalance,
+      formattedResponse: response
     });
   } catch (error) {
     console.error('Error during wallet verification:', error);
@@ -687,7 +699,7 @@ const COLLECTION_ADDRESSES = {
   'fcked_catz': process.env.COLLECTION_ADDRESS_FCKED_CATZ,
   'celebcatz': process.env.COLLECTION_ADDRESS_CELEBCATZ,
   'money_monsters': process.env.COLLECTION_ADDRESS_MONEY_MONSTERS,
-  'money_monsters3d': process.env.COLLECTION_ADDRESS_MONEYMONSTERS3D,
+  'money_monsters3d': process.env.COLLECTION_ADDRESS_MONEY_MONSTERS3D,
   'ai_bitbots': process.env.COLLECTION_ADDRESS_AI_BITBOTS
 };
 
