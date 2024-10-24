@@ -216,14 +216,24 @@
 
                 const data = await response.json();
                 if (data.success) {
+                    const fckedCatzCount = data.nftCounts['fcked_catz'] || 0;
+                    const celebCatzCount = data.nftCounts['celebcatz'] || 0;
+                    const moneyMonstersCount = data.nftCounts['money_monsters'] || 0;
+                    const moneyMonsters3DCount = data.nftCounts['moneymonsters3d'] || 0;
+                    const aiBitBotsCount = data.nftCounts['ai_bitbots'] || 0;
+
+                    const dailyYield = (fckedCatzCount * 2) + (celebCatzCount * 8) + (moneyMonstersCount * 2) + (moneyMonsters3DCount * 4) + (aiBitBotsCount * 1);
+
                     const verifiedAssets = `
                         Verified assets:
-                        Fcked Catz - ${data.nftCounts['fcked_catz'] || 0}
-                        Celeb Catz - ${data.nftCounts['celebcatz'] || 0}
-                        Money Monsters - ${data.nftCounts['money_monsters'] || 0}
-                        Money Monsters 3D - ${data.nftCounts['moneymonsters3d'] || 0}
-                        A.I. BitBots - ${data.nftCounts['ai_bitbots'] || 0}
+                        Fcked Catz - ${fckedCatzCount}
+                        Celeb Catz - ${celebCatzCount}
+                        Money Monsters - ${moneyMonstersCount}
+                        Money Monsters 3D - ${moneyMonsters3DCount}
+                        A.I. BitBots - ${aiBitBotsCount}
                         $BUX - ${data.buxBalance}
+
+                        Potential daily staking yield = ${dailyYield} $BUX
                     `;
                     statusElement.textContent = verifiedAssets;
                     closeMessageElement.style.display = 'block';
