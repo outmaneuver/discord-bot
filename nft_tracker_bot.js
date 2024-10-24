@@ -14,19 +14,6 @@ dotenv.config();
 // Express app initialization
 const app = express();
 
-// Comment out or remove these lines
-// const redisClient = createClient({
-//     url: process.env.REDIS_URL,
-//     socket: {
-//         tls: true,
-//         rejectUnauthorized: false,
-//         secureProtocol: 'TLSv1_2_method',
-//         ciphers: 'HIGH:!aNULL:!MD5'
-//     }
-// });
-// redisClient.connect().catch(console.error);
-// redisClient.on('error', (err) => console.log('Redis Client Error', err));
-
 // Express middleware and session setup
 app.use(cors());
 app.use(express.json());
@@ -64,7 +51,6 @@ const LISTINGS_CHANNEL_ID = process.env.LISTINGS_CHANNEL_ID;
 const COLLECTIONS = process.env.COLLECTIONS.split(',');
 const VERIFICATION_CHANNEL_ID = process.env.VERIFICATION_CHANNEL_ID;
 const SIGN_IN_URL = process.env.SIGN_IN_URL;
-const VERIFY_ROLE_IDS = process.env.VERIFY_ROLE_IDS.split(',');
 
 const collectionNameMap = {
   'fcked_catz': 'Fcked Cat',
@@ -335,9 +321,12 @@ async function verifyHolder(message, walletAddress) {
 
     if (heldCollections.size > 0) {
       const member = await message.guild.members.fetch(message.author.id);
-      for (let i = 0; i < VERIFY_ROLE_IDS.length; i++) {
-        if (heldCollections.has(VERIFY_ROLE_IDS[i])) {
-          await member.roles.add(VERIFY_ROLE_IDS[i]);
+      for (const [collection, data] of Object.entries(COLLECTION_ROLES)) {
+        if (heldCollections.has(collection)) {
+          await member.roles.add(data.roleId);
+          if (data.whaleRoleId && heldCollections.size >= data.whaleThreshold) {
+            await member.roles.add(data.whaleRoleId);
+          }
         }
       }
       await message.reply(`Verification successful! You've been granted roles for your NFT holdings.`);
@@ -633,3 +622,4 @@ const COLLECTION_ADDRESSES = {
   'moneymonsters3d': process.env.COLLECTION_ADDRESS_MONEYMONSTERS3D,
   'ai_bitbots': process.env.COLLECTION_ADDRESS_AI_BITBOTS
 };
+

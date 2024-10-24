@@ -14,7 +14,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@solana/spl-token": "^0.3.11",
+    "@solana/spl-token": "^0.3.7",
     "@solana/web3.js": "^1.95.4",
     "connect-redis": "^7.0.0",
     "cors": "^2.8.5",
