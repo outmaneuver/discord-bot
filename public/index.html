@@ -152,6 +152,9 @@
             fetch('/auth/status')
                 .then(response => {
                     console.log('Auth status response:', response);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
                     return response.json();
                 })
                 .then(data => {

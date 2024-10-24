@@ -31,10 +31,10 @@ app.use(cors());
 app.use(express.json());
 app.use(session({
     secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
+    resave: true,
+    saveUninitialized: true,
     cookie: {
-        secure: process.env.NODE_ENV === 'production', // Only use secure cookies in production
+        secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
@@ -389,12 +389,18 @@ app.get('/auth/discord/callback',
     passport.authenticate('discord', { failureRedirect: '/holder-verify' }),
     function(req, res) {
         console.log('Discord auth callback. User:', req.user);
-        req.session.save((err) => {
+        req.login(req.user, function(err) {
             if (err) {
-                console.error('Error saving session:', err);
+                console.error('Error logging in user:', err);
                 return res.redirect('/holder-verify?auth=failed');
             }
-            res.redirect('/holder-verify');
+            req.session.save((err) => {
+                if (err) {
+                    console.error('Error saving session:', err);
+                    return res.redirect('/holder-verify?auth=failed');
+                }
+                res.redirect('/holder-verify');
+            });
         });
     }
 );
