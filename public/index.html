@@ -147,17 +147,31 @@
             statusElement.textContent = 'You are logged in with Discord. Please connect your wallet.';
         }
 
-        fetch('/auth/status')
-            .then(response => response.json())
-            .then(data => {
-                if (data.authenticated && data.username) {
-                    updateUIForAuthenticatedUser(data.username);
-                }
-            })
-            .catch(error => {
-                console.error('Error checking auth status:', error);
-                statusElement.textContent = 'Error checking authentication status';
-            });
+        function checkAuthStatus() {
+            fetch('/auth/status')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Auth status:', data); // Add this line for debugging
+                    if (data.authenticated && data.username) {
+                        updateUIForAuthenticatedUser(data.username);
+                    } else {
+                        discordButton.style.display = 'inline-block';
+                        connectButton.style.display = 'none';
+                        pageTitle.style.display = 'block';
+                        welcomeMessage.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking auth status:', error);
+                    statusElement.textContent = 'Error checking authentication status';
+                });
+        }
+
+        // Check auth status when the page loads
+        checkAuthStatus();
+
+        // Recheck auth status every 5 seconds (optional, remove if not needed)
+        setInterval(checkAuthStatus, 5000);
 
         connectButton.addEventListener('click', async () => {
             if (!window.solana || !window.solana.isPhantom) {

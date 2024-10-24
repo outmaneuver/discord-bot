@@ -383,7 +383,8 @@ app.get('/auth/discord', passport.authenticate('discord'));
 app.get('/auth/discord/callback', 
     passport.authenticate('discord', { failureRedirect: '/holder-verify' }),
     function(req, res) {
-        res.redirect('/holder-verify'); // Redirect to the wallet connection page
+        console.log('Discord auth successful. User:', req.user); // Add this line for debugging
+        res.redirect('/holder-verify');
     }
 );
 
@@ -425,10 +426,13 @@ async function updateDiscordRoles(userId) {
   return ['Verified Holder']; // Placeholder
 }
 
+// Add this new route to provide authentication status and username
 app.get('/auth/status', (req, res) => {
+    console.log('Auth status requested. User:', req.user); // Add this line for debugging
     res.json({ 
         authenticated: req.isAuthenticated(),
-        username: req.user ? req.user.username : null
+        username: req.user ? req.user.username : null,
+        id: req.user ? req.user.id : null
     });
 });
 
