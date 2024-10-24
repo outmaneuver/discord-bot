@@ -358,6 +358,9 @@ async function verifyHolder(message, walletAddress) {
     response += `Potential daily staking yield = 0 $BUX`;
 
     await message.reply(response);
+
+    // Update Discord roles
+    await updateDiscordRoles(message.author.id, heldCollections);
   } catch (error) {
     console.error('Error during verification:', error);
     await message.reply('An error occurred during verification. Please try again later.');
@@ -519,25 +522,43 @@ async function getBUXBalance(walletAddress) {
   }
 }
 
-async function updateDiscordRoles(userId, roles) {
+async function updateDiscordRoles(userId, heldCollections) {
   try {
-    const guild = await client.guilds.fetch(process.env.GUILD_ID);
+    // Ensure the client is ready
+    if (!client.isReady()) {
+      console.log('Discord client is not ready. Waiting...');
+      await new Promise(resolve => client.once('ready', resolve));
+    }
+
+    const guild = await client.guilds.fetch(GUILD_ID);
+    if (!guild) {
+      console.error('Guild not found');
+      return;
+    }
+
     const member = await guild.members.fetch(userId);
+    if (!member) {
+      console.error('Member not found');
+      return;
+    }
 
-    // Remove all existing roles that are part of our verification system
-    const allVerificationRoles = [
-      ...Object.values(COLLECTION_ROLES).flatMap(data => [data.roleId, data.whaleRoleId]),
-      ...BUX_ROLES.map(role => role.roleId)
-    ];
-    await member.roles.remove(allVerificationRoles);
+    for (const [collection, roleId] of Object.entries(ROLE_IDS)) {
+      if (heldCollections.has(collection)) {
+        await member.roles.add(roleId);
+        if (WHALE_ROLE_IDS[collection] && heldCollections.size >= process.env[`WHALE_THRESHOLD_${collection.toUpperCase()}`]) {
+          await member.roles.add(WHALE_ROLE_IDS[collection]);
+        }
+      } else {
+        await member.roles.remove(roleId);
+        if (WHALE_ROLE_IDS[collection]) {
+          await member.roles.remove(WHALE_ROLE_IDS[collection]);
+        }
+      }
+    }
 
-    // Add the roles that the user qualifies for
-    await member.roles.add(roles);
-
-    return roles.map(roleId => guild.roles.cache.get(roleId).name);
+    console.log(`Updated roles for user ${userId}`);
   } catch (error) {
     console.error('Error updating Discord roles:', error);
-    return [];
   }
 }
 
@@ -660,4 +681,6 @@ const WHALE_ROLE_IDS = {
   'money_monsters3d': process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D,
   'ai_bitbots': process.env.WHALE_ROLE_ID_AI_BITBOTS
 };
+
+const GUILD_ID = process.env.GUILD_ID;
 
