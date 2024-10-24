@@ -576,3 +576,53 @@ app.use((err, req, res, next) => {
     res.status(500).send('Something broke!');
 });
 
+app.get('/holder-verify', (req, res) => {
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Wallet Verification</title>
+            <script src="/holder-verify/solana-web3.js"></script>
+            <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@800&display=swap" rel="stylesheet">
+            <link rel="icon" type="image/x-icon" href="/holder-verify/favicon.ico">
+            <style>
+                /* Your existing styles */
+            </style>
+        </head>
+        <body>
+            <div class="logo-container">
+                <div class="logo-text">BUX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DAO</div>
+            </div>
+            <div class="container">
+                <h1 id="pageTitle">Verify Your Wallet</h1>
+                <p id="welcomeMessage"></p>
+                <button id="discordButton">Sign in with Discord</button>
+                <button id="connectButton">Connect Wallet</button>
+                <p id="status"></p>
+            </div>
+            <div id="closeMessage">
+                You can now close this window...<br>
+                Please allow a few minutes for your discord roles to be updated
+            </div>
+
+            <script>
+                const ROLE_ID_FCKED_CATZ = '${process.env.ROLE_ID_FCKED_CATZ}';
+                const ROLE_ID_CELEBCATZ = '${process.env.ROLE_ID_CELEBCATZ}';
+                const ROLE_ID_MONEY_MONSTERS = '${process.env.ROLE_ID_MONEY_MONSTERS}';
+                const ROLE_ID_MONEYMONSTERS3D = '${process.env.ROLE_ID_MONEYMONSTERS3D}';
+                const ROLE_ID_AI_BITBOTS = '${process.env.ROLE_ID_AI_BITBOTS}';
+                const BUX_ROLES = [
+                    { threshold: 2500, roleId: '${process.env.ROLE_ID_2500_BUX}' },
+                    { threshold: 10000, roleId: '${process.env.ROLE_ID_10000_BUX}' },
+                    { threshold: 25000, roleId: '${process.env.ROLE_ID_25000_BUX}' },
+                    { threshold: 50000, roleId: '${process.env.ROLE_ID_50000_BUX}' }
+                ];
+
+                // Your existing JavaScript code
+            </script>
+        </body>
+        </html>
+    `);
+});
