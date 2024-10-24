@@ -10,11 +10,11 @@ import { Strategy as DiscordStrategy } from 'passport-discord';
 import session from 'express-session';
 import helmet from 'helmet';
 import crypto from 'crypto';
-import fckedCatzHashlist from './public/fcked_catz.json';
-import celebCatzHashlist from './public/celebcatz.json';
-import moneyMonstersHashlist from './public/money_monsters.json';
-import moneyMonsters3DHashlist from './public/moneymonsters3d.json';
-import aiBitBotsHashlist from './public/ai_bitbots.json';
+import fckedCatzHashlist from './hashlists/fcked_catz.json' assert { type: 'json' };
+import celebCatzHashlist from './hashlists/celebcatz.json' assert { type: 'json' };
+import moneyMonstersHashlist from './hashlists/money_monsters.json' assert { type: 'json' };
+import moneyMonsters3DHashlist from './hashlists/money_monsters3d.json' assert { type: 'json' };
+import aiBitBotsHashlist from './hashlists/ai_bitbots.json' assert { type: 'json' };
 
 dotenv.config();
 
@@ -640,3 +640,4 @@ const COLLECTION_HASHLISTS = {
   'moneymonsters3d': moneyMonsters3DHashlist,
   'ai_bitbots': aiBitBotsHashlist
 };
+
