@@ -147,7 +147,7 @@
             statusElement.textContent = 'You are logged in with Discord. Please connect your wallet.';
         }
 
-        function checkAuthStatus(retries = 3) {
+        function checkAuthStatus(retries = 5) {
             console.log('Checking auth status... Retries left:', retries);
             setTimeout(() => {
                 fetch('/auth/status', { 
@@ -161,7 +161,7 @@
                     .then(response => {
                         console.log('Auth status response:', response);
                         console.log('Auth status response headers:', [...response.headers.entries()]);
-                        return response.text(); // Get the raw response text
+                        return response.text();
                     })
                     .then(text => {
                         console.log('Raw response:', text);
@@ -189,7 +189,7 @@
                             checkAuthStatus(retries - 1);
                         }
                     });
-            }, 2000); // 2 seconds delay
+            }, 3000); // 3 seconds delay
         }
 
         // Check auth status when the page loads

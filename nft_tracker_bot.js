@@ -29,6 +29,8 @@ const app = express();
 // Express middleware and session setup
 app.use(cors());
 app.use(express.json());
+app.set('trust proxy', 1); // trust first proxy
+
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: true,
@@ -36,7 +38,8 @@ app.use(session({
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        sameSite: 'lax'
     }
 }));
 app.use(passport.initialize());
@@ -391,16 +394,13 @@ app.get('/auth/discord/callback',
         console.log('Discord auth callback. User:', JSON.stringify(req.user));
         console.log('Session before login:', JSON.stringify(req.session));
         
-        // Manually set the user in the session
-        req.session.user = req.user;
-        
-        req.session.save((err) => {
+        req.login(req.user, function(err) {
             if (err) {
-                console.error('Error saving session:', err);
+                console.error('Error logging in user:', err);
                 return res.redirect('/holder-verify?auth=failed');
             }
-            console.log('Session saved successfully');
-            console.log('Final session:', JSON.stringify(req.session));
+            console.log('User logged in successfully');
+            console.log('Session after login:', JSON.stringify(req.session));
             res.redirect('/holder-verify');
         });
     }
@@ -448,13 +448,13 @@ async function updateDiscordRoles(userId) {
 app.get('/auth/status', (req, res) => {
     console.log('Auth status requested. Full session:', JSON.stringify(req.session));
     console.log('Auth status requested. Session ID:', req.sessionID);
-    console.log('Auth status requested. Session user:', JSON.stringify(req.session.user));
+    console.log('Auth status requested. User:', JSON.stringify(req.user));
+    console.log('Is authenticated:', req.isAuthenticated());
     
-    const isAuthenticated = !!req.session.user;
     res.json({ 
-        authenticated: isAuthenticated,
-        username: isAuthenticated ? req.session.user.username : null,
-        id: isAuthenticated ? req.session.user.id : null
+        authenticated: req.isAuthenticated(),
+        username: req.user ? req.user.username : null,
+        id: req.user ? req.user.id : null
     });
 });
 
