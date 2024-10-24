@@ -149,7 +149,13 @@
 
         function checkAuthStatus() {
             console.log('Checking auth status...');
-            fetch('/auth/status', { credentials: 'include' })
+            fetch('/auth/status', { 
+                credentials: 'include',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            })
                 .then(response => {
                     console.log('Auth status response:', response);
                     if (!response.ok) {

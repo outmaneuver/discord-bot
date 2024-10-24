@@ -399,6 +399,7 @@ app.get('/auth/discord/callback',
                     console.error('Error saving session:', err);
                     return res.redirect('/holder-verify?auth=failed');
                 }
+                console.log('Session saved successfully');
                 res.redirect('/holder-verify');
             });
         });
