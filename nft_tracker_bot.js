@@ -389,45 +389,41 @@ app.get('/auth/discord/callback',
 
 // Update the verification endpoint
 app.post('/holder-verify/verify', async (req, res) => {
-    if (!req.user) {
-        return res.status(401).json({ success: false, error: 'Not authenticated with Discord' });
-    }
-
+  try {
     const { walletAddress } = req.body;
     
-    try {
-        const nfts = await getNFTsForOwner(walletAddress);
-        const heldCollections = new Set();
-
-        for (const nft of nfts) {
-            const mint = nft.account.data.parsed.info.mint;
-            // Fetch the NFT metadata to get the collection address
-            const metadata = await connection.getAccountInfo(new PublicKey(mint));
-            // You'll need to implement a function to parse the metadata and extract the collection address
-            const collectionAddress = parseMetadataForCollectionAddress(metadata);
-            
-            if (VERIFY_COLLECTION_ADDRESSES.includes(collectionAddress)) {
-                heldCollections.add(collectionAddress);
-            }
-        }
-
-        const roles = VERIFY_COLLECTION_ADDRESSES.map((address, index) => 
-            heldCollections.has(address) ? VERIFY_ROLE_IDS[index] : null
-        ).filter(role => role !== null);
-
-        // Update Discord roles
-        const guild = await client.guilds.fetch(process.env.GUILD_ID);
-        const member = await guild.members.fetch(req.user.id);
-        for (const roleId of roles) {
-            await member.roles.add(roleId);
-        }
-
-        res.json({ success: true, roles });
-    } catch (error) {
-        console.error('Error during verification:', error);
-        res.status(500).json({ success: false, error: 'Verification failed' });
+    if (!walletAddress) {
+      return res.status(400).json({ success: false, error: 'Wallet address is required' });
     }
+
+    // TODO: Implement your NFT ownership check here
+    const ownsRequiredNFTs = await checkNFTOwnership(walletAddress);
+
+    if (ownsRequiredNFTs) {
+      // TODO: Update Discord roles
+      const updatedRoles = await updateDiscordRoles(req.user.id);
+      
+      res.json({ success: true, roles: updatedRoles });
+    } else {
+      res.json({ success: false, error: 'Required NFTs not found in wallet' });
+    }
+  } catch (error) {
+    console.error('Error during wallet verification:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
 });
+
+async function checkNFTOwnership(walletAddress) {
+  // TODO: Implement NFT ownership check
+  // This is where you'd query the Solana blockchain or an indexer to check for the required NFTs
+  return true; // Placeholder
+}
+
+async function updateDiscordRoles(userId) {
+  // TODO: Implement Discord role update
+  // This is where you'd use the Discord API to update the user's roles
+  return ['Verified Holder']; // Placeholder
+}
 
 app.get('/auth/status', (req, res) => {
     res.json({ authenticated: req.isAuthenticated() });
