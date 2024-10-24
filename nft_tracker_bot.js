@@ -466,10 +466,17 @@ app.post('/holder-verify/verify', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Wallet address is required' });
     }
 
+    console.log(`Verifying wallet: ${walletAddress}`);
+
     const nftCounts = await checkNFTOwnership(walletAddress);
     const buxBalance = await getBUXBalance(walletAddress);
     const updatedRoles = await updateDiscordRoles(req.user.id, nftCounts, buxBalance);
     
+    console.log('Verification results:');
+    console.log('NFT Counts:', JSON.stringify(nftCounts, null, 2));
+    console.log('BUX Balance:', buxBalance);
+    console.log('Updated Roles:', JSON.stringify(updatedRoles, null, 2));
+
     res.json({ 
       success: true, 
       roles: updatedRoles,
@@ -484,18 +491,26 @@ app.post('/holder-verify/verify', async (req, res) => {
 
 async function checkNFTOwnership(walletAddress) {
   try {
+    console.log(`Checking NFT ownership for wallet: ${walletAddress}`);
     const nfts = await getNFTsForOwner(walletAddress);
+    console.log(`Total NFTs found: ${nfts.length}`);
+
     const collectionCounts = {};
 
     for (const nft of nfts) {
       const mint = nft.account.data.parsed.info.mint;
+      console.log(`Checking NFT with mint: ${mint}`);
       
       for (const [collection, hashlist] of Object.entries(COLLECTION_HASHLISTS)) {
         if (hashlist.includes(mint)) {
+          console.log(`Found NFT from collection: ${collection}`);
           collectionCounts[collection] = (collectionCounts[collection] || 0) + 1;
         }
       }
     }
+
+    console.log('NFT ownership summary:');
+    console.log(JSON.stringify(collectionCounts, null, 2));
 
     return collectionCounts;
   } catch (error) {
@@ -506,16 +521,26 @@ async function checkNFTOwnership(walletAddress) {
 
 async function getBUXBalance(walletAddress) {
   try {
+    console.log(`Checking BUX balance for wallet: ${walletAddress}`);
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
       new PublicKey(walletAddress),
       { programId: TOKEN_PROGRAM_ID }
     );
 
+    console.log(`Total token accounts found: ${tokenAccounts.value.length}`);
+
     const buxAccount = tokenAccounts.value.find(
       account => account.account.data.parsed.info.mint === BUX_TOKEN_MINT
     );
 
-    return buxAccount ? parseInt(buxAccount.account.data.parsed.info.tokenAmount.amount) : 0;
+    if (buxAccount) {
+      const balance = parseInt(buxAccount.account.data.parsed.info.tokenAmount.amount);
+      console.log(`BUX balance found: ${balance}`);
+      return balance;
+    } else {
+      console.log('No BUX balance found');
+      return 0;
+    }
   } catch (error) {
     console.error('Error getting BUX balance:', error);
     return 0;
