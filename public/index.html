@@ -61,12 +61,14 @@
             width: 100%;
             max-width: 400px; /* Increased from 300px */
         }
-        h1 {
+        h1, #welcomeMessage {
             color: #ffffff;
             margin-bottom: 1rem;
         }
-        #connectButton {
-            background-color: #4CAF50;
+        #welcomeMessage {
+            font-size: 1.2em;
+        }
+        button {
             border: none;
             color: white;
             padding: 15px 32px;
@@ -78,6 +80,17 @@
             cursor: pointer;
             border-radius: 5px;
             transition: background-color 0.3s;
+        }
+        #discordButton {
+            background-color: #7289DA; /* Discord color */
+            display: inline-block;
+        }
+        #discordButton:hover {
+            background-color: #5B73C4;
+        }
+        #connectButton {
+            background-color: #4CAF50;
+            display: none;
         }
         #connectButton:hover {
             background-color: #45a049;
@@ -93,31 +106,6 @@
             text-align: center;
             display: none; /* Initially hidden */
         }
-        #discordButton {
-            background-color: #7289DA; /* Discord color */
-            border: none;
-            color: white;
-            padding: 15px 32px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-        }
-        #discordButton:hover {
-            background-color: #5B73C4;
-        }
-        #connectButton {
-            display: none; /* Initially hidden */
-        }
-        #welcomeMessage {
-            color: #ffffff;
-            margin-bottom: 1rem;
-            font-size: 1.2em;
-        }
     </style>
 </head>
 <body>
@@ -128,9 +116,9 @@
     </div>
     <div class="container">
         <h1 id="pageTitle">Verify Your Wallet</h1>
-        <p id="welcomeMessage" style="display: none;"></p>
+        <p id="welcomeMessage"></p>
         <button id="discordButton">Sign in with Discord</button>
-        <button id="connectButton" style="display: none;">Connect Wallet</button>
+        <button id="connectButton">Connect Wallet</button>
         <p id="status"></p>
     </div>
     <div id="closeMessage">
@@ -150,17 +138,20 @@
             window.location.href = '/auth/discord';
         });
 
-        // Check if user is authenticated with Discord
+        function updateUIForAuthenticatedUser(username) {
+            discordButton.style.display = 'none';
+            connectButton.style.display = 'inline-block';
+            pageTitle.style.display = 'none';
+            welcomeMessage.textContent = `Hi ${username}!`;
+            welcomeMessage.style.display = 'block';
+            statusElement.textContent = 'You are logged in with Discord. Please connect your wallet.';
+        }
+
         fetch('/auth/status')
             .then(response => response.json())
             .then(data => {
-                if (data.authenticated) {
-                    discordButton.style.display = 'none';
-                    connectButton.style.display = 'inline-block';
-                    pageTitle.style.display = 'none';
-                    welcomeMessage.style.display = 'block';
-                    welcomeMessage.textContent = `Hi ${data.username}!`;
-                    statusElement.textContent = 'You are logged in with Discord. Please connect your wallet.';
+                if (data.authenticated && data.username) {
+                    updateUIForAuthenticatedUser(data.username);
                 }
             })
             .catch(error => {
@@ -191,7 +182,7 @@
                     statusElement.textContent = `Verification successful! Roles: ${data.roles.join(', ')}`;
                     closeMessageElement.style.display = 'block';
                 } else {
-                    statusElement.textContent = 'Verification failed. Please try again.';
+                    statusElement.textContent = `Verification failed: ${data.error || 'Please try again.'}`;
                 }
             } catch (err) {
                 statusElement.textContent = `Error: ${err.message}`;
