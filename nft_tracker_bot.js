@@ -64,7 +64,6 @@ const LISTINGS_CHANNEL_ID = process.env.LISTINGS_CHANNEL_ID;
 const COLLECTIONS = process.env.COLLECTIONS.split(',');
 const VERIFICATION_CHANNEL_ID = process.env.VERIFICATION_CHANNEL_ID;
 const SIGN_IN_URL = process.env.SIGN_IN_URL;
-const VERIFY_COLLECTION_ADDRESSES = process.env.VERIFY_COLLECTION_ADDRESSES.split(',');
 const VERIFY_ROLE_IDS = process.env.VERIFY_ROLE_IDS.split(',');
 
 const collectionNameMap = {
@@ -329,15 +328,15 @@ async function verifyHolder(message, walletAddress) {
       // You'll need to implement a function to parse the metadata and extract the collection address
       const collectionAddress = parseMetadataForCollectionAddress(metadata);
       
-      if (VERIFY_COLLECTION_ADDRESSES.includes(collectionAddress)) {
+      if (COLLECTION_ADDRESSES[collection]) {
         heldCollections.add(collectionAddress);
       }
     }
 
     if (heldCollections.size > 0) {
       const member = await message.guild.members.fetch(message.author.id);
-      for (let i = 0; i < VERIFY_COLLECTION_ADDRESSES.length; i++) {
-        if (heldCollections.has(VERIFY_COLLECTION_ADDRESSES[i])) {
+      for (let i = 0; i < VERIFY_ROLE_IDS.length; i++) {
+        if (heldCollections.has(VERIFY_ROLE_IDS[i])) {
           await member.roles.add(VERIFY_ROLE_IDS[i]);
         }
       }
@@ -471,7 +470,7 @@ async function checkNFTOwnership(walletAddress) {
       const collectionAddress = parseMetadataForCollectionAddress(metadata);
       
       for (const [collection, data] of Object.entries(COLLECTION_ROLES)) {
-        if (VERIFY_COLLECTION_ADDRESSES.includes(collectionAddress)) {
+        if (COLLECTION_ADDRESSES[collection] === collectionAddress) {
           collectionCounts[collection] = (collectionCounts[collection] || 0) + 1;
           if (!roles.includes(data.roleId)) {
             roles.push(data.roleId);
@@ -626,3 +625,11 @@ app.get('/holder-verify', (req, res) => {
         </html>
     `);
 });
+
+const COLLECTION_ADDRESSES = {
+  'fcked_catz': process.env.COLLECTION_ADDRESS_FCKED_CATZ,
+  'celebcatz': process.env.COLLECTION_ADDRESS_CELEBCATZ,
+  'money_monsters': process.env.COLLECTION_ADDRESS_MONEY_MONSTERS,
+  'moneymonsters3d': process.env.COLLECTION_ADDRESS_MONEYMONSTERS3D,
+  'ai_bitbots': process.env.COLLECTION_ADDRESS_AI_BITBOTS
+};
