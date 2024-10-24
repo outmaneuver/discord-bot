@@ -1,7 +1,8 @@
 import { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
-import { Connection, PublicKey, TOKEN_PROGRAM_ID } from '@solana/web3.js';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import express from 'express';
 import cors from 'cors';
 import passport from 'passport';
