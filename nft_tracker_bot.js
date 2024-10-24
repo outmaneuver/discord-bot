@@ -329,19 +329,30 @@ async function verifyHolder(message, walletAddress) {
     const heldCollections = new Set();
 
     for (const nft of nfts) {
-      const mint = nft.account.data.parsed.info.mint;
-      // Fetch the NFT metadata to get the collection address
-      const metadata = await connection.getAccountInfo(new PublicKey(mint));
-      // You'll need to implement a function to parse the metadata and extract the collection address
-      const collectionAddress = parseMetadataForCollectionAddress(metadata);
-      
-      if (COLLECTION_ADDRESSES[collection]) {
-        heldCollections.add(collectionAddress);
+      const mint = nft.account.data.parsed.info.mint.trim();
+      console.log(`Checking NFT with mint: ${mint}`);
+
+      if (moneyMonsters3DHashlist.includes(mint)) {
+        console.log(`Found Money Monsters 3D NFT: ${mint}`);
+        heldCollections.add('money_monsters3d');
       }
     }
 
     if (heldCollections.size > 0) {
-      const member = await message.guild.members.fetch(message.author.id);
+      const guild = message.guild;
+      if (!guild) {
+        console.error('Guild not found');
+        await message.reply('An error occurred: Guild not found.');
+        return;
+      }
+
+      const member = await guild.members.fetch(message.author.id);
+      if (!member) {
+        console.error('Member not found');
+        await message.reply('An error occurred: Member not found.');
+        return;
+      }
+
       for (const [collection, data] of Object.entries(COLLECTION_ROLES)) {
         if (heldCollections.has(collection)) {
           await member.roles.add(data.roleId);
@@ -656,3 +667,4 @@ const WHALE_ROLE_IDS = {
   'money_monsters3d': process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D,
   'ai_bitbots': process.env.WHALE_ROLE_ID_AI_BITBOTS
 };
+
