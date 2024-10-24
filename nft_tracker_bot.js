@@ -32,11 +32,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(session({
+    store: new RedisStore({ client: redisClient }),
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production', // Set to true if using HTTPS
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
@@ -82,12 +83,18 @@ passport.use(new DiscordStrategy({
     callbackURL: process.env.DISCORD_REDIRECT_URI,
     scope: ['identify', 'guilds.join']
 }, function(accessToken, refreshToken, profile, done) {
-    // We'll just pass the profile to the next middleware
-    done(null, profile);
+    // This function will be called after successful authentication
+    console.log('Discord authentication successful:', profile);
+    return done(null, profile);
 }));
 
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((obj, done) => done(null, obj));
+passport.serializeUser((user, done) => {
+    done(null, user);
+});
+
+passport.deserializeUser((obj, done) => {
+    done(null, obj);
+});
 
 async function getNFTsForOwner(ownerAddress) {
   const nfts = await connection.getParsedTokenAccountsByOwner(
@@ -383,8 +390,14 @@ app.get('/auth/discord', passport.authenticate('discord'));
 app.get('/auth/discord/callback', 
     passport.authenticate('discord', { failureRedirect: '/holder-verify' }),
     function(req, res) {
-        console.log('Discord auth successful. User:', req.user); // Add this line for debugging
-        res.redirect('/holder-verify');
+        console.log('Discord auth callback. User:', req.user);
+        if (req.user) {
+            console.log('Authentication successful. Redirecting to /holder-verify');
+            res.redirect('/holder-verify');
+        } else {
+            console.log('Authentication failed. User object is null.');
+            res.redirect('/holder-verify?auth=failed');
+        }
     }
 );
 
@@ -428,7 +441,8 @@ async function updateDiscordRoles(userId) {
 
 // Add this new route to provide authentication status and username
 app.get('/auth/status', (req, res) => {
-    console.log('Auth status requested. User:', req.user); // Add this line for debugging
+    console.log('Auth status requested. Session:', req.session);
+    console.log('Auth status requested. User:', req.user);
     res.json({ 
         authenticated: req.isAuthenticated(),
         username: req.user ? req.user.username : null,

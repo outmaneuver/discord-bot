@@ -148,13 +148,19 @@
         }
 
         function checkAuthStatus() {
+            console.log('Checking auth status...');
             fetch('/auth/status')
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Auth status response:', response);
+                    return response.json();
+                })
                 .then(data => {
-                    console.log('Auth status:', data); // Add this line for debugging
+                    console.log('Auth status data:', data);
                     if (data.authenticated && data.username) {
+                        console.log('User authenticated:', data.username);
                         updateUIForAuthenticatedUser(data.username);
                     } else {
+                        console.log('User not authenticated');
                         discordButton.style.display = 'inline-block';
                         connectButton.style.display = 'none';
                         pageTitle.style.display = 'block';
@@ -168,10 +174,8 @@
         }
 
         // Check auth status when the page loads
+        console.log('Page loaded, checking auth status...');
         checkAuthStatus();
-
-        // Recheck auth status every 5 seconds (optional, remove if not needed)
-        setInterval(checkAuthStatus, 5000);
 
         connectButton.addEventListener('click', async () => {
             if (!window.solana || !window.solana.isPhantom) {
