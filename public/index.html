@@ -218,11 +218,11 @@
                 if (data.success) {
                     const verifiedAssets = `
                         Verified assets:
-                        Fcked Catz - ${data.roles.includes(process.env.ROLE_ID_FCKED_CATZ) ? 'Yes' : 'No'}
-                        Celeb Catz - ${data.roles.includes(process.env.ROLE_ID_CELEBCATZ) ? 'Yes' : 'No'}
-                        Money Monsters - ${data.roles.includes(process.env.ROLE_ID_MONEY_MONSTERS) ? 'Yes' : 'No'}
-                        Money Monsters 3D - ${data.roles.includes(process.env.ROLE_ID_MONEYMONSTERS3D) ? 'Yes' : 'No'}
-                        A.I. BitBots - ${data.roles.includes(process.env.ROLE_ID_AI_BITBOTS) ? 'Yes' : 'No'}
+                        Fcked Catz - ${data.roles.includes(ROLE_ID_FCKED_CATZ) ? 'Yes' : 'No'}
+                        Celeb Catz - ${data.roles.includes(ROLE_ID_CELEBCATZ) ? 'Yes' : 'No'}
+                        Money Monsters - ${data.roles.includes(ROLE_ID_MONEY_MONSTERS) ? 'Yes' : 'No'}
+                        Money Monsters 3D - ${data.roles.includes(ROLE_ID_MONEYMONSTERS3D) ? 'Yes' : 'No'}
+                        A.I. BitBots - ${data.roles.includes(ROLE_ID_AI_BITBOTS) ? 'Yes' : 'No'}
                         $BUX - ${data.roles.some(role => BUX_ROLES.map(r => r.roleId).includes(role)) ? 'Yes' : 'No'}
                     `;
                     statusElement.textContent = verifiedAssets;
