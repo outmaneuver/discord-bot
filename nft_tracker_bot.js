@@ -7,8 +7,6 @@ import cors from 'cors';
 import passport from 'passport';
 import { Strategy as DiscordStrategy } from 'passport-discord';
 import session from 'express-session';
-import { createClient } from 'redis';
-import RedisStore from "connect-redis"
 
 dotenv.config();
 
@@ -32,13 +30,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(session({
-    store: new RedisStore({ client: redisClient }),
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production', // Set to true if using HTTPS
-        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
@@ -83,7 +79,6 @@ passport.use(new DiscordStrategy({
     callbackURL: process.env.DISCORD_REDIRECT_URI,
     scope: ['identify', 'guilds.join']
 }, function(accessToken, refreshToken, profile, done) {
-    // This function will be called after successful authentication
     console.log('Discord authentication successful:', profile);
     return done(null, profile);
 }));
@@ -464,5 +459,11 @@ function parseMetadataForCollectionAddress(metadata) {
 // Add this near the top of your file, after the imports
 process.on('unhandledRejection', (error) => {
   console.error('Unhandled promise rejection:', error);
+});
+
+// Add this near the end of your file, before starting the server
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).send('Something broke!');
 });
 
