@@ -327,6 +327,7 @@ async function verifyHolder(message, walletAddress) {
     const nfts = await getNFTsForOwner(publicKey.toString());
 
     const heldCollections = new Set();
+    let buxBalance = 0;
 
     for (const nft of nfts) {
       const mint = nft.account.data.parsed.info.mint.trim();
@@ -336,35 +337,27 @@ async function verifyHolder(message, walletAddress) {
         console.log(`Found Money Monsters 3D NFT: ${mint}`);
         heldCollections.add('money_monsters3d');
       }
+      // Add similar checks for other collections
     }
 
-    if (heldCollections.size > 0) {
-      const guild = message.guild;
-      if (!guild) {
-        console.error('Guild not found');
-        await message.reply('An error occurred: Guild not found.');
-        return;
-      }
+    // Example logic to check $BUX balance
+    // Replace with actual logic to fetch $BUX balance
+    buxBalance = await getBuxBalance(walletAddress);
+    console.log(`$BUX Balance: ${buxBalance}`);
 
-      const member = await guild.members.fetch(message.author.id);
-      if (!member) {
-        console.error('Member not found');
-        await message.reply('An error occurred: Member not found.');
-        return;
-      }
+    // Convert balance to correct unit if necessary
+    const formattedBuxBalance = buxBalance / 1e9; // Assuming balance is in smallest unit
 
-      for (const [collection, data] of Object.entries(COLLECTION_ROLES)) {
-        if (heldCollections.has(collection)) {
-          await member.roles.add(data.roleId);
-          if (data.whaleRoleId && heldCollections.size >= data.whaleThreshold) {
-            await member.roles.add(data.whaleRoleId);
-          }
-        }
-      }
-      await message.reply(`Verification successful! You've been granted roles for your NFT holdings.`);
-    } else {
-      await message.reply(`No NFTs from our collections found in this wallet.`);
-    }
+    let response = `Hi ${message.author.username}!\n\nVERIFIED ASSETS:\n`;
+    response += `Fcked Catz - ${heldCollections.has('fcked_catz') ? 1 : 0}\n`;
+    response += `Celeb Catz - ${heldCollections.has('celebcatz') ? 1 : 0}\n`;
+    response += `Money Monsters - ${heldCollections.has('money_monsters') ? 1 : 0}\n`;
+    response += `Money Monsters 3D - ${heldCollections.has('money_monsters3d') ? 1 : 0}\n`;
+    response += `A.I. BitBots - ${heldCollections.has('ai_bitbots') ? 1 : 0}\n`;
+    response += `$BUX - ${formattedBuxBalance}\n\n`;
+    response += `Potential daily staking yield = 0 $BUX`;
+
+    await message.reply(response);
   } catch (error) {
     console.error('Error during verification:', error);
     await message.reply('An error occurred during verification. Please try again later.');
