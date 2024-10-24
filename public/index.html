@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wallet Verification</title>
-    <script src="/holder-verify/solana-web3.js"></script>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="/holder-verify/favicon.ico">
     <style>
@@ -218,12 +218,12 @@
                 if (data.success) {
                     const verifiedAssets = `
                         Verified assets:
-                        Fcked Catz - ${data.roles.includes(ROLE_ID_FCKED_CATZ) ? 'Yes' : 'No'}
-                        Celeb Catz - ${data.roles.includes(ROLE_ID_CELEBCATZ) ? 'Yes' : 'No'}
-                        Money Monsters - ${data.roles.includes(ROLE_ID_MONEY_MONSTERS) ? 'Yes' : 'No'}
-                        Money Monsters 3D - ${data.roles.includes(ROLE_ID_MONEYMONSTERS3D) ? 'Yes' : 'No'}
-                        A.I. BitBots - ${data.roles.includes(ROLE_ID_AI_BITBOTS) ? 'Yes' : 'No'}
-                        $BUX - ${data.roles.some(role => BUX_ROLES.map(r => r.roleId).includes(role)) ? 'Yes' : 'No'}
+                        Fcked Catz - ${data.nftCounts['fcked_catz'] || 0}
+                        Celeb Catz - ${data.nftCounts['celebcatz'] || 0}
+                        Money Monsters - ${data.nftCounts['money_monsters'] || 0}
+                        Money Monsters 3D - ${data.nftCounts['moneymonsters3d'] || 0}
+                        A.I. BitBots - ${data.nftCounts['ai_bitbots'] || 0}
+                        $BUX - ${data.buxBalance}
                     `;
                     statusElement.textContent = verifiedAssets;
                     closeMessageElement.style.display = 'block';

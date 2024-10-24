@@ -8,6 +8,8 @@ import cors from 'cors';
 import passport from 'passport';
 import { Strategy as DiscordStrategy } from 'passport-discord';
 import session from 'express-session';
+import helmet from 'helmet';
+import crypto from 'crypto';
 
 dotenv.config();
 
@@ -32,6 +34,20 @@ app.use(session({
 }));
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Add this before your route definitions
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      connectSrc: ["'self'", "https://api.mainnet-beta.solana.com"],
+    },
+  },
+}));
 
 // Add this near the top of the file, after the imports and before the client initialization
 const lastKnownState = {};
@@ -438,10 +454,16 @@ app.post('/holder-verify/verify', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Wallet address is required' });
     }
 
-    const qualifyingRoles = await checkNFTOwnership(walletAddress);
-    const updatedRoles = await updateDiscordRoles(req.user.id, qualifyingRoles);
+    const nftCounts = await checkNFTOwnership(walletAddress);
+    const buxBalance = await getBUXBalance(walletAddress);
+    const updatedRoles = await updateDiscordRoles(req.user.id, nftCounts, buxBalance);
     
-    res.json({ success: true, roles: updatedRoles });
+    res.json({ 
+      success: true, 
+      roles: updatedRoles,
+      nftCounts,
+      buxBalance
+    });
   } catch (error) {
     console.error('Error during wallet verification:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
@@ -565,6 +587,9 @@ app.use((err, req, res, next) => {
 });
 
 app.get('/holder-verify', (req, res) => {
+    const nonce = crypto.randomBytes(16).toString('base64');
+    res.setHeader('Content-Security-Policy', `script-src 'self' 'nonce-${nonce}' https://unpkg.com;`);
+    
     res.send(`
         <!DOCTYPE html>
         <html lang="en">
@@ -572,7 +597,7 @@ app.get('/holder-verify', (req, res) => {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Wallet Verification</title>
-            <script src="/holder-verify/solana-web3.js"></script>
+            <script nonce="${nonce}" src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
             <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@800&display=swap" rel="stylesheet">
             <link rel="icon" type="image/x-icon" href="/holder-verify/favicon.ico">
             <style>
@@ -595,18 +620,13 @@ app.get('/holder-verify', (req, res) => {
                 Please allow a few minutes for your discord roles to be updated
             </div>
 
-            <script>
+            <script nonce="${nonce}">
                 const ROLE_ID_FCKED_CATZ = '${process.env.ROLE_ID_FCKED_CATZ}';
                 const ROLE_ID_CELEBCATZ = '${process.env.ROLE_ID_CELEBCATZ}';
                 const ROLE_ID_MONEY_MONSTERS = '${process.env.ROLE_ID_MONEY_MONSTERS}';
                 const ROLE_ID_MONEYMONSTERS3D = '${process.env.ROLE_ID_MONEYMONSTERS3D}';
                 const ROLE_ID_AI_BITBOTS = '${process.env.ROLE_ID_AI_BITBOTS}';
-                const BUX_ROLES = [
-                    { threshold: 2500, roleId: '${process.env.ROLE_ID_2500_BUX}' },
-                    { threshold: 10000, roleId: '${process.env.ROLE_ID_10000_BUX}' },
-                    { threshold: 25000, roleId: '${process.env.ROLE_ID_25000_BUX}' },
-                    { threshold: 50000, roleId: '${process.env.ROLE_ID_50000_BUX}' }
-                ];
+                const BUX_ROLES = ${JSON.stringify(BUX_ROLES)};
 
                 // Your existing JavaScript code
             </script>
