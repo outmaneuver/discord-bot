@@ -470,16 +470,16 @@ app.post('/holder-verify/verify', async (req, res) => {
 
     const nftCounts = await checkNFTOwnership(walletAddress);
     const buxBalance = await getBUXBalance(walletAddress);
-    const updatedRoles = await updateDiscordRoles(req.user.id, nftCounts, buxBalance);
+    const rolesUpdated = await updateDiscordRoles(req.user.id, nftCounts);
     
     console.log('Verification results:');
     console.log('NFT Counts:', JSON.stringify(nftCounts, null, 2));
     console.log('BUX Balance:', buxBalance);
-    console.log('Updated Roles:', JSON.stringify(updatedRoles, null, 2));
+    console.log('Roles Updated:', rolesUpdated);
 
     res.json({ 
       success: true, 
-      roles: updatedRoles,
+      rolesUpdated,
       nftCounts,
       buxBalance
     });
@@ -555,35 +555,44 @@ async function updateDiscordRoles(userId, heldCollections) {
       await new Promise(resolve => client.once('ready', resolve));
     }
 
+    console.log('Discord client is ready. Fetching guild...');
     const guild = await client.guilds.fetch(GUILD_ID);
     if (!guild) {
       console.error('Guild not found');
       return;
     }
 
+    console.log('Guild fetched. Fetching member...');
     const member = await guild.members.fetch(userId);
     if (!member) {
       console.error('Member not found');
       return;
     }
 
+    console.log('Member fetched. Updating roles...');
     for (const [collection, roleId] of Object.entries(ROLE_IDS)) {
       if (heldCollections.has(collection)) {
         await member.roles.add(roleId);
+        console.log(`Added role ${roleId} for collection ${collection}`);
         if (WHALE_ROLE_IDS[collection] && heldCollections.size >= process.env[`WHALE_THRESHOLD_${collection.toUpperCase()}`]) {
           await member.roles.add(WHALE_ROLE_IDS[collection]);
+          console.log(`Added whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
         }
       } else {
         await member.roles.remove(roleId);
+        console.log(`Removed role ${roleId} for collection ${collection}`);
         if (WHALE_ROLE_IDS[collection]) {
           await member.roles.remove(WHALE_ROLE_IDS[collection]);
+          console.log(`Removed whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
         }
       }
     }
 
     console.log(`Updated roles for user ${userId}`);
+    return true;
   } catch (error) {
     console.error('Error updating Discord roles:', error);
+    return false;
   }
 }
 
@@ -604,7 +613,12 @@ app.get('/auth/status', (req, res) => {
 const PORT = process.env.PORT || 5500;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.DISCORD_TOKEN).then(() => {
+  console.log('Discord client logged in successfully');
+}).catch(error => {
+  console.error('Error logging in Discord client:', error);
+});
+
 // You'll need to implement this function to parse the metadata
 function parseMetadataForCollectionAddress(metadata) {
   // This implementation depends on the structure of your NFT metadata
