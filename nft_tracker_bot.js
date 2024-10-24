@@ -32,7 +32,7 @@ app.use(express.json());
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     cookie: {
         secure: process.env.NODE_ENV === 'production', // Only use secure cookies in production
         httpOnly: true,
@@ -445,7 +445,7 @@ app.get('/auth/status', (req, res) => {
     res.json({ 
         authenticated: req.isAuthenticated(),
         username: req.user ? req.user.username : null,
-        id: req.user ? req.id : null
+        id: req.user ? req.user.id : null
     });
 });
 
