@@ -426,7 +426,10 @@ async function updateDiscordRoles(userId) {
 }
 
 app.get('/auth/status', (req, res) => {
-    res.json({ authenticated: req.isAuthenticated() });
+    res.json({ 
+        authenticated: req.isAuthenticated(),
+        username: req.user ? req.user.username : null
+    });
 });
 
 const PORT = process.env.PORT || 5500;

@@ -113,6 +113,11 @@
         #connectButton {
             display: none; /* Initially hidden */
         }
+        #welcomeMessage {
+            color: #ffffff;
+            margin-bottom: 1rem;
+            font-size: 1.2em;
+        }
     </style>
 </head>
 <body>
@@ -122,9 +127,10 @@
         <div class="logo-text">BUX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DAO</div>
     </div>
     <div class="container">
-        <h1>Verify Your Wallet</h1>
+        <h1 id="pageTitle">Verify Your Wallet</h1>
+        <p id="welcomeMessage" style="display: none;"></p>
         <button id="discordButton">Sign in with Discord</button>
-        <button id="connectButton">Connect Wallet</button>
+        <button id="connectButton" style="display: none;">Connect Wallet</button>
         <p id="status"></p>
     </div>
     <div id="closeMessage">
@@ -137,6 +143,8 @@
         const connectButton = document.getElementById('connectButton');
         const statusElement = document.getElementById('status');
         const closeMessageElement = document.getElementById('closeMessage');
+        const pageTitle = document.getElementById('pageTitle');
+        const welcomeMessage = document.getElementById('welcomeMessage');
 
         discordButton.addEventListener('click', () => {
             window.location.href = '/auth/discord';
@@ -149,6 +157,10 @@
                 if (data.authenticated) {
                     discordButton.style.display = 'none';
                     connectButton.style.display = 'inline-block';
+                    pageTitle.style.display = 'none';
+                    welcomeMessage.style.display = 'block';
+                    welcomeMessage.textContent = `Hi ${data.username}!`;
+                    statusElement.textContent = 'You are logged in with Discord. Please connect your wallet.';
                 }
             })
             .catch(error => {
@@ -177,7 +189,7 @@
                 const data = await response.json();
                 if (data.success) {
                     statusElement.textContent = `Verification successful! Roles: ${data.roles.join(', ')}`;
-                    closeMessageElement.style.display = 'block'; // Show the close message
+                    closeMessageElement.style.display = 'block';
                 } else {
                     statusElement.textContent = 'Verification failed. Please try again.';
                 }
