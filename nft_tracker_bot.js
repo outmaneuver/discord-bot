@@ -445,7 +445,7 @@ async function updateDiscordRoles(userId) {
 
 // Add this new route to provide authentication status and username
 app.get('/auth/status', (req, res) => {
-    console.log('Auth status requested. Session:', req.session);
+    console.log('Auth status requested. Session:', JSON.stringify(req.session));
     console.log('Auth status requested. User:', req.user);
     console.log('Is authenticated:', req.isAuthenticated());
     res.json({ 
