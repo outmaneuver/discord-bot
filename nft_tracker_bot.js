@@ -36,8 +36,7 @@ app.use(session({
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: 'lax'
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
 app.use(passport.initialize());
@@ -389,24 +388,20 @@ app.get('/auth/discord', passport.authenticate('discord'));
 app.get('/auth/discord/callback', 
     passport.authenticate('discord', { failureRedirect: '/holder-verify' }),
     function(req, res) {
-        console.log('Discord auth callback. User:', req.user);
+        console.log('Discord auth callback. User:', JSON.stringify(req.user));
         console.log('Session before login:', JSON.stringify(req.session));
-        req.login(req.user, function(err) {
+        
+        // Manually set the user in the session
+        req.session.user = req.user;
+        
+        req.session.save((err) => {
             if (err) {
-                console.error('Error logging in user:', err);
+                console.error('Error saving session:', err);
                 return res.redirect('/holder-verify?auth=failed');
             }
-            console.log('User logged in successfully');
-            console.log('Session after login:', JSON.stringify(req.session));
-            req.session.save((err) => {
-                if (err) {
-                    console.error('Error saving session:', err);
-                    return res.redirect('/holder-verify?auth=failed');
-                }
-                console.log('Session saved successfully');
-                console.log('Final session:', JSON.stringify(req.session));
-                res.redirect('/holder-verify');
-            });
+            console.log('Session saved successfully');
+            console.log('Final session:', JSON.stringify(req.session));
+            res.redirect('/holder-verify');
         });
     }
 );
@@ -453,12 +448,13 @@ async function updateDiscordRoles(userId) {
 app.get('/auth/status', (req, res) => {
     console.log('Auth status requested. Full session:', JSON.stringify(req.session));
     console.log('Auth status requested. Session ID:', req.sessionID);
-    console.log('Auth status requested. User:', req.user);
-    console.log('Is authenticated:', req.isAuthenticated());
+    console.log('Auth status requested. Session user:', JSON.stringify(req.session.user));
+    
+    const isAuthenticated = !!req.session.user;
     res.json({ 
-        authenticated: req.isAuthenticated(),
-        username: req.user ? req.user.username : null,
-        id: req.user ? req.user.id : null
+        authenticated: isAuthenticated,
+        username: isAuthenticated ? req.session.user.username : null,
+        id: isAuthenticated ? req.session.user.id : null
     });
 });
 

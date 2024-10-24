@@ -161,12 +161,11 @@
                     .then(response => {
                         console.log('Auth status response:', response);
                         console.log('Auth status response headers:', [...response.headers.entries()]);
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
+                        return response.text(); // Get the raw response text
                     })
-                    .then(data => {
+                    .then(text => {
+                        console.log('Raw response:', text);
+                        const data = JSON.parse(text);
                         console.log('Auth status data:', data);
                         if (data.authenticated && data.username) {
                             console.log('User authenticated:', data.username);
