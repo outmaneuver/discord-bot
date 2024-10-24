@@ -344,13 +344,11 @@ client.on('interactionCreate', async interaction => {
 
   if (interaction.customId === 'verify') {
     try {
-      // Check if the interaction has already been replied to or deferred
       if (interaction.replied || interaction.deferred) {
         console.log('Interaction already handled, skipping.');
         return;
       }
 
-      // Defer the reply immediately
       await interaction.deferReply({ ephemeral: true });
       
       const replyContent = `Please click the link below to sign in and verify your wallet:\n${process.env.SIGN_IN_URL}`;
@@ -358,7 +356,6 @@ client.on('interactionCreate', async interaction => {
     } catch (error) {
       console.error('Error handling interaction:', error);
       
-      // If we haven't replied yet, try to send an error message
       if (!interaction.replied && !interaction.deferred) {
         try {
           await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
@@ -366,7 +363,6 @@ client.on('interactionCreate', async interaction => {
           console.error('Error sending error reply:', replyError);
         }
       } else if (interaction.deferred) {
-        // If we've deferred but not replied, try to edit the reply with an error message
         try {
           await interaction.editReply({ content: 'An error occurred while processing your request.' });
         } catch (editError) {
