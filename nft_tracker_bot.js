@@ -415,11 +415,9 @@ app.post('/holder-verify/verify', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Wallet address is required' });
     }
 
-    // TODO: Implement your NFT ownership check here
     const ownsRequiredNFTs = await checkNFTOwnership(walletAddress);
 
     if (ownsRequiredNFTs) {
-      // TODO: Update Discord roles
       const updatedRoles = await updateDiscordRoles(req.user.id);
       
       res.json({ success: true, roles: updatedRoles });
@@ -433,15 +431,32 @@ app.post('/holder-verify/verify', async (req, res) => {
 });
 
 async function checkNFTOwnership(walletAddress) {
-  // TODO: Implement NFT ownership check
-  // This is where you'd query the Solana blockchain or an indexer to check for the required NFTs
-  return true; // Placeholder
+  try {
+    const nfts = await getNFTsForOwner(walletAddress);
+    for (const nft of nfts) {
+      const metadata = await connection.getParsedAccountInfo(new PublicKey(nft.account.data.parsed.info.mint));
+      const collectionAddress = parseMetadataForCollectionAddress(metadata);
+      if (VERIFY_COLLECTION_ADDRESSES.includes(collectionAddress)) {
+        return true;
+      }
+    }
+    return false;
+  } catch (error) {
+    console.error('Error checking NFT ownership:', error);
+    return false;
+  }
 }
 
 async function updateDiscordRoles(userId) {
-  // TODO: Implement Discord role update
-  // This is where you'd use the Discord API to update the user's roles
-  return ['Verified Holder']; // Placeholder
+  try {
+    const guild = await client.guilds.fetch(process.env.GUILD_ID);
+    const member = await guild.members.fetch(userId);
+    await member.roles.add(VERIFY_ROLE_IDS);
+    return VERIFY_ROLE_IDS.map(roleId => guild.roles.cache.get(roleId).name);
+  } catch (error) {
+    console.error('Error updating Discord roles:', error);
+    return [];
+  }
 }
 
 // Add this new route to provide authentication status and username
@@ -464,9 +479,12 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 client.login(process.env.DISCORD_TOKEN);
 // You'll need to implement this function to parse the metadata
 function parseMetadataForCollectionAddress(metadata) {
-  // Implementation depends on the structure of your NFT metadata
-  // This is a placeholder function
-  return "placeholder_collection_address";
+  // This implementation depends on the structure of your NFT metadata
+  // You may need to adjust this based on how your NFTs store collection information
+  if (metadata && metadata.value && metadata.value.data && metadata.value.data.creators) {
+    return metadata.value.data.creators[0].address;
+  }
+  return null;
 }
 
 // Add this near the top of your file, after the imports
