@@ -149,39 +149,41 @@
 
         function checkAuthStatus() {
             console.log('Checking auth status...');
-            fetch('/auth/status', { 
-                credentials: 'include',
-                cache: 'no-store',
-                headers: {
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache'
-                }
-            })
-                .then(response => {
-                    console.log('Auth status response:', response);
-                    console.log('Auth status response headers:', [...response.headers.entries()]);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('Auth status data:', data);
-                    if (data.authenticated && data.username) {
-                        console.log('User authenticated:', data.username);
-                        updateUIForAuthenticatedUser(data.username);
-                    } else {
-                        console.log('User not authenticated');
-                        discordButton.style.display = 'inline-block';
-                        connectButton.style.display = 'none';
-                        pageTitle.style.display = 'block';
-                        welcomeMessage.style.display = 'none';
+            setTimeout(() => {
+                fetch('/auth/status', { 
+                    credentials: 'include',
+                    cache: 'no-store',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
                     }
                 })
-                .catch(error => {
-                    console.error('Error checking auth status:', error);
-                    statusElement.textContent = 'Error checking authentication status';
-                });
+                    .then(response => {
+                        console.log('Auth status response:', response);
+                        console.log('Auth status response headers:', [...response.headers.entries()]);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Auth status data:', data);
+                        if (data.authenticated && data.username) {
+                            console.log('User authenticated:', data.username);
+                            updateUIForAuthenticatedUser(data.username);
+                        } else {
+                            console.log('User not authenticated');
+                            discordButton.style.display = 'inline-block';
+                            connectButton.style.display = 'none';
+                            pageTitle.style.display = 'block';
+                            welcomeMessage.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking auth status:', error);
+                        statusElement.textContent = 'Error checking authentication status';
+                    });
+            }, 1000); // 1 second delay
         }
 
         // Check auth status when the page loads

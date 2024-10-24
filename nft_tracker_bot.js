@@ -390,14 +390,12 @@ app.get('/auth/discord/callback',
     passport.authenticate('discord', { failureRedirect: '/holder-verify' }),
     function(req, res) {
         console.log('Discord auth callback. User:', req.user);
-        console.log('Session before login:', req.session);
-        req.session.passport = { user: req.user };
-        req.session.save((err) => {
+        req.login(req.user, function(err) {
             if (err) {
-                console.error('Error saving session:', err);
+                console.error('Error logging in user:', err);
                 return res.redirect('/holder-verify?auth=failed');
             }
-            console.log('Session saved successfully. Final session:', req.session);
+            console.log('User logged in successfully');
             res.redirect('/holder-verify');
         });
     }
@@ -443,15 +441,14 @@ async function updateDiscordRoles(userId) {
 
 // Add this new route to provide authentication status and username
 app.get('/auth/status', (req, res) => {
-    console.log('Auth status requested. Full session:', req.session);
+    console.log('Auth status requested. Full session:', JSON.stringify(req.session));
     console.log('Auth status requested. Session ID:', req.sessionID);
-    console.log('Auth status requested. Passport:', req.session.passport);
-    const isAuthenticated = !!req.session.passport && !!req.session.passport.user;
-    const user = isAuthenticated ? req.session.passport.user : null;
+    console.log('Auth status requested. User:', req.user);
+    console.log('Is authenticated:', req.isAuthenticated());
     res.json({ 
-        authenticated: isAuthenticated,
-        username: user ? user.username : null,
-        id: user ? user.id : null
+        authenticated: req.isAuthenticated(),
+        username: req.user ? req.user.username : null,
+        id: req.user ? req.user.id : null
     });
 });
 
