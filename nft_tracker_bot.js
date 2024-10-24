@@ -32,9 +32,10 @@ app.use(express.json());
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
     cookie: {
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production', // Only use secure cookies in production
+        httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
@@ -79,8 +80,10 @@ passport.use(new DiscordStrategy({
     callbackURL: process.env.DISCORD_REDIRECT_URI,
     scope: ['identify', 'guilds.join']
 }, function(accessToken, refreshToken, profile, done) {
-    console.log('Discord authentication successful:', profile);
-    return done(null, profile);
+    // Save the user profile information in session
+    process.nextTick(function() {
+        return done(null, profile);
+    });
 }));
 
 passport.serializeUser((user, done) => {
@@ -386,13 +389,13 @@ app.get('/auth/discord/callback',
     passport.authenticate('discord', { failureRedirect: '/holder-verify' }),
     function(req, res) {
         console.log('Discord auth callback. User:', req.user);
-        if (req.user) {
-            console.log('Authentication successful. Redirecting to /holder-verify');
+        req.session.save((err) => {
+            if (err) {
+                console.error('Error saving session:', err);
+                return res.redirect('/holder-verify?auth=failed');
+            }
             res.redirect('/holder-verify');
-        } else {
-            console.log('Authentication failed. User object is null.');
-            res.redirect('/holder-verify?auth=failed');
-        }
+        });
     }
 );
 
@@ -438,10 +441,11 @@ async function updateDiscordRoles(userId) {
 app.get('/auth/status', (req, res) => {
     console.log('Auth status requested. Session:', req.session);
     console.log('Auth status requested. User:', req.user);
+    console.log('Is authenticated:', req.isAuthenticated());
     res.json({ 
         authenticated: req.isAuthenticated(),
         username: req.user ? req.user.username : null,
-        id: req.user ? req.user.id : null
+        id: req.user ? req.id : null
     });
 });
 
