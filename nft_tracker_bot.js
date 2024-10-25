@@ -520,7 +520,7 @@ async function checkNFTOwnership(walletAddress) {
     const nfts = await getNFTsForOwner(walletAddress);
     console.log(`Total NFTs found: ${nfts.length}`);
 
-    const collectionCounts = {};
+    const collectionNFTs = {};
 
     for (const nft of nfts) {
       const mint = nft.account.data.parsed.info.mint;
@@ -529,15 +529,18 @@ async function checkNFTOwnership(walletAddress) {
       for (const [collection, hashlist] of Object.entries(COLLECTION_HASHLISTS)) {
         if (hashlist.includes(mint)) {
           console.log(`Found NFT from collection: ${collection}`);
-          collectionCounts[collection] = (collectionCounts[collection] || 0) + 1;
+          if (!collectionNFTs[collection]) {
+            collectionNFTs[collection] = [];
+          }
+          collectionNFTs[collection].push(mint);
         }
       }
     }
 
     console.log('NFT ownership summary:');
-    console.log(JSON.stringify(collectionCounts, null, 2));
+    console.log(JSON.stringify(collectionNFTs, null, 2));
 
-    return collectionCounts;
+    return collectionNFTs;
   } catch (error) {
     console.error('Error checking NFT ownership:', error);
     return {};
@@ -607,13 +610,13 @@ async function updateDiscordRoles(userId, heldCollections, buxBalance, walletAdd
     console.log('Member fetched. Updating roles...');
     for (const [collection, roleId] of Object.entries(ROLE_IDS)) {
       try {
-        if (heldCollections[collection] && heldCollections[collection] > 0) {
+        if (heldCollections[collection] && heldCollections[collection].length > 0) {
           console.log(`Adding role ${roleId} for collection ${collection}`);
           await member.roles.add(roleId);
           console.log(`Added role ${roleId} for collection ${collection}`);
           
           // Check for whale role
-          if (WHALE_ROLE_IDS[collection] && heldCollections[collection] >= process.env[`WHALE_THRESHOLD_${collection.toUpperCase()}`]) {
+          if (WHALE_ROLE_IDS[collection] && heldCollections[collection].length >= process.env[`WHALE_THRESHOLD_${collection.toUpperCase()}`]) {
             console.log(`Adding whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
             await member.roles.add(WHALE_ROLE_IDS[collection]);
             console.log(`Added whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
