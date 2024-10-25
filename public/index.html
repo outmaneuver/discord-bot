@@ -242,7 +242,7 @@
                     console.log('Full verification response:', data);
                     if (data.success) {
                         const lines = data.formattedResponse.split('\n');
-                        lines.splice(2, 1); // Remove the second "Hi username!" line
+                        lines.splice(1, 2); // Remove the second "Hi username!" line and the empty line after it
                         lines[1] = '<span class="yellow-text">VERIFIED ASSETS:</span>'; // Make "VERIFIED ASSETS:" yellow
                         // Make "Potential daily staking yield" line yellow
                         const yieldIndex = lines.findIndex(line => line.startsWith('Potential daily staking yield'));
