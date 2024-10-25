@@ -434,10 +434,16 @@ client.on('interactionCreate', async interaction => {
     const replyContent = `Please click the link below to sign in and verify your new wallet:\n${process.env.SIGN_IN_URL}`;
     await interaction.update({ content: replyContent, components: [] });
   } else if (interaction.customId === 'use_existing_wallet') {
-    // Here you can implement logic to re-verify with an existing wallet
-    // For now, we'll just acknowledge the interaction
-    await interaction.update({ content: 'Please choose a wallet to re-verify with:', components: [] });
-    // You might want to add buttons for each existing wallet here
+    const userId = interaction.user.id;
+    const connectedWallets = getUserWallets(userId);
+    const walletList = Array.from(connectedWallets).map((wallet, index) => 
+      `${index + 1}. ${wallet.slice(0, 4)}...${wallet.slice(-4)}`
+    ).join('\n');
+    
+    const replyContent = `Here are your connected wallets:\n\n${walletList}\n\nPlease choose a wallet to re-verify with by replying with its number.`;
+    await interaction.update({ content: replyContent, components: [] });
+    
+    // You might want to set up a message collector here to handle the user's choice
   } else if (interaction.customId === 'verify_wallet') {
     try {
       await interaction.deferReply({ ephemeral: true });
@@ -466,7 +472,7 @@ client.on('interactionCreate', async interaction => {
           components: [row]
         });
       } else {
-        const replyContent = `Please click the link below to sign in and verify your wallet:\n${process.env.SIGN_IN_URL}`;
+        const replyContent = `You don't have any connected wallets yet. Please click the link below to sign in and verify your wallet:\n${process.env.SIGN_IN_URL}`;
         await interaction.editReply({ content: replyContent });
       }
     } catch (error) {
