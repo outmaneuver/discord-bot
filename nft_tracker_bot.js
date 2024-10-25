@@ -395,6 +395,10 @@ client.on('messageCreate', async (message) => {
     } else {
       await message.reply('Verification channel not found.');
     }
+  } else if (message.content === '!createbuttons' && message.member.permissions.has('ADMINISTRATOR')) {
+    const channel = message.channel;
+    await sendVerificationAndProfileButtons(channel);
+    await message.reply('Verification and profile buttons have been created.');
   }
 });
 
@@ -1140,5 +1144,28 @@ async function getPokerStats(userId) {
 
 async function getSpadesStats(userId) {
     // Implement this function to fetch spades stats for the user
+}
+
+async function sendVerificationAndProfileButtons(channel) {
+  const embed = new EmbedBuilder()
+    .setColor('#0099ff')
+    .setTitle('BUX DAO Verification and Profile')
+    .setDescription('Click the buttons below to verify your wallet or view your profile.')
+    .setTimestamp();
+
+  const verifyButton = new ButtonBuilder()
+    .setCustomId('verify_wallet')
+    .setLabel('Verify Wallet')
+    .setStyle(ButtonStyle.Primary);
+
+  const profileButton = new ButtonBuilder()
+    .setCustomId('view_profile')
+    .setLabel('View Profile')
+    .setStyle(ButtonStyle.Secondary);
+
+  const row = new ActionRowBuilder()
+    .addComponents(verifyButton, profileButton);
+
+  await channel.send({ embeds: [embed], components: [row] });
 }
 
