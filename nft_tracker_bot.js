@@ -397,32 +397,47 @@ client.on('interactionCreate', async interaction => {
 
   if (interaction.customId === 'verify') {
     try {
-      if (interaction.replied || interaction.deferred) {
-        console.log('Interaction already handled, skipping.');
-        return;
-      }
-
       await interaction.deferReply({ ephemeral: true });
-      
-      const replyContent = `Please click the link below to sign in and verify your wallet:\n${process.env.SIGN_IN_URL}`;
-      await interaction.editReply({ content: replyContent });
+
+      const userId = interaction.user.id;
+      const connectedWallets = getUserWallets(userId);
+
+      if (connectedWallets.size > 0) {
+        const walletList = Array.from(connectedWallets).join('\n');
+        const replyContent = `You have previously connected the following wallet(s):\n\n${walletList}\n\nDo you want to verify a new wallet or use one of these?`;
+        
+        await interaction.editReply({ 
+          content: replyContent,
+          components: [
+            new ActionRowBuilder()
+              .addComponents(
+                new ButtonBuilder()
+                  .setCustomId('verify_new_wallet')
+                  .setLabel('Verify New Wallet')
+                  .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                  .setCustomId('use_existing_wallet')
+                  .setLabel('Use Existing Wallet')
+                  .setStyle(ButtonStyle.Secondary)
+              )
+          ]
+        });
+      } else {
+        const replyContent = `Please click the link below to sign in and verify your wallet:\n${process.env.SIGN_IN_URL}`;
+        await interaction.editReply({ content: replyContent });
+      }
     } catch (error) {
       console.error('Error handling interaction:', error);
-      
-      if (!interaction.replied && !interaction.deferred) {
-        try {
-          await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
-        } catch (replyError) {
-          console.error('Error sending error reply:', replyError);
-        }
-      } else if (interaction.deferred) {
-        try {
-          await interaction.editReply({ content: 'An error occurred while processing your request.' });
-        } catch (editError) {
-          console.error('Error editing deferred reply:', editError);
-        }
-      }
+      await interaction.editReply({ content: 'An error occurred while processing your request.' });
     }
+  } else if (interaction.customId === 'verify_new_wallet') {
+    const replyContent = `Please click the link below to sign in and verify your new wallet:\n${process.env.SIGN_IN_URL}`;
+    await interaction.update({ content: replyContent, components: [] });
+  } else if (interaction.customId === 'use_existing_wallet') {
+    // Here you can implement logic to re-verify with an existing wallet
+    // For now, we'll just acknowledge the interaction
+    await interaction.update({ content: 'Please choose a wallet to re-verify with:', components: [] });
+    // You might want to add buttons for each existing wallet here
   } else if (interaction.customId === 'verify_wallet') {
     await interaction.reply({ 
       content: `Please visit this link to verify your wallet: ${process.env.SIGN_IN_URL}`, 
@@ -716,7 +731,7 @@ async function updateDiscordRoles(userId, heldCollections, buxBalance, walletAdd
     }
 
     // Store the wallet address
-    setUserWallet(userId, walletAddress);
+    addUserWallet(userId, walletAddress);
 
     console.log(`Updated roles for user ${userId}`);
     return true;
@@ -874,12 +889,15 @@ async function sendVerificationMessage(channel) {
 
 const userWallets = new Map();
 
-function setUserWallet(userId, walletAddress) {
-    userWallets.set(userId, walletAddress);
+function addUserWallet(userId, walletAddress) {
+    if (!userWallets.has(userId)) {
+        userWallets.set(userId, new Set());
+    }
+    userWallets.get(userId).add(walletAddress);
 }
 
-function getUserWallet(userId) {
-    return userWallets.get(userId);
+function getUserWallets(userId) {
+    return userWallets.get(userId) || new Set();
 }
 
 // Add this function to perform the periodic check
@@ -909,3 +927,15 @@ async function startPeriodicRoleChecks() {
     }
 }
 
+app.post('/store-wallet', (req, res) => {
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+
+    const { walletAddress } = req.body;
+    const userId = req.user.id;
+
+    addUserWallet(userId, walletAddress);
+
+    res.json({ success: true });
+});
