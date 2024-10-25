@@ -645,17 +645,19 @@ async function updateDiscordRoles(userId, heldCollections, buxBalance, walletAdd
 
     console.log(`Current BUX balance: ${buxBalance}`);
 
+    const buxBalanceInWholeUnits = buxBalance / 1e9;
+    console.log(`Current BUX balance in whole units: ${buxBalanceInWholeUnits}`);
+
     for (const { threshold, roleId } of buxRoles) {
       if (!roleId) {
         console.log(`Role ID for ${threshold} BUX threshold is not set. Skipping.`);
         continue;
       }
 
-      const thresholdInSmallestUnit = threshold * 1e9;
-      console.log(`Checking BUX role for threshold ${threshold} (${thresholdInSmallestUnit} in smallest unit)`);
+      console.log(`Checking BUX role for threshold ${threshold}`);
       
-      if (buxBalance >= thresholdInSmallestUnit) {
-        console.log(`Adding BUX role ${roleId} for balance ${buxBalance}`);
+      if (buxBalanceInWholeUnits >= threshold) {
+        console.log(`Adding BUX role ${roleId} for balance ${buxBalanceInWholeUnits}`);
         try {
           await member.roles.add(roleId);
           console.log(`Successfully added BUX role ${roleId}`);
@@ -663,7 +665,7 @@ async function updateDiscordRoles(userId, heldCollections, buxBalance, walletAdd
           console.error(`Error adding BUX role ${roleId}:`, error);
         }
       } else {
-        console.log(`Removing BUX role ${roleId} for balance ${buxBalance}`);
+        console.log(`Removing BUX role ${roleId} for balance ${buxBalanceInWholeUnits}`);
         try {
           await member.roles.remove(roleId);
           console.log(`Successfully removed BUX role ${roleId}`);
