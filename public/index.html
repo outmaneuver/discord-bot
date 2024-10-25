@@ -28,15 +28,27 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            overflow: hidden;
+        }
+        .logo-blur {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('logo.png');
+            background-size: cover;
+            background-position: center;
+            filter: blur(10px);
+            opacity: 0.7;
+            z-index: 0;
         }
         .logo {
             height: 100px;
             width: auto;
             object-fit: contain;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            position: relative;
+            z-index: 1;
         }
         .logo-text {
             position: relative;
@@ -47,7 +59,7 @@
             -webkit-text-stroke: 2px #FFD700;
             white-space: nowrap;
             text-align: center;
-            z-index: 1;
+            z-index: 2;
         }
         .container {
             background-color: #8a4fff;
@@ -143,6 +155,7 @@
 </head>
 <body>
     <div class="logo-container">
+        <div class="logo-blur"></div>
         <img src="logo.png" alt="Logo" class="logo">
         <div class="logo-text">BUX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DAO</div>
     </div>
