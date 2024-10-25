@@ -110,6 +110,12 @@
             text-align: center;
             display: none; /* Initially hidden */
         }
+        #verificationResult {
+            margin-top: 1rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: #ffffff;
+        }
     </style>
 </head>
 <body>
@@ -124,6 +130,7 @@
         <button id="discordButton">Sign in with Discord</button>
         <button id="connectButton">Connect Wallet</button>
         <p id="status"></p>
+        <p id="verificationResult"></p>  <!-- Add this line -->
     </div>
     <div id="closeMessage">
         You can now close this window...<br>
@@ -219,16 +226,19 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    console.log('Full verification response:', data);
                     if (data.success) {
-                        console.log('Full verification response:', data);
                         document.getElementById('verificationResult').textContent = data.formattedResponse;
+                        statusElement.textContent = 'Verification complete!';
                     } else {
                         document.getElementById('verificationResult').textContent = 'Verification failed. Please try again.';
+                        statusElement.textContent = 'Verification failed.';
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     document.getElementById('verificationResult').textContent = 'An error occurred. Please try again.';
+                    statusElement.textContent = 'Error during verification.';
                 });
             } catch (err) {
                 statusElement.textContent = `Error: ${err.message}`;
