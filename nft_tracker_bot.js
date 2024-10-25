@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits } from 'discord.js';
+import { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
@@ -85,7 +85,25 @@ client.once('ready', async () => {
 });
 
 client.on('messageCreate', async (message) => {
-    // ... (handle commands using imported functions)
+    if (message.author.bot) return; // Ignore messages from bots
+
+    if (message.content === '!createbuttons' && message.member.permissions.has('ADMINISTRATOR')) {
+        try {
+            await sendVerificationAndProfileButtons(message.channel);
+            await message.reply('Verification and profile buttons have been created.');
+        } catch (error) {
+            console.error('Error creating buttons:', error);
+            await message.reply('An error occurred while creating the buttons.');
+        }
+    } else if (message.content === '!sendverification' && message.member.permissions.has('ADMINISTRATOR')) {
+        try {
+            await sendVerificationMessage(message.channel);
+            await message.reply('Verification message sent successfully.');
+        } catch (error) {
+            console.error('Error sending verification message:', error);
+            await message.reply('An error occurred while sending the verification message.');
+        }
+    }
 });
 
 client.on('interactionCreate', async interaction => {
@@ -244,3 +262,46 @@ function storeWalletAddress(userId, walletAddress) {
   }
   global.userWallets.get(userId).add(walletAddress);
 }
+
+async function sendVerificationAndProfileButtons(channel) {
+    const embed = new EmbedBuilder()
+        .setColor('#0099ff')
+        .setTitle('BUX DAO Verification and Profile')
+        .setDescription('Click the buttons below to verify your wallet or view your profile.')
+        .setTimestamp();
+
+    const verifyButton = new ButtonBuilder()
+        .setCustomId('verify_wallet')
+        .setLabel('Verify Wallet')
+        .setStyle(ButtonStyle.Primary);
+
+    const profileButton = new ButtonBuilder()
+        .setCustomId('view_profile')
+        .setLabel('View Profile')
+        .setStyle(ButtonStyle.Secondary);
+
+    const row = new ActionRowBuilder()
+        .addComponents(verifyButton, profileButton);
+
+    await channel.send({ embeds: [embed], components: [row] });
+}
+
+// Make sure this function is imported from verify.js if it's not in nft_tracker_bot.js
+async function sendVerificationMessage(channel) {
+    const embed = new EmbedBuilder()
+        .setColor('#0099ff')
+        .setTitle('THANK YOU FOR CHOOSING BUXDAO')
+        .setDescription('To verify your wallet, click the button and open the link in your browser on desktop or copy and paste into wallet browser on mobile devices\n\nAuthorise signing into your discord profile then connect your wallet\n\nYour server roles will update automatically based on your NFT and $BUX token holdings')
+        .setTimestamp();
+
+    const button = new ButtonBuilder()
+        .setCustomId('verify_wallet')
+        .setLabel('Verify Wallet')
+        .setStyle(ButtonStyle.Primary);
+
+    const row = new ActionRowBuilder()
+        .addComponents(button);
+
+    await channel.send({ embeds: [embed], components: [row] });
+}
+
