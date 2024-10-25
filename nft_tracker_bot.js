@@ -377,11 +377,12 @@ client.on('messageCreate', async (message) => {
     }
     await verifyHolder(message, walletAddress);
   } else if (message.content === '!sendverification' && message.member.permissions.has('ADMINISTRATOR')) {
-    const verificationChannel = client.channels.cache.get(process.env.VERIFICATION_CHANNEL_ID);
+    const verificationChannel = await client.channels.fetch(process.env.VERIFICATION_CHANNEL_ID);
     if (verificationChannel) {
       await sendVerificationMessage(verificationChannel);
+      await message.reply('Verification message sent successfully.');
     } else {
-      message.reply('Verification channel not found.');
+      await message.reply('Verification channel not found.');
     }
   }
 });
