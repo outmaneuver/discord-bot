@@ -482,11 +482,11 @@ app.post('/holder-verify/verify', async (req, res) => {
     // Format the response
     const formattedBuxBalance = buxBalance / 1e9;
     let response = `Hi ${req.user.username}!\n\nVERIFIED ASSETS:\n`;
-    response += `Fcked Catz - ${nftCounts['fcked_catz'] || 0}\n`;
-    response += `Celeb Catz - ${nftCounts['celebcatz'] || 0}\n`;
-    response += `Money Monsters - ${nftCounts['money_monsters'] || 0}\n`;
-    response += `Money Monsters 3D - ${nftCounts['money_monsters3d'] || 0}\n`;
-    response += `A.I. BitBots - ${nftCounts['ai_bitbots'] || 0}\n`;
+    response += `Fcked Catz - ${nftCounts['fcked_catz'] ? nftCounts['fcked_catz'].length : 0}\n`;
+    response += `Celeb Catz - ${nftCounts['celebcatz'] ? nftCounts['celebcatz'].length : 0}\n`;
+    response += `Money Monsters - ${nftCounts['money_monsters'] ? nftCounts['money_monsters'].length : 0}\n`;
+    response += `Money Monsters 3D - ${nftCounts['money_monsters3d'] ? nftCounts['money_monsters3d'].length : 0}\n`;
+    response += `A.I. BitBots - ${nftCounts['ai_bitbots'] ? nftCounts['ai_bitbots'].length : 0}\n`;
     response += `$BUX - ${formattedBuxBalance}\n\n`;
     response += `Potential daily staking yield = ${dailyYield} $BUX`;
 
@@ -506,11 +506,11 @@ app.post('/holder-verify/verify', async (req, res) => {
 
 // Add this function to calculate the daily yield
 function calculateDailyYield(nftCounts) {
-  const dailyYield = (nftCounts['fcked_catz'] || 0) * 2 +
-                     (nftCounts['money_monsters'] || 0) * 2 +
-                     (nftCounts['ai_bitbots'] || 0) * 1 +
-                     (nftCounts['money_monsters3d'] || 0) * 4 +
-                     (nftCounts['celebcatz'] || 0) * 8;
+  const dailyYield = (nftCounts['fcked_catz']?.length || 0) * 2 +
+                     (nftCounts['money_monsters']?.length || 0) * 2 +
+                     (nftCounts['ai_bitbots']?.length || 0) * 1 +
+                     (nftCounts['money_monsters3d']?.length || 0) * 4 +
+                     (nftCounts['celebcatz']?.length || 0) * 8;
   return dailyYield;
 }
 
