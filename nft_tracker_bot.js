@@ -439,10 +439,40 @@ client.on('interactionCreate', async interaction => {
     await interaction.update({ content: 'Please choose a wallet to re-verify with:', components: [] });
     // You might want to add buttons for each existing wallet here
   } else if (interaction.customId === 'verify_wallet') {
-    await interaction.reply({ 
-      content: `Please visit this link to verify your wallet: ${process.env.SIGN_IN_URL}`, 
-      ephemeral: true 
-    });
+    try {
+      await interaction.deferReply({ ephemeral: true });
+
+      const userId = interaction.user.id;
+      const connectedWallets = getUserWallets(userId);
+
+      if (connectedWallets.size > 0) {
+        const walletList = Array.from(connectedWallets).join('\n');
+        const replyContent = `You have already connected the following wallet(s):\n\n${walletList}\n\nDo you want to verify a new wallet or use one of these?`;
+        
+        const row = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId('verify_new_wallet')
+              .setLabel('Verify New Wallet')
+              .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+              .setCustomId('use_existing_wallet')
+              .setLabel('Use Existing Wallet')
+              .setStyle(ButtonStyle.Secondary)
+          );
+
+        await interaction.editReply({ 
+          content: replyContent,
+          components: [row]
+        });
+      } else {
+        const replyContent = `Please click the link below to sign in and verify your wallet:\n${process.env.SIGN_IN_URL}`;
+        await interaction.editReply({ content: replyContent });
+      }
+    } catch (error) {
+      console.error('Error handling interaction:', error);
+      await interaction.editReply({ content: 'An error occurred while processing your request.' });
+    }
   }
 });
 
@@ -939,3 +969,4 @@ app.post('/store-wallet', (req, res) => {
 
     res.json({ success: true });
 });
+
