@@ -21,6 +21,8 @@ import { setTimeout } from 'timers/promises';
 
 dotenv.config();
 
+console.log('PROFILE_URL:', process.env.PROFILE_URL);
+
 // Express app initialization
 const app = express();
 
@@ -511,9 +513,18 @@ client.on('interactionCreate', async interaction => {
       await interaction.deferReply({ ephemeral: true });
 
       const userId = interaction.user.id;
-      const profileUrl = `${process.env.PROFILE_URL}?userId=${userId}`;
+      const profileUrl = process.env.PROFILE_URL;
       
-      await interaction.editReply(`Click here to view your profile: ${profileUrl}`);
+      if (!profileUrl) {
+        console.error('PROFILE_URL is not set in environment variables');
+        await interaction.editReply('Sorry, there was an error generating your profile link. Please contact an administrator.');
+        return;
+      }
+
+      const fullProfileUrl = `${profileUrl}?userId=${userId}`;
+      console.log('Generated profile URL:', fullProfileUrl);
+      
+      await interaction.editReply(`Click here to view your profile: ${fullProfileUrl}`);
     } catch (error) {
       console.error('Error handling profile interaction:', error);
       await interaction.editReply({ content: 'An error occurred while processing your request.' });
@@ -1067,11 +1078,36 @@ app.get('/profile', async (req, res) => {
                 <title>BUX DAO Profile</title>
                 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;800&display=swap" rel="stylesheet">
                 <style>
-                    /* Add your existing styles here */
+                    body {
+                        font-family: 'Poppins', Arial, sans-serif;
+                        background: linear-gradient(135deg, #1e0e2d 0%, #4a1e6a 100%);
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                        margin: 0;
+                        padding: 20px;
+                        box-sizing: border-box;
+                    }
+                    .container {
+                        background: linear-gradient(135deg, #7f3fce 0%, #a65fef 100%);
+                        padding: 2rem;
+                        border-radius: 10px;
+                        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+                        text-align: center;
+                        width: 100%;
+                        max-width: 400px;
+                    }
+                    h1 {
+                        color: #ffffff;
+                        margin-bottom: 1rem;
+                    }
                     .tab {
                         overflow: hidden;
                         border: 1px solid #ccc;
                         background-color: #f1f1f1;
+                        border-radius: 5px 5px 0 0;
                     }
                     .tab button {
                         background-color: inherit;
@@ -1081,6 +1117,7 @@ app.get('/profile', async (req, res) => {
                         cursor: pointer;
                         padding: 14px 16px;
                         transition: 0.3s;
+                        font-size: 17px;
                     }
                     .tab button:hover {
                         background-color: #ddd;
@@ -1093,6 +1130,12 @@ app.get('/profile', async (req, res) => {
                         padding: 6px 12px;
                         border: 1px solid #ccc;
                         border-top: none;
+                        border-radius: 0 0 5px 5px;
+                        background-color: #ffffff;
+                    }
+                    .yellow-text {
+                        color: #FFD700;
+                        font-weight: bold;
                     }
                 </style>
             </head>
@@ -1106,18 +1149,28 @@ app.get('/profile', async (req, res) => {
                     </div>
 
                     <div id="Wallet" class="tabcontent">
-                        <h3>Wallet Information</h3>
-                        <pre>${JSON.stringify(walletData, null, 2)}</pre>
+                        <h3 class="yellow-text">VERIFIED ASSETS:</h3>
+                        <p>Fcked Catz - ${walletData.fckedCatz || 0}</p>
+                        <p>Celeb Catz - ${walletData.celebCatz || 0}</p>
+                        <p>Money Monsters - ${walletData.moneyMonsters || 0}</p>
+                        <p>Money Monsters 3D - ${walletData.moneyMonsters3D || 0}</p>
+                        <p>A.I. BitBots - ${walletData.aiBitBots || 0}</p>
+                        <p>$BUX - ${walletData.buxBalance || 0}</p>
+                        <p class="yellow-text">Potential daily staking yield = ${walletData.dailyYield || 0} $BUX</p>
                     </div>
 
                     <div id="Poker" class="tabcontent">
                         <h3>Poker Stats</h3>
-                        <pre>${JSON.stringify(pokerStats, null, 2)}</pre>
+                        <p>Games Played: ${pokerStats.gamesPlayed || 0}</p>
+                        <p>Games Won: ${pokerStats.gamesWon || 0}</p>
+                        <p>Win %: ${pokerStats.winPercentage || 0}%</p>
                     </div>
 
                     <div id="Spades" class="tabcontent">
                         <h3>Spades Stats</h3>
-                        <pre>${JSON.stringify(spadesStats, null, 2)}</pre>
+                        <p>Games Played: ${spadesStats.gamesPlayed || 0}</p>
+                        <p>Games Won: ${spadesStats.gamesWon || 0}</p>
+                        <p>Win %: ${spadesStats.winPercentage || 0}%</p>
                     </div>
                 </div>
 
@@ -1149,16 +1202,34 @@ app.get('/profile', async (req, res) => {
 
 // Implement these functions to fetch the required data
 async function getWalletData(userId) {
-    // Implement this function to fetch wallet data for the user
-    // This should return an object with the same structure as your current verification result
+    // This is a placeholder. Replace with actual data fetching logic when you have a database set up.
+    return {
+        fckedCatz: 0,
+        celebCatz: 0,
+        moneyMonsters: 0,
+        moneyMonsters3D: 1,
+        aiBitBots: 0,
+        buxBalance: 20,
+        dailyYield: 4
+    };
 }
 
 async function getPokerStats(userId) {
-    // Implement this function to fetch poker stats for the user
+    // This is a placeholder. Replace with actual data fetching logic when you have a database set up.
+    return {
+        gamesPlayed: 0,
+        gamesWon: 0,
+        winPercentage: 0
+    };
 }
 
 async function getSpadesStats(userId) {
-    // Implement this function to fetch spades stats for the user
+    // This is a placeholder. Replace with actual data fetching logic when you have a database set up.
+    return {
+        gamesPlayed: 0,
+        gamesWon: 0,
+        winPercentage: 0
+    };
 }
 
 async function sendVerificationAndProfileButtons(channel) {
