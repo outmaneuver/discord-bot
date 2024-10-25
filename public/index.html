@@ -298,6 +298,27 @@
                 statusElement.textContent = `Error: ${err.message}`;
             }
         });
+
+        function storeWalletAddress(walletAddress) {
+            fetch('/store-wallet', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ walletAddress }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Wallet address stored successfully');
+                } else {
+                    console.error('Failed to store wallet address');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
     </script>
 </body>
 </html>
