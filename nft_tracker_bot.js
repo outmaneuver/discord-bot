@@ -449,11 +449,13 @@ client.on('interactionCreate', async interaction => {
       await interaction.deferReply({ ephemeral: true });
 
       const userId = interaction.user.id;
+      console.log(`Checking wallets for user: ${userId}`);
       const connectedWallets = getUserWallets(userId);
+      console.log(`Connected wallets for user ${userId}:`, Array.from(connectedWallets));
 
       if (connectedWallets.size > 0) {
         const walletList = Array.from(connectedWallets).join('\n');
-        const replyContent = `You have already connected the following wallet(s):\n\n${walletList}\n\nDo you want to verify a new wallet or use one of these?`;
+        const replyContent = `You have previously connected the following wallet(s):\n\n${walletList}\n\nDo you want to verify a new wallet or use one of these?`;
         
         const row = new ActionRowBuilder()
           .addComponents(
@@ -930,10 +932,14 @@ function addUserWallet(userId, walletAddress) {
         userWallets.set(userId, new Set());
     }
     userWallets.get(userId).add(walletAddress);
+    console.log(`Added wallet ${walletAddress} for user ${userId}`);
+    console.log(`Current wallets for user ${userId}:`, Array.from(userWallets.get(userId)));
 }
 
 function getUserWallets(userId) {
-    return userWallets.get(userId) || new Set();
+    const wallets = userWallets.get(userId) || new Set();
+    console.log(`Retrieved wallets for user ${userId}:`, Array.from(wallets));
+    return wallets;
 }
 
 // Add this function to perform the periodic check
@@ -976,3 +982,8 @@ app.post('/store-wallet', (req, res) => {
     res.json({ success: true });
 });
 
+app.get('/check-wallets/:userId', (req, res) => {
+    const userId = req.params.userId;
+    const wallets = getUserWallets(userId);
+    res.json({ userId, wallets: Array.from(wallets) });
+});
