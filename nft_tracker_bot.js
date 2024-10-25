@@ -180,6 +180,12 @@ client.once('ready', async () => {
     components: [row]
   });
 
+  // Send profile message
+  const profileChannel = await client.channels.fetch(process.env.PROFILE_CHANNEL_ID);
+  if (profileChannel) {
+    await sendProfileMessage(profileChannel);
+  }
+
   startPeriodicRoleChecks();
 });
 
@@ -1135,3 +1141,4 @@ async function getPokerStats(userId) {
 async function getSpadesStats(userId) {
     // Implement this function to fetch spades stats for the user
 }
+
