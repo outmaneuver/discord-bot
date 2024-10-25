@@ -341,7 +341,7 @@ async function verifyHolder(message, walletAddress) {
     await message.reply(response);
 
     // Update Discord roles
-    await updateDiscordRoles(message.author.id, nftCounts);
+    await updateDiscordRoles(message.author.id, nftCounts, buxBalance);
   } catch (error) {
     console.error('Error during verification:', error);
     await message.reply('An error occurred during verification. Please try again later.');
@@ -464,7 +464,7 @@ app.post('/holder-verify/verify', async (req, res) => {
 
     const nftCounts = await checkNFTOwnership(walletAddress);
     const buxBalance = await getBUXBalance(walletAddress);
-    const rolesUpdated = await updateDiscordRoles(req.user.id, nftCounts);
+    const rolesUpdated = await updateDiscordRoles(req.user.id, nftCounts, buxBalance);
     
     console.log('Verification results:');
     console.log('NFT Counts:', JSON.stringify(nftCounts, null, 2));
@@ -569,10 +569,11 @@ async function getBUXBalance(walletAddress) {
   }
 }
 
-async function updateDiscordRoles(userId, heldCollections) {
+async function updateDiscordRoles(userId, heldCollections, buxBalance) {
   try {
     console.log('Updating Discord roles for user:', userId);
     console.log('Held collections:', heldCollections);
+    console.log('BUX Balance:', buxBalance);
 
     if (!client.isReady()) {
       console.log('Discord client is not ready. Waiting...');
@@ -607,10 +608,16 @@ async function updateDiscordRoles(userId, heldCollections) {
           console.log(`Adding role ${roleId} for collection ${collection}`);
           await member.roles.add(roleId);
           console.log(`Added role ${roleId} for collection ${collection}`);
+          
+          // Check for whale role
           if (WHALE_ROLE_IDS[collection] && heldCollections[collection] >= process.env[`WHALE_THRESHOLD_${collection.toUpperCase()}`]) {
             console.log(`Adding whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
             await member.roles.add(WHALE_ROLE_IDS[collection]);
             console.log(`Added whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
+          } else if (WHALE_ROLE_IDS[collection]) {
+            console.log(`Removing whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
+            await member.roles.remove(WHALE_ROLE_IDS[collection]);
+            console.log(`Removed whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
           }
         } else {
           console.log(`Removing role ${roleId} for collection ${collection}`);
@@ -624,6 +631,24 @@ async function updateDiscordRoles(userId, heldCollections) {
         }
       } catch (error) {
         console.error(`Error updating role for collection ${collection}:`, error);
+      }
+    }
+
+    // Handle BUX banker roles
+    const buxRoles = [
+      { threshold: 500000, roleId: process.env.ROLE_ID_500000_BUX },
+      { threshold: 250000, roleId: process.env.ROLE_ID_250000_BUX },
+      { threshold: 10000, roleId: process.env.ROLE_ID_10000_BUX },
+      { threshold: 2500, roleId: process.env.ROLE_ID_2500_BUX },
+    ];
+
+    for (const { threshold, roleId } of buxRoles) {
+      if (buxBalance >= threshold * 1e9) {  // Convert to smallest unit
+        console.log(`Adding BUX role ${roleId} for balance ${buxBalance}`);
+        await member.roles.add(roleId);
+      } else {
+        console.log(`Removing BUX role ${roleId} for balance ${buxBalance}`);
+        await member.roles.remove(roleId);
       }
     }
 
@@ -780,3 +805,4 @@ async function sendVerificationMessage(channel) {
 
   await channel.send({ embeds: [embed], components: [row] });
 }
+
