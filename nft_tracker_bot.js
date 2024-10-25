@@ -15,6 +15,7 @@ import celebCatzHashlist from './hashlists/celebcatz.json' assert { type: 'json'
 import moneyMonstersHashlist from './hashlists/money_monsters.json' assert { type: 'json' };
 import moneyMonsters3DHashlist from './hashlists/money_monsters3d.json' assert { type: 'json' };
 import aiBitBotsHashlist from './hashlists/ai_bitbots.json' assert { type: 'json' };
+import { setTimeout } from 'timers/promises';
 
 dotenv.config();
 
@@ -569,7 +570,7 @@ async function getBUXBalance(walletAddress) {
   }
 }
 
-async function updateDiscordRoles(userId, heldCollections, buxBalance) {
+async function updateDiscordRoles(userId, heldCollections, buxBalance, walletAddress) {
   try {
     console.log('Updating Discord roles for user:', userId);
     console.log('Held collections:', heldCollections);
@@ -636,8 +637,8 @@ async function updateDiscordRoles(userId, heldCollections, buxBalance) {
 
     // Handle BUX banker roles
     const buxRoles = [
-      { threshold: 50000, roleId: process.env.ROLE_ID_500000_BUX },
-      { threshold: 25000, roleId: process.env.ROLE_ID_250000_BUX },
+      { threshold: 50000, roleId: process.env.ROLE_ID_50000_BUX },
+      { threshold: 25000, roleId: process.env.ROLE_ID_25000_BUX },
       { threshold: 10000, roleId: process.env.ROLE_ID_10000_BUX },
       { threshold: 2500, roleId: process.env.ROLE_ID_2500_BUX },
     ];
@@ -645,12 +646,22 @@ async function updateDiscordRoles(userId, heldCollections, buxBalance) {
     console.log(`Current BUX balance: ${buxBalance}`);
 
     for (const { threshold, roleId } of buxRoles) {
+      if (!roleId) {
+        console.log(`Role ID for ${threshold} BUX threshold is not set. Skipping.`);
+        continue;
+      }
+
       const thresholdInSmallestUnit = threshold * 1e9;
       console.log(`Checking BUX role for threshold ${threshold} (${thresholdInSmallestUnit} in smallest unit)`);
       
       if (buxBalance >= thresholdInSmallestUnit) {
         console.log(`Adding BUX role ${roleId} for balance ${buxBalance}`);
-        await member.roles.add(roleId);
+        try {
+          await member.roles.add(roleId);
+          console.log(`Successfully added BUX role ${roleId}`);
+        } catch (error) {
+          console.error(`Error adding BUX role ${roleId}:`, error);
+        }
       } else {
         console.log(`Removing BUX role ${roleId} for balance ${buxBalance}`);
         try {
@@ -661,6 +672,9 @@ async function updateDiscordRoles(userId, heldCollections, buxBalance) {
         }
       }
     }
+
+    // Store the wallet address
+    setUserWallet(userId, walletAddress);
 
     console.log(`Updated roles for user ${userId}`);
     return true;
@@ -814,5 +828,15 @@ async function sendVerificationMessage(channel) {
     .addComponents(button);
 
   await channel.send({ embeds: [embed], components: [row] });
+}
+
+const userWallets = new Map();
+
+function setUserWallet(userId, walletAddress) {
+    userWallets.set(userId, walletAddress);
+}
+
+function getUserWallet(userId) {
+    return userWallets.get(userId);
 }
 
