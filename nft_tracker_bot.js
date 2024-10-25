@@ -89,7 +89,30 @@ client.on('messageCreate', async (message) => {
 });
 
 client.on('interactionCreate', async interaction => {
-    // ... (handle interactions using imported functions)
+    if (!interaction.isButton()) return;
+
+    if (interaction.customId === 'view_profile') {
+        try {
+            await interaction.deferReply({ ephemeral: true });
+
+            const userId = interaction.user.id;
+            if (!PROFILE_URL) {
+                console.error('PROFILE_URL is not set in environment variables');
+                await interaction.editReply('Sorry, there was an error generating your profile link. Please contact an administrator.');
+                return;
+            }
+
+            const profileUrl = `${PROFILE_URL}?userId=${userId}`;
+            console.log('Generated profile URL:', profileUrl);
+            
+            await interaction.editReply(`Click here to view your profile: ${profileUrl}`);
+        } catch (error) {
+            console.error('Error handling profile interaction:', error);
+            await interaction.editReply({ content: 'An error occurred while processing your request.' });
+        }
+    }
+
+    // ... (handle other button interactions)
 });
 
 // Serve static files
@@ -193,3 +216,31 @@ const PORT = process.env.PORT || 5500;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 client.login(process.env.DISCORD_TOKEN);
+
+// Add a route to store wallet addresses
+app.post('/store-wallet', (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ success: false, error: 'Not authenticated' });
+  }
+
+  const { walletAddress } = req.body;
+  const userId = req.user.id;
+
+  // Store the wallet address (implement this function)
+  storeWalletAddress(userId, walletAddress);
+
+  res.json({ success: true });
+});
+
+// Implement this function to store wallet addresses
+function storeWalletAddress(userId, walletAddress) {
+  // Store the wallet address in your database or data structure
+  // This is just a placeholder implementation
+  if (!global.userWallets) {
+    global.userWallets = new Map();
+  }
+  if (!global.userWallets.has(userId)) {
+    global.userWallets.set(userId, new Set());
+  }
+  global.userWallets.get(userId).add(walletAddress);
+}
