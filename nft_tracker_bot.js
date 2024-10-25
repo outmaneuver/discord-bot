@@ -396,9 +396,14 @@ client.on('messageCreate', async (message) => {
       await message.reply('Verification channel not found.');
     }
   } else if (message.content === '!createbuttons' && message.member.permissions.has('ADMINISTRATOR')) {
-    const channel = message.channel;
-    await sendVerificationAndProfileButtons(channel);
-    await message.reply('Verification and profile buttons have been created.');
+    try {
+      const channel = message.channel;
+      await sendVerificationAndProfileButtons(channel);
+      await message.reply('Verification and profile buttons have been created.');
+    } catch (error) {
+      console.error('Error creating buttons:', error);
+      await message.reply('An error occurred while creating the buttons.');
+    }
   }
 });
 
