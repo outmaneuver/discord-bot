@@ -487,6 +487,7 @@ async function checkNFTOwnership(walletAddress) {
     console.log(`Checking NFT ownership for wallet: ${walletAddress}`);
     const nfts = await getNFTsForOwner(walletAddress);
     console.log(`Total NFTs found: ${nfts.length}`);
+    console.log('All NFTs:', JSON.stringify(nfts, null, 2));
 
     const collectionCounts = {};
 
@@ -495,6 +496,7 @@ async function checkNFTOwnership(walletAddress) {
       console.log(`Checking NFT with mint: ${mint}`);
       
       for (const [collection, hashlist] of Object.entries(COLLECTION_HASHLISTS)) {
+        console.log(`Checking against ${collection} hashlist`);
         if (hashlist.includes(mint)) {
           console.log(`Found NFT from collection: ${collection}`);
           collectionCounts[collection] = (collectionCounts[collection] || 0) + 1;
@@ -575,16 +577,20 @@ async function updateDiscordRoles(userId, heldCollections) {
     for (const [collection, roleId] of Object.entries(ROLE_IDS)) {
       try {
         if (heldCollections[collection] && heldCollections[collection] > 0) {
+          console.log(`Adding role ${roleId} for collection ${collection}`);
           await member.roles.add(roleId);
           console.log(`Added role ${roleId} for collection ${collection}`);
           if (WHALE_ROLE_IDS[collection] && heldCollections[collection] >= process.env[`WHALE_THRESHOLD_${collection.toUpperCase()}`]) {
+            console.log(`Adding whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
             await member.roles.add(WHALE_ROLE_IDS[collection]);
             console.log(`Added whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
           }
         } else {
+          console.log(`Removing role ${roleId} for collection ${collection}`);
           await member.roles.remove(roleId);
           console.log(`Removed role ${roleId} for collection ${collection}`);
           if (WHALE_ROLE_IDS[collection]) {
+            console.log(`Removing whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
             await member.roles.remove(WHALE_ROLE_IDS[collection]);
             console.log(`Removed whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
           }

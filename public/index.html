@@ -210,41 +210,26 @@
                 const resp = await window.solana.connect();
                 statusElement.textContent = 'Connected! Verifying...';
                 
-                const response = await fetch('/holder-verify/verify', {
+                fetch('/holder-verify/verify', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ walletAddress: resp.publicKey.toString() }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Full verification response:', data);
+                        document.getElementById('verificationResult').textContent = data.formattedResponse;
+                    } else {
+                        document.getElementById('verificationResult').textContent = 'Verification failed. Please try again.';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('verificationResult').textContent = 'An error occurred. Please try again.';
                 });
-
-                const data = await response.json();
-                if (data.success) {
-                    const fckedCatzCount = data.nftCounts['fcked_catz'] || 0;
-                    const celebCatzCount = data.nftCounts['celebcatz'] || 0;
-                    const moneyMonstersCount = data.nftCounts['money_monsters'] || 0;
-                    const moneyMonsters3DCount = data.nftCounts['moneymonsters3d'] || 0;
-                    const aiBitBotsCount = data.nftCounts['ai_bitbots'] || 0;
-
-                    const dailyYield = (fckedCatzCount * 2) + (celebCatzCount * 8) + (moneyMonstersCount * 2) + (moneyMonsters3DCount * 4) + (aiBitBotsCount * 1);
-
-                    const verifiedAssets = `
-                        VERIFIED ASSETS:<br>
-                        Fcked Catz - ${fckedCatzCount}<br>
-                        Celeb Catz - ${celebCatzCount}<br>
-                        Money Monsters - ${moneyMonstersCount}<br>
-                        Money Monsters 3D - ${moneyMonsters3DCount}<br>
-                        A.I. BitBots - ${aiBitBotsCount}<br>
-                        $BUX - ${data.buxBalance}<br><br>
-                        Potential daily staking yield = ${dailyYield} $BUX
-                    `;
-                    statusElement.innerHTML = verifiedAssets; // Use innerHTML to render HTML tags
-                    connectButton.disabled = true; // Disable the button
-                    connectButton.textContent = 'CONNECTED'; // Change button text
-                    closeMessageElement.style.display = 'block';
-                } else {
-                    statusElement.textContent = `Verification failed: ${data.error || 'Please try again.'}`;
-                }
             } catch (err) {
                 statusElement.textContent = `Error: ${err.message}`;
             }
