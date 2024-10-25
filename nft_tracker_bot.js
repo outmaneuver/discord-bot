@@ -529,10 +529,7 @@ async function checkNFTOwnership(walletAddress) {
       for (const [collection, hashlist] of Object.entries(COLLECTION_HASHLISTS)) {
         if (hashlist.includes(mint)) {
           console.log(`Found NFT from collection: ${collection}`);
-          if (!collectionCounts[collection]) {
-            collectionCounts[collection] = [];
-          }
-          collectionCounts[collection].push(mint);
+          collectionCounts[collection] = (collectionCounts[collection] || 0) + 1;
         }
       }
     }
