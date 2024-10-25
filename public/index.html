@@ -116,6 +116,10 @@
             word-break: break-word;
             color: #ffffff;
         }
+        .blue-text {
+            color: #007bff;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -228,7 +232,10 @@
                 .then(data => {
                     console.log('Full verification response:', data);
                     if (data.success) {
-                        document.getElementById('verificationResult').textContent = data.formattedResponse;
+                        const lines = data.formattedResponse.split('\n');
+                        lines.splice(2, 1); // Remove the second "Hi tom_buxdao!" line
+                        lines[1] = '<span class="blue-text">VERIFIED ASSETS:</span>'; // Make "VERIFIED ASSETS:" blue
+                        document.getElementById('verificationResult').innerHTML = lines.join('\n');
                         statusElement.textContent = 'Verification complete!';
                     } else {
                         document.getElementById('verificationResult').textContent = 'Verification failed. Please try again.';

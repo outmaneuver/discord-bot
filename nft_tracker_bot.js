@@ -458,6 +458,9 @@ app.post('/holder-verify/verify', async (req, res) => {
     console.log('BUX Balance:', buxBalance);
     console.log('Roles Updated:', rolesUpdated);
 
+    // Calculate potential daily staking yield
+    const dailyYield = calculateDailyYield(nftCounts);
+
     // Format the response
     const formattedBuxBalance = buxBalance / 1e9;
     let response = `Hi ${req.user.username}!\n\nVERIFIED ASSETS:\n`;
@@ -467,13 +470,14 @@ app.post('/holder-verify/verify', async (req, res) => {
     response += `Money Monsters 3D - ${nftCounts['money_monsters3d'] || 0}\n`;
     response += `A.I. BitBots - ${nftCounts['ai_bitbots'] || 0}\n`;
     response += `$BUX - ${formattedBuxBalance}\n\n`;
-    response += `Potential daily staking yield = 0 $BUX`; // You may want to calculate this based on holdings
+    response += `Potential daily staking yield = ${dailyYield} $BUX`;
 
     res.json({ 
       success: true, 
       rolesUpdated,
       nftCounts,
       buxBalance,
+      dailyYield,
       formattedResponse: response
     });
   } catch (error) {
@@ -481,6 +485,16 @@ app.post('/holder-verify/verify', async (req, res) => {
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
+
+// Add this function to calculate the daily yield
+function calculateDailyYield(nftCounts) {
+  const dailyYield = (nftCounts['fcked_catz'] || 0) * 2 +
+                     (nftCounts['money_monsters'] || 0) * 2 +
+                     (nftCounts['ai_bitbots'] || 0) * 1 +
+                     (nftCounts['money_monsters3d'] || 0) * 4 +
+                     (nftCounts['celebcatz'] || 0) * 8;
+  return dailyYield;
+}
 
 async function checkNFTOwnership(walletAddress) {
   try {
