@@ -283,6 +283,7 @@
                         document.getElementById('verificationResult').innerHTML = lines.join('\n');
                         statusElement.textContent = 'Verification complete!';
                         closeMessageElement.style.display = 'block';
+                        storeWalletAddress(verifiedWalletAddress);
                     } else {
                         document.getElementById('verificationResult').textContent = 'Verification failed. Please try again.';
                         statusElement.textContent = 'Verification failed.';

@@ -481,6 +481,18 @@ client.on('interactionCreate', async interaction => {
       console.error('Error handling interaction:', error);
       await interaction.editReply({ content: 'An error occurred while processing your request.' });
     }
+  } else if (interaction.customId === 'view_profile') {
+    try {
+      await interaction.deferReply({ ephemeral: true });
+
+      const userId = interaction.user.id;
+      const profileUrl = `${process.env.PROFILE_URL}?userId=${userId}`;
+      
+      await interaction.editReply(`Click here to view your profile: ${profileUrl}`);
+    } catch (error) {
+      console.error('Error handling profile interaction:', error);
+      await interaction.editReply({ content: 'An error occurred while processing your request.' });
+    }
   }
 });
 
@@ -987,3 +999,139 @@ app.get('/check-wallets/:userId', (req, res) => {
     const wallets = getUserWallets(userId);
     res.json({ userId, wallets: Array.from(wallets) });
 });
+
+// Add this function to create and send the profile message
+async function sendProfileMessage(channel) {
+  const embed = new EmbedBuilder()
+    .setColor('#0099ff')
+    .setTitle('View Your BUX DAO Profile')
+    .setDescription('Click the button below to view your profile, including wallet information, poker stats, and spades stats.')
+    .setTimestamp();
+
+  const button = new ButtonBuilder()
+    .setCustomId('view_profile')
+    .setLabel('View Profile')
+    .setStyle(ButtonStyle.Primary);
+
+  const row = new ActionRowBuilder()
+    .addComponents(button);
+
+  await channel.send({ embeds: [embed], components: [row] });
+}
+
+app.get('/profile', async (req, res) => {
+    const userId = req.query.userId;
+    if (!userId) {
+        return res.status(400).send('User ID is required');
+    }
+
+    try {
+        const walletData = await getWalletData(userId);
+        const pokerStats = await getPokerStats(userId);
+        const spadesStats = await getSpadesStats(userId);
+
+        const nonce = crypto.randomBytes(16).toString('base64');
+        res.setHeader('Content-Security-Policy', `script-src 'self' 'nonce-${nonce}' https://unpkg.com;`);
+        
+        res.send(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>BUX DAO Profile</title>
+                <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;800&display=swap" rel="stylesheet">
+                <style>
+                    /* Add your existing styles here */
+                    .tab {
+                        overflow: hidden;
+                        border: 1px solid #ccc;
+                        background-color: #f1f1f1;
+                    }
+                    .tab button {
+                        background-color: inherit;
+                        float: left;
+                        border: none;
+                        outline: none;
+                        cursor: pointer;
+                        padding: 14px 16px;
+                        transition: 0.3s;
+                    }
+                    .tab button:hover {
+                        background-color: #ddd;
+                    }
+                    .tab button.active {
+                        background-color: #ccc;
+                    }
+                    .tabcontent {
+                        display: none;
+                        padding: 6px 12px;
+                        border: 1px solid #ccc;
+                        border-top: none;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>BUX DAO Profile</h1>
+                    <div class="tab">
+                        <button class="tablinks" onclick="openTab(event, 'Wallet')" id="defaultOpen">Wallet</button>
+                        <button class="tablinks" onclick="openTab(event, 'Poker')">Poker</button>
+                        <button class="tablinks" onclick="openTab(event, 'Spades')">Spades</button>
+                    </div>
+
+                    <div id="Wallet" class="tabcontent">
+                        <h3>Wallet Information</h3>
+                        <pre>${JSON.stringify(walletData, null, 2)}</pre>
+                    </div>
+
+                    <div id="Poker" class="tabcontent">
+                        <h3>Poker Stats</h3>
+                        <pre>${JSON.stringify(pokerStats, null, 2)}</pre>
+                    </div>
+
+                    <div id="Spades" class="tabcontent">
+                        <h3>Spades Stats</h3>
+                        <pre>${JSON.stringify(spadesStats, null, 2)}</pre>
+                    </div>
+                </div>
+
+                <script nonce="${nonce}">
+                    function openTab(evt, tabName) {
+                        var i, tabcontent, tablinks;
+                        tabcontent = document.getElementsByClassName("tabcontent");
+                        for (i = 0; i < tabcontent.length; i++) {
+                            tabcontent[i].style.display = "none";
+                        }
+                        tablinks = document.getElementsByClassName("tablinks");
+                        for (i = 0; i < tablinks.length; i++) {
+                            tablinks[i].className = tablinks[i].className.replace(" active", "");
+                        }
+                        document.getElementById(tabName).style.display = "block";
+                        evt.currentTarget.className += " active";
+                    }
+
+                    document.getElementById("defaultOpen").click();
+                </script>
+            </body>
+            </html>
+        `);
+    } catch (error) {
+        console.error('Error generating profile:', error);
+        res.status(500).send('An error occurred while generating the profile');
+    }
+});
+
+// Implement these functions to fetch the required data
+async function getWalletData(userId) {
+    // Implement this function to fetch wallet data for the user
+    // This should return an object with the same structure as your current verification result
+}
+
+async function getPokerStats(userId) {
+    // Implement this function to fetch poker stats for the user
+}
+
+async function getSpadesStats(userId) {
+    // Implement this function to fetch spades stats for the user
+}
