@@ -132,6 +132,13 @@
                 width: 100%;
             }
         }
+        #discordButton:disabled {
+            background-color: #4a5568;
+            cursor: default;
+        }
+        #discordButton:disabled:hover {
+            background-color: #4a5568;
+        }
     </style>
 </head>
 <body>
@@ -162,6 +169,11 @@
         const welcomeMessage = document.getElementById('welcomeMessage');
 
         discordButton.addEventListener('click', () => {
+            discordButton.textContent = 'LOADING';
+            discordButton.disabled = true;
+            discordButton.style.backgroundColor = '#4a5568';
+            discordButton.style.cursor = 'default';
+            discordButton.style.opacity = '0.7';
             window.location.href = '/auth/discord';
         });
 

@@ -376,6 +376,13 @@ client.on('messageCreate', async (message) => {
       return;
     }
     await verifyHolder(message, walletAddress);
+  } else if (message.content === '!sendverification' && message.member.permissions.has('ADMINISTRATOR')) {
+    const verificationChannel = client.channels.cache.get(process.env.VERIFICATION_CHANNEL_ID);
+    if (verificationChannel) {
+      await sendVerificationMessage(verificationChannel);
+    } else {
+      message.reply('Verification channel not found.');
+    }
   }
 });
 
@@ -410,6 +417,11 @@ client.on('interactionCreate', async interaction => {
         }
       }
     }
+  } else if (interaction.customId === 'verify_wallet') {
+    await interaction.reply({ 
+      content: `Please visit this link to verify your wallet: ${process.env.SIGN_IN_URL}`, 
+      ephemeral: true 
+    });
   }
 });
 
@@ -749,3 +761,21 @@ const WHALE_ROLE_IDS = {
 
 const GUILD_ID = process.env.GUILD_ID;
 
+// Function to send the verification message
+async function sendVerificationMessage(channel) {
+  const embed = new EmbedBuilder()
+    .setColor('#0099ff')
+    .setTitle('THANK YOU FOR CHOOSING BUXDAO')
+    .setDescription('To verify your wallet, click the button and open the link in your browser on desktop or copy and paste into wallet browser on mobile devices\n\nAuthorise signing into your discord profile then connect your wallet\n\nYour server roles will update automatically based on your NFT and $BUX token holdings')
+    .setTimestamp();
+
+  const button = new ButtonBuilder()
+    .setCustomId('verify_wallet')
+    .setLabel('Verify Wallet')
+    .setStyle(ButtonStyle.Primary);
+
+  const row = new ActionRowBuilder()
+    .addComponents(button);
+
+  await channel.send({ embeds: [embed], components: [row] });
+}
