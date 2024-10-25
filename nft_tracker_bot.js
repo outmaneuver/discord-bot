@@ -636,19 +636,29 @@ async function updateDiscordRoles(userId, heldCollections, buxBalance) {
 
     // Handle BUX banker roles
     const buxRoles = [
-      { threshold: 500000, roleId: process.env.ROLE_ID_500000_BUX },
-      { threshold: 250000, roleId: process.env.ROLE_ID_250000_BUX },
+      { threshold: 50000, roleId: process.env.ROLE_ID_500000_BUX },
+      { threshold: 25000, roleId: process.env.ROLE_ID_250000_BUX },
       { threshold: 10000, roleId: process.env.ROLE_ID_10000_BUX },
       { threshold: 2500, roleId: process.env.ROLE_ID_2500_BUX },
     ];
 
+    console.log(`Current BUX balance: ${buxBalance}`);
+
     for (const { threshold, roleId } of buxRoles) {
-      if (buxBalance >= threshold * 1e9) {  // Convert to smallest unit
+      const thresholdInSmallestUnit = threshold * 1e9;
+      console.log(`Checking BUX role for threshold ${threshold} (${thresholdInSmallestUnit} in smallest unit)`);
+      
+      if (buxBalance >= thresholdInSmallestUnit) {
         console.log(`Adding BUX role ${roleId} for balance ${buxBalance}`);
         await member.roles.add(roleId);
       } else {
         console.log(`Removing BUX role ${roleId} for balance ${buxBalance}`);
-        await member.roles.remove(roleId);
+        try {
+          await member.roles.remove(roleId);
+          console.log(`Successfully removed BUX role ${roleId}`);
+        } catch (error) {
+          console.error(`Error removing BUX role ${roleId}:`, error);
+        }
       }
     }
 
