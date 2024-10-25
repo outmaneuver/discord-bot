@@ -5,68 +5,66 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wallet Verification</title>
     <script src="/holder-verify/solana-web3.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="/holder-verify/favicon.ico">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #2c0e37; /* Dark purple background */
+            font-family: 'Poppins', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e0e2d 0%, #4a1e6a 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
         }
         .logo-container {
             position: relative;
             width: 100%;
-            max-width: 400px; /* Increased from 300px */
+            max-width: 400px;
             margin-bottom: 2rem;
             display: flex;
             justify-content: center;
             align-items: center;
         }
         .logo {
-            height: 100px; /* Increased from 70px */
+            height: 100px;
             width: auto;
             object-fit: contain;
-            filter: blur(1.5px); /* Apply blur effect */
-            opacity: 0.6; /* Apply fade effect */
-            transition: filter 0.3s, opacity 0.3s; /* Smooth transition for hover effect */
-        }
-        
-        .logo-text {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+        }
+        .logo-text {
+            position: relative;
             font-family: 'Poppins', sans-serif;
             font-weight: 800;
-            font-size: 48px; /* Increased from 36px */
-            height: 70px; /* Increased from 50px */
-            line-height: 70px; /* Increased from 50px */
+            font-size: 48px;
             color: transparent;
-            -webkit-text-stroke: 2px #FFD700; /* Yellow outline */
+            -webkit-text-stroke: 2px #FFD700;
             white-space: nowrap;
-            width: 100%;
             text-align: center;
+            z-index: 1;
         }
         .container {
-            background-color: #8a4fff; /* Light purple container */
+            background-color: #8a4fff;
             padding: 2rem;
             border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
             text-align: center;
             width: 100%;
-            max-width: 400px; /* Increased from 300px */
+            max-width: 400px;
         }
         h1, #welcomeMessage {
             color: #ffffff;
             margin-bottom: 1rem;
         }
         #welcomeMessage {
-            font-size: 1.2em;
+            font-size: 1.5em;
+            font-weight: bold;
         }
         button {
             border: none;
@@ -80,9 +78,10 @@
             cursor: pointer;
             border-radius: 5px;
             transition: background-color 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         #discordButton {
-            background-color: #7289DA; /* Discord color */
+            background-color: #7289DA;
             display: inline-block;
         }
         #discordButton:hover {
@@ -96,36 +95,48 @@
             background-color: #45a049;
         }
         #connectButton:disabled {
-            background-color: #2e7d32; /* Darker green */
-            cursor: not-allowed; /* Change cursor to not-allowed */
+            background-color: #2e7d32;
+            cursor: not-allowed;
         }
         #status {
             margin-top: 1rem;
             font-weight: bold;
             color: #ffffff;
         }
-        #closeMessage {
-            margin-top: 2rem;
-            color: #ffffff;
-            text-align: center;
-            display: none; /* Initially hidden */
-        }
         #verificationResult {
             margin-top: 1rem;
             white-space: pre-wrap;
             word-break: break-word;
             color: #ffffff;
+            font-size: 1.1em;
         }
-        .blue-text {
-            color: #007bff;
+        .yellow-text {
+            color: #FFD700;
             font-weight: bold;
+        }
+        #closeMessage {
+            margin-top: 2rem;
+            color: #ffffff;
+            text-align: center;
+            display: none;
+            font-size: 1.2em;
+        }
+        @media (max-width: 480px) {
+            .container {
+                padding: 1rem;
+            }
+            .logo-text {
+                font-size: 36px;
+            }
+            button {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
     <div class="logo-container">
-        <!-- Comment out or remove this line if you don't have a logo -->
-        <!-- <img src="logo.png" alt="Logo" class="logo"> -->
+        <img src="logo.png" alt="Logo" class="logo">
         <div class="logo-text">BUX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DAO</div>
     </div>
     <div class="container">
@@ -134,11 +145,12 @@
         <button id="discordButton">Sign in with Discord</button>
         <button id="connectButton">Connect Wallet</button>
         <p id="status"></p>
-        <p id="verificationResult"></p>  <!-- Add this line -->
+        <p id="verificationResult"></p>
     </div>
     <div id="closeMessage">
-        You can now close this window...<br>
-        Please allow a few minutes for your discord roles to be updated
+        <strong>VERIFIED</strong><br>
+        You can now close this window<br>
+        Please allow a few minutes for your server roles to update...
     </div>
 
     <script>
@@ -173,14 +185,8 @@
                         'Pragma': 'no-cache'
                     }
                 })
-                    .then(response => {
-                        console.log('Auth status response:', response);
-                        console.log('Auth status response headers:', [...response.headers.entries()]);
-                        return response.text();
-                    })
-                    .then(text => {
-                        console.log('Raw response:', text);
-                        const data = JSON.parse(text);
+                    .then(response => response.json())
+                    .then(data => {
                         console.log('Auth status data:', data);
                         if (data.authenticated && data.username) {
                             console.log('User authenticated:', data.username);
@@ -204,10 +210,9 @@
                             checkAuthStatus(retries - 1);
                         }
                     });
-            }, 3000); // 3 seconds delay
+            }, 3000);
         }
 
-        // Check auth status when the page loads
         console.log('Page loaded, checking auth status...');
         checkAuthStatus();
 
@@ -220,6 +225,10 @@
             try {
                 const resp = await window.solana.connect();
                 statusElement.textContent = 'Connected! Verifying...';
+                connectButton.disabled = true;
+                connectButton.textContent = 'CONNECTED';
+                connectButton.style.backgroundColor = '#2e7d32';
+                connectButton.style.cursor = 'default';
                 
                 fetch('/holder-verify/verify', {
                     method: 'POST',
@@ -233,10 +242,16 @@
                     console.log('Full verification response:', data);
                     if (data.success) {
                         const lines = data.formattedResponse.split('\n');
-                        lines.splice(2, 1); // Remove the second "Hi tom_buxdao!" line
-                        lines[1] = '<span class="blue-text">VERIFIED ASSETS:</span>'; // Make "VERIFIED ASSETS:" blue
+                        lines.splice(2, 1); // Remove the second "Hi username!" line
+                        lines[1] = '<span class="yellow-text">VERIFIED ASSETS:</span>'; // Make "VERIFIED ASSETS:" yellow
+                        // Make "Potential daily staking yield" line yellow
+                        const yieldIndex = lines.findIndex(line => line.startsWith('Potential daily staking yield'));
+                        if (yieldIndex !== -1) {
+                            lines[yieldIndex] = `<span class="yellow-text">${lines[yieldIndex]}</span>`;
+                        }
                         document.getElementById('verificationResult').innerHTML = lines.join('\n');
                         statusElement.textContent = 'Verification complete!';
+                        closeMessageElement.style.display = 'block';
                     } else {
                         document.getElementById('verificationResult').textContent = 'Verification failed. Please try again.';
                         statusElement.textContent = 'Verification failed.';
