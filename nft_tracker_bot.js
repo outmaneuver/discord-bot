@@ -181,9 +181,19 @@ client.once('ready', async () => {
   });
 
   // Send profile message
-  const profileChannel = await client.channels.fetch(process.env.PROFILE_CHANNEL_ID);
-  if (profileChannel) {
-    await sendProfileMessage(profileChannel);
+  if (process.env.PROFILE_CHANNEL_ID) {
+    try {
+      const profileChannel = await client.channels.fetch(process.env.PROFILE_CHANNEL_ID);
+      if (profileChannel) {
+        await sendProfileMessage(profileChannel);
+      } else {
+        console.error('Profile channel not found');
+      }
+    } catch (error) {
+      console.error('Error fetching profile channel:', error);
+    }
+  } else {
+    console.error('PROFILE_CHANNEL_ID is not set in the environment variables');
   }
 
   startPeriodicRoleChecks();
