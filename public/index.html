@@ -52,7 +52,7 @@
             z-index: 1;
         }
         .container {
-            background-color: #8a4fff;
+            background: linear-gradient(135deg, #7f3fce 0%, #a65fef 100%);
             padding: 2rem;
             border-radius: 10px;
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
@@ -141,6 +141,23 @@
         #discordButton:disabled:hover {
             background-color: #4a5568;
         }
+        .verified {
+            font-size: 1.5em;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+        .checkmark {
+            display: inline-block;
+            width: 22px;
+            height: 22px;
+            background-color: #4CAF50;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 22px;
+            margin-right: 10px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -157,7 +174,7 @@
         <p id="verificationResult"></p>
     </div>
     <div id="closeMessage">
-        <strong>VERIFIED</strong><br>
+        <span class="verified"><i class="checkmark">✓</i> VERIFIED</span><br>
         You can now close this window<br>
         Please allow a few minutes for your server roles to update...
     </div>
