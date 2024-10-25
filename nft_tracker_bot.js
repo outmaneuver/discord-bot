@@ -177,6 +177,8 @@ client.once('ready', async () => {
     content: 'Click the button below to verify your wallet and get your roles!',
     components: [row]
   });
+
+  startPeriodicRoleChecks();
 });
 
 async function checkCollections() {
@@ -465,7 +467,7 @@ app.post('/holder-verify/verify', async (req, res) => {
 
     const nftCounts = await checkNFTOwnership(walletAddress);
     const buxBalance = await getBUXBalance(walletAddress);
-    const rolesUpdated = await updateDiscordRoles(req.user.id, nftCounts, buxBalance);
+    const rolesUpdated = await updateDiscordRoles(req.user.id, nftCounts, buxBalance, walletAddress);
     
     console.log('Verification results:');
     console.log('NFT Counts:', JSON.stringify(nftCounts, null, 2));
@@ -842,3 +844,29 @@ function getUserWallet(userId) {
     return userWallets.get(userId);
 }
 
+// Add this function to perform the periodic check
+async function periodicRoleCheck() {
+    console.log('Starting periodic role check');
+    const guild = await client.guilds.fetch(GUILD_ID);
+
+    for (const [userId, walletAddress] of userWallets.entries()) {
+        try {
+            console.log(`Checking roles for user ${userId} with wallet ${walletAddress}`);
+            const nftCounts = await checkNFTOwnership(walletAddress);
+            const buxBalance = await getBUXBalance(walletAddress);
+            await updateDiscordRoles(userId, nftCounts, buxBalance);
+        } catch (error) {
+            console.error(`Error updating roles for user ${userId}:`, error);
+        }
+    }
+
+    console.log('Periodic role check completed');
+}
+
+// Add this function to start the periodic checks
+async function startPeriodicRoleChecks() {
+    while (true) {
+        await periodicRoleCheck();
+        await setTimeout(5 * 60 * 1000); // Wait for 5 minutes
+    }
+}
