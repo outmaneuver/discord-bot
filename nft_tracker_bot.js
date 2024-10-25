@@ -15,6 +15,8 @@ import celebCatzHashlist from './hashlists/celebcatz.json' assert { type: 'json'
 import moneyMonstersHashlist from './hashlists/money_monsters.json' assert { type: 'json' };
 import moneyMonsters3DHashlist from './hashlists/money_monsters3d.json' assert { type: 'json' };
 import aiBitBotsHashlist from './hashlists/ai_bitbots.json' assert { type: 'json' };
+import MM_TOP10 from './hashlists/MM_top10.json' assert { type: 'json' };
+import MM3D_TOP10 from './hashlists/MM3D_top10.json' assert { type: 'json' };
 import { setTimeout } from 'timers/promises';
 
 dotenv.config();
@@ -517,7 +519,6 @@ async function checkNFTOwnership(walletAddress) {
     console.log(`Checking NFT ownership for wallet: ${walletAddress}`);
     const nfts = await getNFTsForOwner(walletAddress);
     console.log(`Total NFTs found: ${nfts.length}`);
-    console.log('All NFTs:', JSON.stringify(nfts, null, 2));
 
     const collectionCounts = {};
 
@@ -526,10 +527,12 @@ async function checkNFTOwnership(walletAddress) {
       console.log(`Checking NFT with mint: ${mint}`);
       
       for (const [collection, hashlist] of Object.entries(COLLECTION_HASHLISTS)) {
-        console.log(`Checking against ${collection} hashlist`);
         if (hashlist.includes(mint)) {
           console.log(`Found NFT from collection: ${collection}`);
-          collectionCounts[collection] = (collectionCounts[collection] || 0) + 1;
+          if (!collectionCounts[collection]) {
+            collectionCounts[collection] = [];
+          }
+          collectionCounts[collection].push(mint);
         }
       }
     }
@@ -622,6 +625,31 @@ async function updateDiscordRoles(userId, heldCollections, buxBalance, walletAdd
             await member.roles.remove(WHALE_ROLE_IDS[collection]);
             console.log(`Removed whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
           }
+          
+          // Check for top 10 role
+          if (collection === 'money_monsters') {
+            const hasTop10 = heldCollections[collection].some(nft => MM_TOP10.includes(nft));
+            if (hasTop10) {
+              console.log(`Adding top 10 role ${process.env.ROLE_ID_MM_TOP10} for Money Monsters`);
+              await member.roles.add(process.env.ROLE_ID_MM_TOP10);
+              console.log(`Added top 10 role ${process.env.ROLE_ID_MM_TOP10} for Money Monsters`);
+            } else {
+              console.log(`Removing top 10 role ${process.env.ROLE_ID_MM_TOP10} for Money Monsters`);
+              await member.roles.remove(process.env.ROLE_ID_MM_TOP10);
+              console.log(`Removed top 10 role ${process.env.ROLE_ID_MM_TOP10} for Money Monsters`);
+            }
+          } else if (collection === 'money_monsters3d') {
+            const hasTop10 = heldCollections[collection].some(nft => MM3D_TOP10.includes(nft));
+            if (hasTop10) {
+              console.log(`Adding top 10 role ${process.env.ROLE_ID_MM3D_TOP10} for Money Monsters 3D`);
+              await member.roles.add(process.env.ROLE_ID_MM3D_TOP10);
+              console.log(`Added top 10 role ${process.env.ROLE_ID_MM3D_TOP10} for Money Monsters 3D`);
+            } else {
+              console.log(`Removing top 10 role ${process.env.ROLE_ID_MM3D_TOP10} for Money Monsters 3D`);
+              await member.roles.remove(process.env.ROLE_ID_MM3D_TOP10);
+              console.log(`Removed top 10 role ${process.env.ROLE_ID_MM3D_TOP10} for Money Monsters 3D`);
+            }
+          }
         } else {
           console.log(`Removing role ${roleId} for collection ${collection}`);
           await member.roles.remove(roleId);
@@ -630,6 +658,16 @@ async function updateDiscordRoles(userId, heldCollections, buxBalance, walletAdd
             console.log(`Removing whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
             await member.roles.remove(WHALE_ROLE_IDS[collection]);
             console.log(`Removed whale role ${WHALE_ROLE_IDS[collection]} for collection ${collection}`);
+          }
+          // Remove top 10 roles if not in the collection anymore
+          if (collection === 'money_monsters') {
+            console.log(`Removing top 10 role ${process.env.ROLE_ID_MM_TOP10} for Money Monsters`);
+            await member.roles.remove(process.env.ROLE_ID_MM_TOP10);
+            console.log(`Removed top 10 role ${process.env.ROLE_ID_MM_TOP10} for Money Monsters`);
+          } else if (collection === 'money_monsters3d') {
+            console.log(`Removing top 10 role ${process.env.ROLE_ID_MM3D_TOP10} for Money Monsters 3D`);
+            await member.roles.remove(process.env.ROLE_ID_MM3D_TOP10);
+            console.log(`Removed top 10 role ${process.env.ROLE_ID_MM3D_TOP10} for Money Monsters 3D`);
           }
         }
       } catch (error) {
@@ -870,3 +908,4 @@ async function startPeriodicRoleChecks() {
         await setTimeout(5 * 60 * 1000); // Wait for 5 minutes
     }
 }
+
