@@ -19,18 +19,22 @@ export async function getWalletData(userId) {
   const walletAddress = Array.from(walletAddresses)[0];
   console.log('Using wallet address:', walletAddress);
 
-  // Fetch NFT and BUX data for this wallet address
-  const nftCounts = await checkNFTOwnership(walletAddress);
-  const buxBalance = await getBUXBalance(walletAddress);
+  try {
+    // Fetch NFT and BUX data for this wallet address
+    const nftCounts = await checkNFTOwnership(walletAddress);
+    const buxBalance = await getBUXBalance(walletAddress);
 
-  console.log('Fetched data:', { nftCounts, buxBalance });
+    console.log('Fetched data:', { nftCounts, buxBalance });
 
-  return {
-    walletAddress,
-    nftCounts,
-    buxBalance,
-    // Add other relevant data
-  };
+    return {
+      walletAddress,
+      nftCounts,
+      buxBalance,
+    };
+  } catch (error) {
+    console.error('Error fetching wallet data:', error);
+    return null;
+  }
 }
 
 export async function getPokerStats(userId) {
@@ -43,9 +47,11 @@ export async function getSpadesStats(userId) {
 
 export async function sendProfileMessage(channel, userId) {
   try {
+    console.log('Sending profile message for user:', userId);
     const walletData = await getWalletData(userId);
 
     if (!walletData) {
+      console.log('No wallet data found for user:', userId);
       const embed = new EmbedBuilder()
         .setColor('#FF0000')
         .setTitle('Profile Not Found')
@@ -62,6 +68,7 @@ export async function sendProfileMessage(channel, userId) {
     const user = await channel.client.users.fetch(userId);
     const username = user.username;
 
+    console.log('Creating profile embed for user:', username);
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
       .setTitle(`${username}'s BUX DAO Profile`)
@@ -69,10 +76,10 @@ export async function sendProfileMessage(channel, userId) {
         { name: 'Wallet Address', value: walletData.walletAddress },
         { name: 'BUX Balance', value: `${walletData.buxBalance} BUX` },
         { name: 'NFTs', value: formatNFTCounts(walletData.nftCounts) },
-        // Add other fields as needed
       )
       .setTimestamp();
 
+    console.log('Sending profile embed');
     await channel.send({ embeds: [embed] });
   } catch (error) {
     console.error('Error sending profile message:', error);
