@@ -200,6 +200,20 @@ app.use((req, res, next) => {
   next();
 });
 
+app.post('/store-wallet', (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ success: false, error: 'Not authenticated' });
+  }
+
+  const { walletAddress } = req.body;
+  const userId = req.user.id;
+
+  // Store the wallet address (implement your storage logic here)
+  console.log(`Storing wallet address ${walletAddress} for user ${userId}`);
+
+  res.json({ success: true });
+});
+
 // Catch-all route for 404 errors
 app.use((req, res) => {
   res.status(404).send('404 - Not Found');
@@ -251,17 +265,3 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 console.log('Application setup complete');
-
-app.post('/store-wallet', (req, res) => {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ success: false, error: 'Not authenticated' });
-  }
-
-  const { walletAddress } = req.body;
-  const userId = req.user.id;
-
-  // Store the wallet address (implement your storage logic here)
-  console.log(`Storing wallet address ${walletAddress} for user ${userId}`);
-
-  res.json({ success: true });
-});

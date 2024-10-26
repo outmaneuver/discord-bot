@@ -314,7 +314,21 @@
                 },
                 body: JSON.stringify({ walletAddress }),
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.text(); // Get the raw text first
+            })
+            .then(text => {
+                try {
+                    return JSON.parse(text); // Try to parse it as JSON
+                } catch (e) {
+                    console.error('Error parsing JSON:', e);
+                    console.log('Raw response:', text);
+                    throw new Error('Invalid JSON response');
+                }
+            })
             .then(data => {
                 if (data.success) {
                     console.log('Wallet address stored successfully');
