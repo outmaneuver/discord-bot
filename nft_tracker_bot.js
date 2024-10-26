@@ -6,6 +6,7 @@ import passport from 'passport';
 import { Strategy as DiscordStrategy } from 'passport-discord';
 import session from 'express-session';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 import { initializeSalesListings, testSale, testListing, testAllListings } from './sales_listings.js';
 import { verifyHolder, sendVerificationMessage } from './verify.js';
@@ -26,7 +27,9 @@ const client = new Client({
 const app = express();
 
 // Express middleware and session setup
-app.use(cors());
+app.use(cors({
+  origin: ['https://yourdomain.com', 'https://anotherdomain.com']
+}));
 app.use(express.json());
 app.set('trust proxy', 1); // trust first proxy
 
@@ -76,6 +79,11 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser((obj, done) => {
     done(null, obj);
+});
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
 });
 
 client.once('ready', async () => {
@@ -310,3 +318,8 @@ if (!process.env.PROFILE_CHANNEL_ID) {
 } else {
   console.log('PROFILE_CHANNEL_ID:', process.env.PROFILE_CHANNEL_ID);
 }
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
+});
