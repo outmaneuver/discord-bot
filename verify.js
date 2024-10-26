@@ -316,53 +316,54 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance, 
       process.env.ROLE_ID_MM3D_TOP10,
       process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D,
       process.env.ROLE_ID_AI_BITBOTS,
-      process.env.WHALE_ROLE_ID_AI_BITBOTS,
-      process.env.ROLE_ID_2500_BUX,
-      process.env.ROLE_ID_10000_BUX,
+      process.env.ROLE_ID_50000_BUX,
       process.env.ROLE_ID_25000_BUX,
-      process.env.ROLE_ID_50000_BUX
+      process.env.ROLE_ID_10000_BUX,
+      process.env.ROLE_ID_2500_BUX,
+      process.env.ROLE_ID_VERIFIED
     ];
 
-    // Remove all possible roles
+    // Remove all possible roles first
     for (const roleId of allRoles) {
       if (roleId && member.roles.cache.has(roleId)) {
         await member.roles.remove(roleId);
       }
     }
 
-    // Add roles based on NFT ownership
+    // Array to store roles to be added
     const rolesToAdd = [];
 
-    if (nftCounts.fcked_catz && nftCounts.fcked_catz.length > 0) {
+    // Add verified role
+    rolesToAdd.push(process.env.ROLE_ID_VERIFIED);
+
+    // Check NFT counts and add roles
+    if (nftCounts.fcked_catz.length > 0) {
       rolesToAdd.push(process.env.ROLE_ID_FCKED_CATZ);
-      if (nftCounts.fcked_catz.length >= parseInt(process.env.WHALE_THRESHOLD_FCKED_CATZ)) {
+      if (nftCounts.fcked_catz.length >= 20) {
         rolesToAdd.push(process.env.WHALE_ROLE_ID_FCKED_CATZ);
       }
     }
 
-    if (nftCounts.celebcatz && nftCounts.celebcatz.length > 0) {
+    if (nftCounts.celebcatz.length > 0) {
       rolesToAdd.push(process.env.ROLE_ID_CELEBCATZ);
     }
 
-    if (nftCounts.money_monsters && nftCounts.money_monsters.length > 0) {
+    if (nftCounts.money_monsters.length > 0) {
       rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS);
-      if (nftCounts.money_monsters.length >= parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS)) {
+      if (nftCounts.money_monsters.length >= 20) {
         rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS);
       }
     }
 
-    if (nftCounts.money_monsters3d && nftCounts.money_monsters3d.length > 0) {
+    if (nftCounts.money_monsters3d.length > 0) {
       rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
-      if (nftCounts.money_monsters3d.length >= parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS3D)) {
+      if (nftCounts.money_monsters3d.length >= 20) {
         rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
       }
     }
 
-    if (nftCounts.ai_bitbots && nftCounts.ai_bitbots.length > 0) {
+    if (nftCounts.ai_bitbots.length > 0) {
       rolesToAdd.push(process.env.ROLE_ID_AI_BITBOTS);
-      if (nftCounts.ai_bitbots.length >= parseInt(process.env.WHALE_THRESHOLD_AI_BITBOTS)) {
-        rolesToAdd.push(process.env.WHALE_ROLE_ID_AI_BITBOTS);
-      }
     }
 
     // Add BUX balance roles
