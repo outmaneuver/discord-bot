@@ -1,6 +1,7 @@
 import { Client, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import * as borsh from 'borsh';
 
 const GUILD_ID = process.env.GUILD_ID;
 const BUX_TOKEN_MINT = process.env.BUX_TOKEN_MINT;
@@ -43,17 +44,22 @@ export async function checkNFTOwnership(walletAddress) {
 
             if (tokenAmount.amount === '1' && tokenAmount.decimals === 0) {
                 console.log(`Checking collection for NFT: ${mint}`);
-                // Check which collection this NFT belongs to
-                if (await isNFTFromCollection(mint, FCKED_CATZ_COLLECTION)) {
-                    nftCounts.fcked_catz.push(mint);
-                } else if (await isNFTFromCollection(mint, CELEBCATZ_COLLECTION)) {
-                    nftCounts.celebcatz.push(mint);
-                } else if (await isNFTFromCollection(mint, MONEY_MONSTERS_COLLECTION)) {
-                    nftCounts.money_monsters.push(mint);
-                } else if (await isNFTFromCollection(mint, MONEY_MONSTERS_3D_COLLECTION)) {
-                    nftCounts.money_monsters3d.push(mint);
-                } else if (await isNFTFromCollection(mint, AI_BITBOTS_COLLECTION)) {
-                    nftCounts.ai_bitbots.push(mint);
+                const collectionInfo = await getCollectionInfo(mint);
+                if (collectionInfo) {
+                    console.log(`NFT ${mint} belongs to collection ${collectionInfo.collectionAddress}`);
+                    if (collectionInfo.collectionAddress === FCKED_CATZ_COLLECTION) {
+                        nftCounts.fcked_catz.push(mint);
+                    } else if (collectionInfo.collectionAddress === CELEBCATZ_COLLECTION) {
+                        nftCounts.celebcatz.push(mint);
+                    } else if (collectionInfo.collectionAddress === MONEY_MONSTERS_COLLECTION) {
+                        nftCounts.money_monsters.push(mint);
+                    } else if (collectionInfo.collectionAddress === MONEY_MONSTERS_3D_COLLECTION) {
+                        nftCounts.money_monsters3d.push(mint);
+                    } else if (collectionInfo.collectionAddress === AI_BITBOTS_COLLECTION) {
+                        nftCounts.ai_bitbots.push(mint);
+                    }
+                } else {
+                    console.log(`NFT ${mint} does not belong to any known collection`);
                 }
             }
         }
@@ -66,14 +72,159 @@ export async function checkNFTOwnership(walletAddress) {
     }
 }
 
-async function isNFTFromCollection(mint, collectionAddress) {
-    console.log(`Checking if NFT ${mint} belongs to collection ${collectionAddress}`);
-    // This is a placeholder implementation. You'll need to implement the actual logic to check the NFT's collection.
-    // For now, we'll use a simple comparison of the mint address to the known NFTs you have.
-    if (mint === 'DRWPyg3PGnG7k2ngbePdhMK9H4C3zocenXGJF3dbfh7q' && collectionAddress === MONEY_MONSTERS_3D_COLLECTION) {
-        return true;
+async function getCollectionInfo(mint) {
+    try {
+        const metadataProgram = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
+        const metadataAccount = PublicKey.findProgramAddressSync(
+            [
+                Buffer.from('metadata'),
+                metadataProgram.toBuffer(),
+                new PublicKey(mint).toBuffer(),
+            ],
+            metadataProgram
+        )[0];
+
+        const accountInfo = await connection.getAccountInfo(metadataAccount);
+        if (!accountInfo) {
+            console.log(`No metadata account found for NFT ${mint}`);
+            return null;
+        }
+
+        const metadata = decodeMetadata(accountInfo.data);
+        console.log(`Metadata for NFT ${mint}:`, metadata);
+
+        if (metadata.collection) {
+            return {
+                collectionAddress: metadata.collection.key.toBase58(),
+                verified: metadata.collection.verified
+            };
+        }
+
+        return null;
+    } catch (error) {
+        console.error(`Error getting collection info for NFT ${mint}:`, error);
+        return null;
     }
-    return false;
+}
+
+function decodeMetadata(buffer) {
+    // This is a simplified decoder. You might need a more comprehensive one depending on the metadata structure.
+    const metadata = borsh.deserializeUnchecked(METADATA_SCHEMA, Metadata, buffer);
+    return metadata;
+}
+
+const METADATA_SCHEMA = new Map([
+    [
+        Metadata,
+        {
+            kind: 'struct',
+            fields: [
+                ['key', 'u8'],
+                ['updateAuthority', [32]],
+                ['mint', [32]],
+                ['data', Data],
+                ['primarySaleHappened', 'u8'],
+                ['isMutable', 'u8'],
+                ['editionNonce', { kind: 'option', type: 'u8' }],
+                ['tokenStandard', { kind: 'option', type: 'u8' }],
+                ['collection', { kind: 'option', type: Collection }],
+                ['uses', { kind: 'option', type: Uses }],
+            ]
+        }
+    ],
+    [
+        Data,
+        {
+            kind: 'struct',
+            fields: [
+                ['name', 'string'],
+                ['symbol', 'string'],
+                ['uri', 'string'],
+                ['sellerFeeBasisPoints', 'u16'],
+                ['creators', { kind: 'option', type: [Creator] }]
+            ]
+        }
+    ],
+    [
+        Creator,
+        {
+            kind: 'struct',
+            fields: [
+                ['address', [32]],
+                ['verified', 'u8'],
+                ['share', 'u8']
+            ]
+        }
+    ],
+    [
+        Collection,
+        {
+            kind: 'struct',
+            fields: [
+                ['verified', 'u8'],
+                ['key', [32]]
+            ]
+        }
+    ],
+    [
+        Uses,
+        {
+            kind: 'struct',
+            fields: [
+                ['useMethod', 'u8'],
+                ['remaining', 'u64'],
+                ['total', 'u64']
+            ]
+        }
+    ]
+]);
+
+class Metadata {
+    constructor(args) {
+        this.key = args.key;
+        this.updateAuthority = args.updateAuthority;
+        this.mint = args.mint;
+        this.data = args.data;
+        this.primarySaleHappened = args.primarySaleHappened;
+        this.isMutable = args.isMutable;
+        this.editionNonce = args.editionNonce;
+        this.tokenStandard = args.tokenStandard;
+        this.collection = args.collection;
+        this.uses = args.uses;
+    }
+}
+
+class Data {
+    constructor(args) {
+        this.name = args.name;
+        this.symbol = args.symbol;
+        this.uri = args.uri;
+        this.sellerFeeBasisPoints = args.sellerFeeBasisPoints;
+        this.creators = args.creators;
+    }
+}
+
+class Creator {
+    constructor(args) {
+        this.address = args.address;
+        this.verified = args.verified;
+        this.share = args.share;
+    }
+}
+
+class Collection {
+    constructor(args) {
+        this.verified = args.verified;
+        this.key = args.key;
+    }
+}
+
+class Uses {
+    constructor(args) {
+        this.useMethod = args.useMethod;
+        this.remaining = args.remaining;
+        this.total = args.total;
+    }
 }
 
 export async function getBUXBalance(walletAddress) {

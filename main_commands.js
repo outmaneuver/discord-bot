@@ -5,6 +5,7 @@ export async function handleMainCommands(message, client) {
     const commands = [
       { name: '!help', description: 'Show this help message' },
       { name: '!profile', description: 'View your profile' },
+      { name: '!profile @user', description: 'View another user\'s profile (Admin only)' },
       { name: '!verify', description: 'Get a link to verify your wallet' },
       { name: '!testsale', description: 'Test a sale notification (Admin only)' },
       { name: '!testlisting', description: 'Test a listing notification (Admin only)' },
