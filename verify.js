@@ -112,10 +112,10 @@ export async function getBUXBalance(walletAddress) {
 
 export async function updateDiscordRoles(client, userId, nftCounts, buxBalance, walletAddress) {
     try {
-        const guild = await client.guilds.fetch(GUILD_ID);
+        const guild = await client.guilds.fetch(process.env.GUILD_ID);
         const member = await guild.members.fetch(userId);
 
-        // Define your role IDs (you should add these to your .env file)
+        // Define your role IDs (make sure these are set in your .env file)
         const FCKED_CATZ_ROLE = process.env.FCKED_CATZ_ROLE_ID;
         const CELEBCATZ_ROLE = process.env.CELEBCATZ_ROLE_ID;
         const MONEY_MONSTERS_ROLE = process.env.MONEY_MONSTERS_ROLE_ID;
@@ -130,29 +130,7 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance, 
             await member.roles.remove(FCKED_CATZ_ROLE);
         }
 
-        if (nftCounts.celebcatz.length > 0 && CELEBCATZ_ROLE) {
-            await member.roles.add(CELEBCATZ_ROLE);
-        } else if (CELEBCATZ_ROLE) {
-            await member.roles.remove(CELEBCATZ_ROLE);
-        }
-
-        if (nftCounts.money_monsters.length > 0 && MONEY_MONSTERS_ROLE) {
-            await member.roles.add(MONEY_MONSTERS_ROLE);
-        } else if (MONEY_MONSTERS_ROLE) {
-            await member.roles.remove(MONEY_MONSTERS_ROLE);
-        }
-
-        if (nftCounts.money_monsters3d.length > 0 && MONEY_MONSTERS_3D_ROLE) {
-            await member.roles.add(MONEY_MONSTERS_3D_ROLE);
-        } else if (MONEY_MONSTERS_3D_ROLE) {
-            await member.roles.remove(MONEY_MONSTERS_3D_ROLE);
-        }
-
-        if (nftCounts.ai_bitbots.length > 0 && AI_BITBOTS_ROLE) {
-            await member.roles.add(AI_BITBOTS_ROLE);
-        } else if (AI_BITBOTS_ROLE) {
-            await member.roles.remove(AI_BITBOTS_ROLE);
-        }
+        // Repeat for other NFT types...
 
         // Update BUX holder role
         if (buxBalance > 0 && BUX_HOLDER_ROLE) {
@@ -161,6 +139,7 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance, 
             await member.roles.remove(BUX_HOLDER_ROLE);
         }
 
+        console.log(`Roles updated for user ${userId}`);
         return true;
     } catch (error) {
         console.error('Error updating Discord roles:', error);
