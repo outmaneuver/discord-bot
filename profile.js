@@ -2,20 +2,11 @@ import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'disc
 import { checkNFTOwnership, getBUXBalance } from './verify.js';
 import Redis from 'ioredis';
 
-const redisOptions = {
-  port: process.env.REDIS_PORT || 6379,
-  host: process.env.REDIS_HOST || '127.0.0.1',
+const redis = new Redis(process.env.REDIS_URL, {
   tls: {
     rejectUnauthorized: false
   }
-};
-
-// Only add password if it's set in the environment
-if (process.env.REDIS_PASSWORD) {
-  redisOptions.password = process.env.REDIS_PASSWORD;
-}
-
-const redis = new Redis(redisOptions);
+});
 
 export async function getWalletData(userId) {
   console.log('Retrieving wallet data for user:', userId);

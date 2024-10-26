@@ -206,20 +206,11 @@ app.use((req, res, next) => {
 
 let redis;
 try {
-  const redisOptions = {
-    port: process.env.REDIS_PORT || 6379,
-    host: process.env.REDIS_HOST || '127.0.0.1',
+  redis = new Redis(process.env.REDIS_URL, {
     tls: {
       rejectUnauthorized: false
     }
-  };
-  
-  // Only add password if it's set in the environment
-  if (process.env.REDIS_PASSWORD) {
-    redisOptions.password = process.env.REDIS_PASSWORD;
-  }
-
-  redis = new Redis(redisOptions);
+  });
   console.log('Connected to Redis');
 } catch (error) {
   console.warn('Failed to connect to Redis. Using in-memory storage instead.');
