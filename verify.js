@@ -111,40 +111,95 @@ export async function getBUXBalance(walletAddress) {
 }
 
 export async function updateDiscordRoles(client, userId, nftCounts, buxBalance, walletAddress) {
-    try {
-        const guild = await client.guilds.fetch(process.env.GUILD_ID);
-        const member = await guild.members.fetch(userId);
+  try {
+    const guild = await client.guilds.fetch(process.env.GUILD_ID);
+    const member = await guild.members.fetch(userId);
 
-        // Define your role IDs (make sure these are set in your .env file)
-        const FCKED_CATZ_ROLE = process.env.FCKED_CATZ_ROLE_ID;
-        const CELEBCATZ_ROLE = process.env.CELEBCATZ_ROLE_ID;
-        const MONEY_MONSTERS_ROLE = process.env.MONEY_MONSTERS_ROLE_ID;
-        const MONEY_MONSTERS_3D_ROLE = process.env.MONEY_MONSTERS_3D_ROLE_ID;
-        const AI_BITBOTS_ROLE = process.env.AI_BITBOTS_ROLE_ID;
-        const BUX_HOLDER_ROLE = process.env.BUX_HOLDER_ROLE_ID;
+    // Define all possible roles
+    const allRoles = [
+      process.env.ROLE_ID_FCKED_CATZ,
+      process.env.WHALE_ROLE_ID_FCKED_CATZ,
+      process.env.ROLE_ID_CELEBCATZ,
+      process.env.ROLE_ID_MONEY_MONSTERS,
+      process.env.WHALE_ROLE_ID_MONEY_MONSTERS,
+      process.env.ROLE_ID_MONEY_MONSTERS3D,
+      process.env.ROLE_ID_MM_TOP10,
+      process.env.ROLE_ID_MM3D_TOP10,
+      process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D,
+      process.env.ROLE_ID_AI_BITBOTS,
+      process.env.WHALE_ROLE_ID_AI_BITBOTS,
+      process.env.ROLE_ID_2500_BUX,
+      process.env.ROLE_ID_10000_BUX,
+      process.env.ROLE_ID_25000_BUX,
+      process.env.ROLE_ID_50000_BUX
+    ];
 
-        // Update roles based on NFT ownership
-        if (nftCounts.fcked_catz.length > 0 && FCKED_CATZ_ROLE) {
-            await member.roles.add(FCKED_CATZ_ROLE);
-        } else if (FCKED_CATZ_ROLE) {
-            await member.roles.remove(FCKED_CATZ_ROLE);
-        }
-
-        // Repeat for other NFT types...
-
-        // Update BUX holder role
-        if (buxBalance > 0 && BUX_HOLDER_ROLE) {
-            await member.roles.add(BUX_HOLDER_ROLE);
-        } else if (BUX_HOLDER_ROLE) {
-            await member.roles.remove(BUX_HOLDER_ROLE);
-        }
-
-        console.log(`Roles updated for user ${userId}`);
-        return true;
-    } catch (error) {
-        console.error('Error updating Discord roles:', error);
-        return false;
+    // Remove all possible roles
+    for (const roleId of allRoles) {
+      if (roleId && member.roles.cache.has(roleId)) {
+        await member.roles.remove(roleId);
+      }
     }
+
+    // Add roles based on NFT ownership
+    const rolesToAdd = [];
+
+    if (nftCounts.fcked_catz && nftCounts.fcked_catz.length > 0) {
+      rolesToAdd.push(process.env.ROLE_ID_FCKED_CATZ);
+      if (nftCounts.fcked_catz.length >= parseInt(process.env.WHALE_THRESHOLD_FCKED_CATZ)) {
+        rolesToAdd.push(process.env.WHALE_ROLE_ID_FCKED_CATZ);
+      }
+    }
+
+    if (nftCounts.celebcatz && nftCounts.celebcatz.length > 0) {
+      rolesToAdd.push(process.env.ROLE_ID_CELEBCATZ);
+    }
+
+    if (nftCounts.money_monsters && nftCounts.money_monsters.length > 0) {
+      rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS);
+      if (nftCounts.money_monsters.length >= parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS)) {
+        rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS);
+      }
+    }
+
+    if (nftCounts.money_monsters3d && nftCounts.money_monsters3d.length > 0) {
+      rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
+      if (nftCounts.money_monsters3d.length >= parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS3D)) {
+        rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
+      }
+    }
+
+    if (nftCounts.ai_bitbots && nftCounts.ai_bitbots.length > 0) {
+      rolesToAdd.push(process.env.ROLE_ID_AI_BITBOTS);
+      if (nftCounts.ai_bitbots.length >= parseInt(process.env.WHALE_THRESHOLD_AI_BITBOTS)) {
+        rolesToAdd.push(process.env.WHALE_ROLE_ID_AI_BITBOTS);
+      }
+    }
+
+    // Add BUX balance roles
+    if (buxBalance >= 50000) {
+      rolesToAdd.push(process.env.ROLE_ID_50000_BUX);
+    } else if (buxBalance >= 25000) {
+      rolesToAdd.push(process.env.ROLE_ID_25000_BUX);
+    } else if (buxBalance >= 10000) {
+      rolesToAdd.push(process.env.ROLE_ID_10000_BUX);
+    } else if (buxBalance >= 2500) {
+      rolesToAdd.push(process.env.ROLE_ID_2500_BUX);
+    }
+
+    // Add the roles
+    for (const roleId of rolesToAdd) {
+      if (roleId && !member.roles.cache.has(roleId)) {
+        await member.roles.add(roleId);
+      }
+    }
+
+    console.log(`Updated roles for user ${userId}`);
+    return true;
+  } catch (error) {
+    console.error('Error updating Discord roles:', error);
+    return false;
+  }
 }
 
 export function sendVerificationMessage(channel) {
