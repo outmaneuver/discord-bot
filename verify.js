@@ -30,7 +30,6 @@ export async function checkNFTOwnership(walletAddress) {
             ai_bitbots: []
         };
 
-        // Fetch NFTs owned by the wallet
         console.log('Fetching NFT accounts...');
         const nftAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
             programId: TOKEN_PROGRAM_ID
@@ -38,6 +37,7 @@ export async function checkNFTOwnership(walletAddress) {
         console.log(`Found ${nftAccounts.value.length} token accounts`);
 
         for (let account of nftAccounts.value) {
+            console.log('Processing account:', JSON.stringify(account, null, 2));
             const mint = account.account.data.parsed.info.mint;
             const tokenAmount = account.account.data.parsed.info.tokenAmount;
 
@@ -77,22 +77,35 @@ async function isNFTFromCollection(mint, collectionAddress) {
 
 export async function getBUXBalance(walletAddress) {
     try {
+        console.log(`Getting BUX balance for wallet: ${walletAddress}`);
         const publicKey = new PublicKey(walletAddress);
+        
+        // Check if BUX_TOKEN_MINT is defined
+        if (!BUX_TOKEN_MINT) {
+            console.error('BUX_TOKEN_MINT is not defined');
+            return 0;
+        }
+        
         const buxMint = new PublicKey(BUX_TOKEN_MINT);
 
+        console.log('Fetching token accounts...');
         const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
             mint: buxMint
         });
+        console.log(`Found ${tokenAccounts.value.length} BUX token accounts`);
 
         if (tokenAccounts.value.length > 0) {
+            console.log('Token account data:', JSON.stringify(tokenAccounts.value[0], null, 2));
             const balance = tokenAccounts.value[0].account.data.parsed.info.tokenAmount.uiAmount;
+            console.log(`BUX balance: ${balance}`);
             return balance;
         }
 
+        console.log('No BUX balance found');
         return 0;
     } catch (error) {
         console.error('Error getting BUX balance:', error);
-        throw error;
+        return 0; // Return 0 instead of throwing an error
     }
 }
 

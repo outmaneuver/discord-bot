@@ -183,7 +183,7 @@ app.post('/holder-verify/verify', async (req, res) => {
 
     console.log('Getting BUX balance...');
     const buxBalance = await getBUXBalance(walletAddress);
-    console.log('BUX balance retrieved');
+    console.log('BUX balance retrieved:', buxBalance);
 
     console.log('Updating Discord roles...');
     const rolesUpdated = await updateDiscordRoles(client, req.user.id, nftCounts, buxBalance, walletAddress);
