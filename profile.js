@@ -80,6 +80,7 @@ export async function sendProfileMessage(channel, userId) {
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
       .setTitle(`${username}'s BUX DAO Profile`)
+      .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 128 }))
       .addFields(
         { name: 'Wallet Address', value: walletData.walletAddress },
         { name: 'BUX Balance', value: `${walletData.buxBalance} BUX` },
