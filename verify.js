@@ -2,6 +2,8 @@ import { Client, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } fr
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import * as borsh from 'borsh';
+import fs from 'fs/promises';
+import path from 'path';
 
 const GUILD_ID = process.env.GUILD_ID;
 const BUX_TOKEN_MINT = process.env.BUX_TOKEN_MINT;
@@ -15,10 +17,53 @@ const AI_BITBOTS_COLLECTION = process.env.COLLECTION_ADDRESS_AI_BITBOTS;
 
 const connection = new Connection(process.env.SOLANA_RPC_URL);
 
+// Add this function for rate limiting
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function retryWithBackoff(fn, maxRetries = 5, initialDelay = 1000) {
+    let retries = 0;
+    while (retries < maxRetries) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (error.message.includes('429 Too Many Requests')) {
+                const delay = initialDelay * Math.pow(2, retries);
+                console.log(`Rate limited. Retrying in ${delay}ms...`);
+                await sleep(delay);
+                retries++;
+            } else {
+                throw error;
+            }
+        }
+    }
+    throw new Error('Max retries reached');
+}
+
+// Load hashlists
+const loadHashlist = async (filename) => {
+  const filePath = path.join(process.cwd(), 'hashlists', filename);
+  const data = await fs.readFile(filePath, 'utf8');
+  return new Set(JSON.parse(data));
+};
+
+let fckedCatzHashlist, celebcatzHashlist, moneyMonstersHashlist, moneyMonsters3dHashlist, aiBitbotsHashlist;
+
+const initializeHashlists = async () => {
+  fckedCatzHashlist = await loadHashlist('fcked_catz.json');
+  celebcatzHashlist = await loadHashlist('celebcatz.json');
+  moneyMonstersHashlist = await loadHashlist('money_monsters.json');
+  moneyMonsters3dHashlist = await loadHashlist('money_monsters3d.json');
+  aiBitbotsHashlist = await loadHashlist('ai_bitbots.json');
+};
+
+// Call this function when your bot starts up
+initializeHashlists();
+
 export async function verifyHolder(client, userId, walletAddress) {
     // ... (existing verifyHolder function)
 }
 
+// Modify the checkNFTOwnership function
 export async function checkNFTOwnership(walletAddress) {
     try {
         console.log(`Checking NFT ownership for wallet: ${walletAddress}`);
@@ -38,28 +83,20 @@ export async function checkNFTOwnership(walletAddress) {
         console.log(`Found ${nftAccounts.value.length} token accounts`);
 
         for (let account of nftAccounts.value) {
-            console.log('Processing account:', JSON.stringify(account, null, 2));
             const mint = account.account.data.parsed.info.mint;
             const tokenAmount = account.account.data.parsed.info.tokenAmount;
 
             if (tokenAmount.amount === '1' && tokenAmount.decimals === 0) {
-                console.log(`Checking collection for NFT: ${mint}`);
-                const collectionInfo = await getCollectionInfo(mint);
-                if (collectionInfo) {
-                    console.log(`NFT ${mint} belongs to collection ${collectionInfo.collectionAddress}`);
-                    if (collectionInfo.collectionAddress === FCKED_CATZ_COLLECTION) {
-                        nftCounts.fcked_catz.push(mint);
-                    } else if (collectionInfo.collectionAddress === CELEBCATZ_COLLECTION) {
-                        nftCounts.celebcatz.push(mint);
-                    } else if (collectionInfo.collectionAddress === MONEY_MONSTERS_COLLECTION) {
-                        nftCounts.money_monsters.push(mint);
-                    } else if (collectionInfo.collectionAddress === MONEY_MONSTERS_3D_COLLECTION) {
-                        nftCounts.money_monsters3d.push(mint);
-                    } else if (collectionInfo.collectionAddress === AI_BITBOTS_COLLECTION) {
-                        nftCounts.ai_bitbots.push(mint);
-                    }
-                } else {
-                    console.log(`NFT ${mint} does not belong to any known collection`);
+                if (fckedCatzHashlist.has(mint)) {
+                    nftCounts.fcked_catz.push(mint);
+                } else if (celebcatzHashlist.has(mint)) {
+                    nftCounts.celebcatz.push(mint);
+                } else if (moneyMonstersHashlist.has(mint)) {
+                    nftCounts.money_monsters.push(mint);
+                } else if (moneyMonsters3dHashlist.has(mint)) {
+                    nftCounts.money_monsters3d.push(mint);
+                } else if (aiBitbotsHashlist.has(mint)) {
+                    nftCounts.ai_bitbots.push(mint);
                 }
             }
         }
@@ -84,7 +121,7 @@ async function getCollectionInfo(mint) {
             metadataProgram
         )[0];
 
-        const accountInfo = await connection.getAccountInfo(metadataAccount);
+        const accountInfo = await retryWithBackoff(() => connection.getAccountInfo(metadataAccount));
         if (!accountInfo) {
             console.log(`No metadata account found for NFT ${mint}`);
             return null;
