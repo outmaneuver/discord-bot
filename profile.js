@@ -36,7 +36,16 @@ export async function sendProfileMessage(channel, userId) {
     const walletData = await getWalletData(userId);
 
     if (!walletData) {
-      await channel.send('No wallet connected. Please verify your wallet first.');
+      const embed = new EmbedBuilder()
+        .setColor('#FF0000')
+        .setTitle('Profile Not Found')
+        .setDescription('No wallet connected. Please verify your wallet first.')
+        .addFields(
+          { name: 'How to Verify', value: 'Use the `!verify` command to get a link to connect your wallet.' }
+        )
+        .setTimestamp();
+
+      await channel.send({ embeds: [embed] });
       return;
     }
 

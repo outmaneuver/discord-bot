@@ -208,7 +208,12 @@ app.post('/store-wallet', (req, res) => {
   const { walletAddress } = req.body;
   const userId = req.user.id;
 
-  // Store the wallet address (implement your storage logic here)
+  // Store the wallet address
+  if (!global.userWallets) {
+    global.userWallets = new Map();
+  }
+  global.userWallets.set(userId, new Set([walletAddress]));
+
   console.log(`Storing wallet address ${walletAddress} for user ${userId}`);
 
   res.json({ success: true });
