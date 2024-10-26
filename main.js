@@ -251,3 +251,18 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 console.log('Application setup complete');
+
+app.post('/store-wallet', (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ success: false, error: 'Not authenticated' });
+  }
+
+  const { walletAddress } = req.body;
+  const userId = req.user.id;
+
+  // Store the wallet address (you can implement your storage logic here)
+  // For now, we'll just log it
+  console.log(`Storing wallet address ${walletAddress} for user ${userId}`);
+
+  res.json({ success: true });
+});
