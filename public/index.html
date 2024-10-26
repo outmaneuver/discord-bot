@@ -272,18 +272,10 @@
                 .then(data => {
                     console.log('Full verification response:', data);
                     if (data.success) {
-                        const lines = data.formattedResponse.split('\n');
-                        lines.splice(0, 2); // Remove the first "Hi username!" line and the empty line after it
-                        lines[0] = '<span class="yellow-text">VERIFIED ASSETS:</span>'; // Make "VERIFIED ASSETS:" yellow
-                        // Make "Potential daily staking yield" line yellow
-                        const yieldIndex = lines.findIndex(line => line.startsWith('Potential daily staking yield'));
-                        if (yieldIndex !== -1) {
-                            lines[yieldIndex] = `<span class="yellow-text">${lines[yieldIndex]}</span>`;
-                        }
-                        document.getElementById('verificationResult').innerHTML = lines.join('\n');
+                        document.getElementById('verificationResult').innerHTML = data.formattedResponse.replace(/\n/g, '<br>');
                         statusElement.textContent = 'Verification complete!';
                         closeMessageElement.style.display = 'block';
-                        storeWalletAddress(verifiedWalletAddress);
+                        storeWalletAddress(walletAddress); // Use walletAddress instead of verifiedWalletAddress
                     } else {
                         document.getElementById('verificationResult').textContent = 'Verification failed. Please try again.';
                         statusElement.textContent = 'Verification failed.';
