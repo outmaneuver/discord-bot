@@ -38,3 +38,5 @@ export function sendProfileMessage(channel) {
 export function generateProfileHtml(walletData, pokerStats, spadesStats) {
     // ... (generate HTML for profile)
 }
+
+
