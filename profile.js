@@ -40,3 +40,4 @@ export function generateProfileHtml(walletData, pokerStats, spadesStats) {
 }
 
 
+
