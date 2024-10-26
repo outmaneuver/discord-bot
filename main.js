@@ -63,7 +63,35 @@ app.use(passport.session());
 
 console.log('Express middleware set up');
 
-// ... (rest of your existing setup code)
+// Passport configuration
+passport.use(new DiscordStrategy({
+    clientID: process.env.DISCORD_CLIENT_ID,
+    clientSecret: process.env.DISCORD_CLIENT_SECRET,
+    callbackURL: process.env.DISCORD_REDIRECT_URI,
+    scope: ['identify', 'guilds.join']
+}, function(accessToken, refreshToken, profile, done) {
+    process.nextTick(function() {
+        return done(null, profile);
+    });
+}));
+
+passport.serializeUser((user, done) => {
+    done(null, user);
+});
+
+passport.deserializeUser((obj, done) => {
+    done(null, obj);
+});
+
+// Discord auth routes
+app.get('/auth/discord', passport.authenticate('discord'));
+
+app.get('/auth/discord/callback', 
+    passport.authenticate('discord', { failureRedirect: '/holder-verify' }),
+    function(req, res) {
+        res.redirect('/holder-verify');
+    }
+);
 
 // Serve static files
 app.use('/holder-verify', express.static(path.join(__dirname, 'public')));
@@ -72,6 +100,17 @@ app.use('/holder-verify', express.static(path.join(__dirname, 'public')));
 app.get('/holder-verify', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+// Auth status route
+app.get('/auth/status', (req, res) => {
+    res.json({ 
+        authenticated: req.isAuthenticated(),
+        username: req.user ? req.user.username : null,
+        id: req.user ? req.user.id : null
+    });
+});
+
+// ... (other routes and middleware)
 
 // Catch-all route for 404 errors
 app.use((req, res) => {
