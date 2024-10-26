@@ -59,9 +59,12 @@ export async function sendProfileMessage(channel, userId) {
       return;
     }
 
+    const user = await channel.client.users.fetch(userId);
+    const username = user.username;
+
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
-      .setTitle('Your BUX DAO Profile')
+      .setTitle(`${username}'s BUX DAO Profile`)
       .addFields(
         { name: 'Wallet Address', value: walletData.walletAddress },
         { name: 'BUX Balance', value: `${walletData.buxBalance} BUX` },
