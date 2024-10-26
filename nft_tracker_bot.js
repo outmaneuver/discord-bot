@@ -179,7 +179,7 @@ app.post('/holder-verify/verify', async (req, res) => {
 
     const nftCounts = await checkNFTOwnership(walletAddress);
     const buxBalance = await getBUXBalance(walletAddress);
-    const rolesUpdated = await updateDiscordRoles(req.user.id, nftCounts, buxBalance, walletAddress);
+    const rolesUpdated = await updateDiscordRoles(client, req.user.id, nftCounts, buxBalance, walletAddress);
     
     console.log('Verification results:');
     console.log('NFT Counts:', JSON.stringify(nftCounts, null, 2));
@@ -307,3 +307,4 @@ app.use((err, req, res, next) => {
 });
 
 const PROFILE_URL = process.env.PROFILE_URL;
+

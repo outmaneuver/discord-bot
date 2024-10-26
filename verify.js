@@ -166,5 +166,3 @@ export function sendVerificationMessage(channel) {
 
     return channel.send({ embeds: [embed], components: [row] });
 }
-
-export { verifyHolder, sendVerificationMessage, checkNFTOwnership, getBUXBalance, updateDiscordRoles };
