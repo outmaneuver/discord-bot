@@ -70,6 +70,16 @@ app.get('/holder-verify', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Catch-all route for 404 errors
+app.use((req, res) => {
+  res.status(404).send('404 - Not Found');
+});
+
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
   console.log(`Server is starting on port ${PORT}`);
