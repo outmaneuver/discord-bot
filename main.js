@@ -19,6 +19,9 @@ import { handleVerifyCommands } from './verify_commands.js';
 import { handleProfileCommands } from './profile_commands.js';
 import { handleSalesListingsCommands } from './sales_listings_commands.js';
 
+// Add this near the top of the file, after the imports
+global.userWallets = new Map();
+
 console.log('Starting application...');
 
 dotenv.config();
@@ -202,6 +205,7 @@ app.use((req, res, next) => {
 
 app.post('/store-wallet', (req, res) => {
   if (!req.isAuthenticated()) {
+    console.log('User not authenticated when trying to store wallet');
     return res.status(401).json({ success: false, error: 'Not authenticated' });
   }
 
@@ -214,7 +218,8 @@ app.post('/store-wallet', (req, res) => {
   }
   global.userWallets.set(userId, new Set([walletAddress]));
 
-  console.log(`Storing wallet address ${walletAddress} for user ${userId}`);
+  console.log(`Stored wallet address ${walletAddress} for user ${userId}`);
+  console.log('Current userWallets:', global.userWallets);
 
   res.json({ success: true });
 });
