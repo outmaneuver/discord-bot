@@ -68,6 +68,14 @@ export async function sendProfileMessage(channel, userId) {
     const user = await channel.client.users.fetch(userId);
     const username = user.username;
 
+    // Fetch the member object to get the roles
+    const member = await channel.guild.members.fetch(userId);
+    const roles = member.roles.cache
+      .filter(role => role.name !== '@everyone')
+      .sort((a, b) => b.position - a.position)
+      .map(role => role.name)
+      .join(', ');
+
     console.log('Creating profile embed for user:', username);
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
@@ -76,6 +84,7 @@ export async function sendProfileMessage(channel, userId) {
         { name: 'Wallet Address', value: walletData.walletAddress },
         { name: 'BUX Balance', value: `${walletData.buxBalance} BUX` },
         { name: 'NFTs', value: formatNFTCounts(walletData.nftCounts) },
+        { name: 'Server Roles', value: roles || 'No roles' }
       )
       .setTimestamp();
 
