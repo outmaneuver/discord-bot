@@ -26,7 +26,8 @@
     "node-fetch": "^3.3.2",
     "passport": "^0.6.0",
     "passport-discord": "^0.1.4",
-    "redis": "^4.6.10"
+    "redis": "^4.6.10",
+    "express-rate-limit": "^6.7.0"
   },
   "devDependencies": {
     "eslint": "^8.40.0",
