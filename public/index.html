@@ -255,6 +255,7 @@
 
             try {
                 const resp = await window.solana.connect();
+                const walletAddress = resp.publicKey.toString();
                 statusElement.textContent = 'Connected! Verifying...';
                 connectButton.disabled = true;
                 connectButton.textContent = 'CONNECTED';
@@ -266,7 +267,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ walletAddress: resp.publicKey.toString() }),
+                    body: JSON.stringify({ walletAddress: walletAddress }),
                 })
                 .then(response => response.json())
                 .then(data => {
@@ -275,7 +276,7 @@
                         document.getElementById('verificationResult').innerHTML = data.formattedResponse.replace(/\n/g, '<br>');
                         statusElement.textContent = 'Verification complete!';
                         closeMessageElement.style.display = 'block';
-                        storeWalletAddress(walletAddress); // Use walletAddress instead of verifiedWalletAddress
+                        storeWalletAddress(walletAddress);
                     } else {
                         document.getElementById('verificationResult').textContent = 'Verification failed. Please try again.';
                         statusElement.textContent = 'Verification failed.';

@@ -123,40 +123,40 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance, 
         const BUX_HOLDER_ROLE = process.env.BUX_HOLDER_ROLE_ID;
 
         // Update roles based on NFT ownership
-        if (nftCounts.fcked_catz.length > 0) {
+        if (nftCounts.fcked_catz.length > 0 && FCKED_CATZ_ROLE) {
             await member.roles.add(FCKED_CATZ_ROLE);
-        } else {
+        } else if (FCKED_CATZ_ROLE) {
             await member.roles.remove(FCKED_CATZ_ROLE);
         }
 
-        if (nftCounts.celebcatz.length > 0) {
+        if (nftCounts.celebcatz.length > 0 && CELEBCATZ_ROLE) {
             await member.roles.add(CELEBCATZ_ROLE);
-        } else {
+        } else if (CELEBCATZ_ROLE) {
             await member.roles.remove(CELEBCATZ_ROLE);
         }
 
-        if (nftCounts.money_monsters.length > 0) {
+        if (nftCounts.money_monsters.length > 0 && MONEY_MONSTERS_ROLE) {
             await member.roles.add(MONEY_MONSTERS_ROLE);
-        } else {
+        } else if (MONEY_MONSTERS_ROLE) {
             await member.roles.remove(MONEY_MONSTERS_ROLE);
         }
 
-        if (nftCounts.money_monsters3d.length > 0) {
+        if (nftCounts.money_monsters3d.length > 0 && MONEY_MONSTERS_3D_ROLE) {
             await member.roles.add(MONEY_MONSTERS_3D_ROLE);
-        } else {
+        } else if (MONEY_MONSTERS_3D_ROLE) {
             await member.roles.remove(MONEY_MONSTERS_3D_ROLE);
         }
 
-        if (nftCounts.ai_bitbots.length > 0) {
+        if (nftCounts.ai_bitbots.length > 0 && AI_BITBOTS_ROLE) {
             await member.roles.add(AI_BITBOTS_ROLE);
-        } else {
+        } else if (AI_BITBOTS_ROLE) {
             await member.roles.remove(AI_BITBOTS_ROLE);
         }
 
         // Update BUX holder role
-        if (buxBalance > 0) {
+        if (buxBalance > 0 && BUX_HOLDER_ROLE) {
             await member.roles.add(BUX_HOLDER_ROLE);
-        } else {
+        } else if (BUX_HOLDER_ROLE) {
             await member.roles.remove(BUX_HOLDER_ROLE);
         }
 
