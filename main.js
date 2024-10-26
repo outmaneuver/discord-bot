@@ -17,6 +17,8 @@ import { handleVerifyCommands } from './verify_commands.js';
 import { handleProfileCommands } from './profile_commands.js';
 import { handleSalesListingsCommands } from './sales_listings_commands.js';
 
+console.log('Starting application...');
+
 dotenv.config();
 
 const client = new Client({
@@ -28,18 +30,79 @@ const client = new Client({
   ],
 });
 
+console.log('Discord client created');
+
+const app = express();
+console.log('Express app created');
+
+// Express middleware and session setup
+app.use(cors({
+  origin: ['https://yourdomain.com', 'https://anotherdomain.com']
+}));
+app.use(express.json());
+app.set('trust proxy', 1);
+
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: true,
+    saveUninitialized: true,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000,
+        sameSite: 'lax'
+    }
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
+console.log('Express middleware set up');
+
 // ... (rest of your existing setup code)
+
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, () => {
+  console.log(`Server is starting on port ${PORT}`);
+})
+.on('error', (err) => {
+  console.error('Error starting server:', err);
+  process.exit(1);
+});
+
+// Set a timeout to exit if the server hasn't started within 55 seconds
+const startTimeout = setTimeout(() => {
+  console.error('Server failed to start within 55 seconds');
+  process.exit(1);
+}, 55000);
+
+server.on('listening', () => {
+  clearTimeout(startTimeout);
+  console.log(`Server is running on port ${PORT}`);
+});
+
+client.once('ready', () => {
+  console.log(`Logged in as ${client.user.tag}!`);
+  initializeSalesListings(client);
+});
 
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
-  // Handle commands from each module
   await handleMainCommands(message, client);
   await handleVerifyCommands(message, client);
   await handleProfileCommands(message, client);
   await handleSalesListingsCommands(message, client);
 });
 
-// ... (rest of your existing code)
+client.login(process.env.DISCORD_TOKEN)
+  .then(() => console.log('Discord bot logged in'))
+  .catch(err => {
+    console.error('Error logging in to Discord:', err);
+    process.exit(1);
+  });
 
-client.login(process.env.DISCORD_TOKEN);
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+console.log('Application setup complete');
