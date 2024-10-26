@@ -113,6 +113,55 @@ function decodeMetadata(buffer) {
     return metadata;
 }
 
+// Move these class definitions before the METADATA_SCHEMA
+class Metadata {
+    constructor(args) {
+        this.key = args.key;
+        this.updateAuthority = args.updateAuthority;
+        this.mint = args.mint;
+        this.data = args.data;
+        this.primarySaleHappened = args.primarySaleHappened;
+        this.isMutable = args.isMutable;
+        this.editionNonce = args.editionNonce;
+        this.tokenStandard = args.tokenStandard;
+        this.collection = args.collection;
+        this.uses = args.uses;
+    }
+}
+
+class Data {
+    constructor(args) {
+        this.name = args.name;
+        this.symbol = args.symbol;
+        this.uri = args.uri;
+        this.sellerFeeBasisPoints = args.sellerFeeBasisPoints;
+        this.creators = args.creators;
+    }
+}
+
+class Creator {
+    constructor(args) {
+        this.address = args.address;
+        this.verified = args.verified;
+        this.share = args.share;
+    }
+}
+
+class Collection {
+    constructor(args) {
+        this.verified = args.verified;
+        this.key = args.key;
+    }
+}
+
+class Uses {
+    constructor(args) {
+        this.useMethod = args.useMethod;
+        this.remaining = args.remaining;
+        this.total = args.total;
+    }
+}
+
 const METADATA_SCHEMA = new Map([
     [
         Metadata,
@@ -178,54 +227,6 @@ const METADATA_SCHEMA = new Map([
         }
     ]
 ]);
-
-class Metadata {
-    constructor(args) {
-        this.key = args.key;
-        this.updateAuthority = args.updateAuthority;
-        this.mint = args.mint;
-        this.data = args.data;
-        this.primarySaleHappened = args.primarySaleHappened;
-        this.isMutable = args.isMutable;
-        this.editionNonce = args.editionNonce;
-        this.tokenStandard = args.tokenStandard;
-        this.collection = args.collection;
-        this.uses = args.uses;
-    }
-}
-
-class Data {
-    constructor(args) {
-        this.name = args.name;
-        this.symbol = args.symbol;
-        this.uri = args.uri;
-        this.sellerFeeBasisPoints = args.sellerFeeBasisPoints;
-        this.creators = args.creators;
-    }
-}
-
-class Creator {
-    constructor(args) {
-        this.address = args.address;
-        this.verified = args.verified;
-        this.share = args.share;
-    }
-}
-
-class Collection {
-    constructor(args) {
-        this.verified = args.verified;
-        this.key = args.key;
-    }
-}
-
-class Uses {
-    constructor(args) {
-        this.useMethod = args.useMethod;
-        this.remaining = args.remaining;
-        this.total = args.total;
-    }
-}
 
 export async function getBUXBalance(walletAddress) {
     try {
