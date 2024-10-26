@@ -177,7 +177,7 @@ app.post('/holder-verify/verify', async (req, res) => {
       nftCounts,
       buxBalance,
       dailyYield,
-      formattedResponse: response
+      formattedResponse: response.trim() // Trim any whitespace
     });
   } catch (error) {
     console.error('Error during wallet verification:', error);
