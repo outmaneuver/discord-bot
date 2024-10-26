@@ -9,7 +9,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 
 import { initializeSalesListings, testSale, testListing, testAllListings } from './sales_listings.js';
-import { verifyHolder, sendVerificationMessage } from './verify.js';
+import { verifyHolder, sendVerificationMessage, checkNFTOwnership, getBUXBalance, updateDiscordRoles } from './verify.js';
 import { sendProfileMessage, getWalletData, getPokerStats, getSpadesStats, generateProfileHtml } from './profile.js';
 
 dotenv.config();
@@ -305,3 +305,5 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).send('Something broke!');
 });
+
+const PROFILE_URL = process.env.PROFILE_URL;
