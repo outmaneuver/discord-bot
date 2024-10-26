@@ -269,7 +269,12 @@
                     },
                     body: JSON.stringify({ walletAddress: walletAddress }),
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     console.log('Full verification response:', data);
                     if (data.success) {
@@ -278,13 +283,13 @@
                         closeMessageElement.style.display = 'block';
                         storeWalletAddress(walletAddress);
                     } else {
-                        document.getElementById('verificationResult').textContent = 'Verification failed. Please try again.';
+                        document.getElementById('verificationResult').textContent = `Verification failed: ${data.error}`;
                         statusElement.textContent = 'Verification failed.';
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    document.getElementById('verificationResult').textContent = 'An error occurred. Please try again.';
+                    document.getElementById('verificationResult').textContent = `An error occurred: ${error.message}`;
                     statusElement.textContent = 'Error during verification.';
                 });
             } catch (err) {
