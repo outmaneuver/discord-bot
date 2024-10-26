@@ -67,12 +67,13 @@ export async function checkNFTOwnership(walletAddress) {
 }
 
 async function isNFTFromCollection(mint, collectionAddress) {
-    // This is a placeholder implementation. You'll need to replace this with the actual logic
-    // to check if an NFT belongs to a specific collection.
-    // This might involve checking the NFT's metadata or using a Metaplex method.
-    
-    // For now, we'll just return true if the mint is not null and the collectionAddress is defined
-    return mint != null && collectionAddress != null;
+    console.log(`Checking if NFT ${mint} belongs to collection ${collectionAddress}`);
+    // This is a placeholder implementation. You'll need to implement the actual logic to check the NFT's collection.
+    // For now, we'll use a simple comparison of the mint address to the known NFTs you have.
+    if (mint === 'DRWPyg3PGnG7k2ngbePdhMK9H4C3zocenXGJF3dbfh7q' && collectionAddress === MONEY_MONSTERS_3D_COLLECTION) {
+        return true;
+    }
+    return false;
 }
 
 export async function getBUXBalance(walletAddress) {
@@ -80,12 +81,12 @@ export async function getBUXBalance(walletAddress) {
         console.log(`Getting BUX balance for wallet: ${walletAddress}`);
         const publicKey = new PublicKey(walletAddress);
         
-        // Check if BUX_TOKEN_MINT is defined
         if (!BUX_TOKEN_MINT) {
-            console.error('BUX_TOKEN_MINT is not defined');
+            console.error('BUX_TOKEN_MINT is not defined in environment variables');
             return 0;
         }
         
+        console.log(`BUX_TOKEN_MINT: ${BUX_TOKEN_MINT}`);
         const buxMint = new PublicKey(BUX_TOKEN_MINT);
 
         console.log('Fetching token accounts...');
@@ -105,7 +106,7 @@ export async function getBUXBalance(walletAddress) {
         return 0;
     } catch (error) {
         console.error('Error getting BUX balance:', error);
-        return 0; // Return 0 instead of throwing an error
+        return 0;
     }
 }
 
