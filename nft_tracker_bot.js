@@ -177,10 +177,18 @@ app.post('/holder-verify/verify', async (req, res) => {
 
     console.log(`Verifying wallet: ${walletAddress}`);
 
+    console.log('Checking NFT ownership...');
     const nftCounts = await checkNFTOwnership(walletAddress);
+    console.log('NFT ownership check complete');
+
+    console.log('Getting BUX balance...');
     const buxBalance = await getBUXBalance(walletAddress);
+    console.log('BUX balance retrieved');
+
+    console.log('Updating Discord roles...');
     const rolesUpdated = await updateDiscordRoles(client, req.user.id, nftCounts, buxBalance, walletAddress);
-    
+    console.log('Discord roles update complete');
+
     console.log('Verification results:');
     console.log('NFT Counts:', JSON.stringify(nftCounts, null, 2));
     console.log('BUX Balance:', buxBalance);
@@ -210,7 +218,7 @@ app.post('/holder-verify/verify', async (req, res) => {
     });
   } catch (error) {
     console.error('Error during wallet verification:', error);
-    res.status(500).json({ success: false, error: 'Internal server error' });
+    res.status(500).json({ success: false, error: 'Internal server error', details: error.message });
   }
 });
 

@@ -20,6 +20,7 @@ export async function verifyHolder(client, userId, walletAddress) {
 
 export async function checkNFTOwnership(walletAddress) {
     try {
+        console.log(`Checking NFT ownership for wallet: ${walletAddress}`);
         const publicKey = new PublicKey(walletAddress);
         const nftCounts = {
             fcked_catz: [],
@@ -30,15 +31,18 @@ export async function checkNFTOwnership(walletAddress) {
         };
 
         // Fetch NFTs owned by the wallet
+        console.log('Fetching NFT accounts...');
         const nftAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
             programId: TOKEN_PROGRAM_ID
         });
+        console.log(`Found ${nftAccounts.value.length} token accounts`);
 
         for (let account of nftAccounts.value) {
             const mint = account.account.data.parsed.info.mint;
             const tokenAmount = account.account.data.parsed.info.tokenAmount;
 
             if (tokenAmount.amount === '1' && tokenAmount.decimals === 0) {
+                console.log(`Checking collection for NFT: ${mint}`);
                 // Check which collection this NFT belongs to
                 if (await isNFTFromCollection(mint, FCKED_CATZ_COLLECTION)) {
                     nftCounts.fcked_catz.push(mint);
@@ -54,6 +58,7 @@ export async function checkNFTOwnership(walletAddress) {
             }
         }
 
+        console.log('NFT counts:', nftCounts);
         return nftCounts;
     } catch (error) {
         console.error('Error checking NFT ownership:', error);
