@@ -294,24 +294,6 @@ async function sendVerificationAndProfileButtons(channel) {
     await channel.send({ embeds: [embed], components: [row] });
 }
 
-// Make sure this function is imported from verify.js if it's not in nft_tracker_bot.js
-async function sendVerificationMessage(channel) {
-    const embed = new EmbedBuilder()
-        .setColor('#0099ff')
-        .setTitle('THANK YOU FOR CHOOSING BUXDAO')
-        .setDescription('To verify your wallet, click the button and open the link in your browser on desktop or copy and paste into wallet browser on mobile devices\n\nAuthorise signing into your discord profile then connect your wallet\n\nYour server roles will update automatically based on your NFT and $BUX token holdings')
-        .setTimestamp();
-
-    const button = new ButtonBuilder()
-        .setCustomId('verify_wallet')
-        .setLabel('Verify Wallet')
-        .setStyle(ButtonStyle.Primary);
-
-    const row = new ActionRowBuilder()
-        .addComponents(button);
-
-    await channel.send({ embeds: [embed], components: [row] });
-}
 
 if (!process.env.PROFILE_CHANNEL_ID) {
   console.error('PROFILE_CHANNEL_ID is not set in environment variables');
