@@ -305,3 +305,8 @@ async function sendVerificationMessage(channel) {
     await channel.send({ embeds: [embed], components: [row] });
 }
 
+if (!process.env.PROFILE_CHANNEL_ID) {
+  console.error('PROFILE_CHANNEL_ID is not set in environment variables');
+} else {
+  console.log('PROFILE_CHANNEL_ID:', process.env.PROFILE_CHANNEL_ID);
+}
