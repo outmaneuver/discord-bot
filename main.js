@@ -9,6 +9,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import Redis from 'ioredis';
 
 import { initializeSalesListings } from './sales_listings.js';
 import { verifyHolder, sendVerificationMessage, checkNFTOwnership, getBUXBalance, updateDiscordRoles } from './verify.js';
@@ -203,7 +204,27 @@ app.use((req, res, next) => {
   next();
 });
 
-app.post('/store-wallet', (req, res) => {
+let redis;
+try {
+  redis = new Redis(process.env.REDIS_URL);
+  console.log('Connected to Redis');
+} catch (error) {
+  console.warn('Failed to connect to Redis. Using in-memory storage instead.');
+  console.warn('Warning: Data will be lost on server restarts.');
+  redis = {
+    set: (key, value) => {
+      if (!global.inMemoryStorage) global.inMemoryStorage = new Map();
+      global.inMemoryStorage.set(key, value);
+      return Promise.resolve('OK');
+    },
+    get: (key) => {
+      if (!global.inMemoryStorage) return Promise.resolve(null);
+      return Promise.resolve(global.inMemoryStorage.get(key));
+    }
+  };
+}
+
+app.post('/store-wallet', async (req, res) => {
   if (!req.isAuthenticated()) {
     console.log('User not authenticated when trying to store wallet');
     return res.status(401).json({ success: false, error: 'Not authenticated' });
@@ -212,16 +233,14 @@ app.post('/store-wallet', (req, res) => {
   const { walletAddress } = req.body;
   const userId = req.user.id;
 
-  // Store the wallet address
-  if (!global.userWallets) {
-    global.userWallets = new Map();
+  try {
+    await redis.set(`wallet:${userId}`, walletAddress);
+    console.log(`Stored wallet address ${walletAddress} for user ${userId}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error storing wallet address:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
-  global.userWallets.set(userId, new Set([walletAddress]));
-
-  console.log(`Stored wallet address ${walletAddress} for user ${userId}`);
-  console.log('Current userWallets:', global.userWallets);
-
-  res.json({ success: true });
 });
 
 // Catch-all route for 404 errors

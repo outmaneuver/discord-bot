@@ -1,25 +1,21 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { checkNFTOwnership, getBUXBalance } from './verify.js';
+import Redis from 'ioredis';
+
+const redis = new Redis(process.env.REDIS_URL);
 
 export async function getWalletData(userId) {
   console.log('Retrieving wallet data for user:', userId);
-  console.log('Current userWallets:', global.userWallets);
   
-  // Retrieve wallet addresses for the user
-  const walletAddresses = global.userWallets ? global.userWallets.get(userId) : new Set();
-
-  console.log('Retrieved wallet addresses:', walletAddresses);
-
-  if (!walletAddresses || walletAddresses.size === 0) {
-    console.log('No wallets connected for user:', userId);
-    return null; // No wallets connected
-  }
-
-  // Fetch data for the first wallet address (you might want to handle multiple wallets differently)
-  const walletAddress = Array.from(walletAddresses)[0];
-  console.log('Using wallet address:', walletAddress);
-
   try {
+    const walletAddress = await redis.get(`wallet:${userId}`);
+    console.log('Retrieved wallet address:', walletAddress);
+
+    if (!walletAddress) {
+      console.log('No wallet connected for user:', userId);
+      return null; // No wallet connected
+    }
+
     // Fetch NFT and BUX data for this wallet address
     const nftCounts = await checkNFTOwnership(walletAddress);
     const buxBalance = await getBUXBalance(walletAddress);
