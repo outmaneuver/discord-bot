@@ -1,1 +1,1 @@
-web: node nft_tracker_bot.js
+web: node main.js

@@ -1,11 +1,11 @@
 {
   "name": "discord-bot",
   "version": "1.0.0",
-  "main": "nft_tracker_bot.js",
+  "main": "main.js",
   "type": "module",
   "scripts": {
-    "start": "node nft_tracker_bot.js",
-    "dev": "nodemon nft_tracker_bot.js",
+    "start": "node main.js",
+    "dev": "nodemon main.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint ."
   },
