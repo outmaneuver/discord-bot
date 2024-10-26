@@ -31,8 +31,37 @@ export async function getSpadesStats(userId) {
     // ... (existing getSpadesStats function)
 }
 
-export function sendProfileMessage(channel) {
-    // ... (existing sendProfileMessage function)
+export async function sendProfileMessage(channel, userId) {
+  try {
+    const walletData = await getWalletData(userId);
+
+    if (!walletData) {
+      await channel.send('No wallet connected. Please verify your wallet first.');
+      return;
+    }
+
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle('Your BUX DAO Profile')
+      .addFields(
+        { name: 'Wallet Address', value: walletData.walletAddress },
+        { name: 'BUX Balance', value: `${walletData.buxBalance} BUX` },
+        { name: 'NFTs', value: formatNFTCounts(walletData.nftCounts) },
+        // Add other fields as needed
+      )
+      .setTimestamp();
+
+    await channel.send({ embeds: [embed] });
+  } catch (error) {
+    console.error('Error sending profile message:', error);
+    await channel.send('An error occurred while fetching your profile. Please try again later.');
+  }
+}
+
+function formatNFTCounts(nftCounts) {
+  return Object.entries(nftCounts)
+    .map(([collection, count]) => `${collection}: ${count.length}`)
+    .join('\n');
 }
 
 export function generateProfileHtml(walletData, pokerStats, spadesStats) {

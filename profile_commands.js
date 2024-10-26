@@ -3,7 +3,7 @@ import { sendProfileMessage } from './profile.js';
 export async function handleProfileCommands(message, client) {
   if (message.content.toLowerCase() === '!profile') {
     try {
-      await sendProfileMessage(message.channel);
+      await sendProfileMessage(message.channel, message.author.id);
       console.log('Profile message sent successfully');
     } catch (error) {
       console.error('Error sending profile message:', error);
