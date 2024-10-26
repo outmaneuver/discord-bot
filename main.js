@@ -7,6 +7,8 @@ import { Strategy as DiscordStrategy } from 'passport-discord';
 import session from 'express-session';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 import { initializeSalesListings } from './sales_listings.js';
 import { verifyHolder, sendVerificationMessage, checkNFTOwnership, getBUXBalance, updateDiscordRoles } from './verify.js';
@@ -60,6 +62,14 @@ console.log('Express middleware set up');
 
 // ... (rest of your existing setup code)
 
+// Serve static files
+app.use('/holder-verify', express.static(path.join(__dirname, 'public')));
+
+// Serve index.html for /holder-verify route
+app.get('/holder-verify', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
   console.log(`Server is starting on port ${PORT}`);
@@ -106,3 +116,16 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 console.log('Application setup complete');
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      connectSrc: ["'self'", "https://api.mainnet-beta.solana.com"],
+    },
+  },
+}));
