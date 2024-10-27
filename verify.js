@@ -66,16 +66,16 @@ const redis = new Redis(process.env.REDIS_URL, {
   }
 });
 
-export async function verifyHolder(client, userId, walletAddress) {
+export async function verifyHolder(message) {
   try {
-    console.log(`Verifying wallet: ${walletAddress}`);
-    const nftCounts = await checkNFTOwnership(walletAddress);
+    console.log(`Verifying wallet: ${message.walletAddress}`);
+    const nftCounts = await checkNFTOwnership(message.walletAddress);
     console.log('NFT ownership check complete:', nftCounts);
 
-    const buxBalance = await getBUXBalance(walletAddress);
+    const buxBalance = await getBUXBalance(message.walletAddress);
     console.log('BUX balance:', buxBalance);
 
-    const rolesUpdated = await updateDiscordRoles(client, userId, nftCounts, buxBalance);
+    const rolesUpdated = await updateDiscordRoles(message.client, message.userId, nftCounts, buxBalance);
 
     // Calculate daily reward
     const dailyReward = calculateDailyReward(nftCounts, buxBalance);
@@ -478,7 +478,7 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) 
     return true;
   } catch (error) {
     console.error('Error updating Discord roles:', error);
-    return false;
+    throw error;
   }
 }
 

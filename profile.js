@@ -172,5 +172,3 @@ function formatNFTCounts(nftCounts) {
     .map(([collection, count]) => `${collection}: ${count.length}`)
     .join('\n');
 }
-
-export { addWallet, removeWallet, getWalletData, updateUserProfile, sendProfileMessage };
