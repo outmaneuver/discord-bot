@@ -140,20 +140,25 @@ export async function updateUserProfile(channel, userId, client) {
     const user = await client.users.fetch(userId);
     const username = user.username;
 
-    console.log('Creating updated profile embed for user:', username);
+    const timerData = await startOrUpdateDailyTimer(userId);
+    const timeUntilNext = await getTimeUntilNextClaim(userId);
+    
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
       .setTitle(`${username}'s Updated BUX DAO Profile`)
       .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 128 }))
       .addFields(
         { name: 'Connected Wallets', value: walletData.walletAddresses.join('\n') },
-        { name: 'BUX Balance', value: `${aggregatedData.buxBalance} BUX` },
+        { name: '\u200B', value: '─'.repeat(40) },
         { name: 'NFTs', value: formatNFTCounts(aggregatedData.nftCounts) },
-        { name: 'Updated Server Roles', value: roles || 'No roles' }
-      )
-      .setTimestamp();
+        { name: '\u200B', value: '─'.repeat(40) },
+        { name: 'Updated Server Roles', value: roles || 'No roles' },
+        { name: '\u200B', value: '─'.repeat(40) },
+        { name: 'BUX Balance', value: `${aggregatedData.buxBalance} BUX` },
+        { name: 'BUX Claim', value: `${timerData.claimAmount} BUX` },
+        { name: 'Next Claim', value: timeUntilNext ? `Updates in ${timeUntilNext}` : 'Start timer by verifying wallet' }
+      );
 
-    console.log('Sending updated profile embed');
     await channel.send({ embeds: [embed] });
   } catch (error) {
     console.error('Error updating user profile:', error);

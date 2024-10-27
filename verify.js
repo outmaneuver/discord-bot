@@ -320,3 +320,59 @@ export function sendVerificationMessage(channel) {
 
     return channel.send({ embeds: [embed], components: [row] });
 }
+
+// Add these functions to verify.js
+async function startOrUpdateDailyTimer(userId) {
+  const key = `daily_timer:${userId}`;
+  const claimKey = `bux_claim:${userId}`;
+  
+  // Get last check time
+  const lastCheck = await redis.get(key);
+  const now = Date.now();
+  
+  if (!lastCheck) {
+    // First time setup
+    await redis.set(key, now);
+    return {
+      nextClaimTime: now + (24 * 60 * 60 * 1000),
+      claimAmount: 0
+    };
+  }
+
+  const timeDiff = now - parseInt(lastCheck);
+  if (timeDiff >= 24 * 60 * 60 * 1000) {
+    // 24 hours passed, add reward to claim balance
+    const reward = await calculateDailyReward(userId);
+    const currentClaim = parseInt(await redis.get(claimKey) || '0');
+    await redis.set(claimKey, currentClaim + reward);
+    await redis.set(key, now);
+    
+    return {
+      nextClaimTime: now + (24 * 60 * 60 * 1000),
+      claimAmount: currentClaim + reward
+    };
+  }
+
+  return {
+    nextClaimTime: parseInt(lastCheck) + (24 * 60 * 60 * 1000),
+    claimAmount: parseInt(await redis.get(claimKey) || '0')
+  };
+}
+
+async function getTimeUntilNextClaim(userId) {
+  const key = `daily_timer:${userId}`;
+  const lastCheck = await redis.get(key);
+  
+  if (!lastCheck) return null;
+
+  const nextClaimTime = parseInt(lastCheck) + (24 * 60 * 60 * 1000);
+  const timeLeft = nextClaimTime - Date.now();
+  
+  if (timeLeft <= 0) return '00:00:00';
+  
+  const hours = Math.floor(timeLeft / (60 * 60 * 1000));
+  const minutes = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
+  const seconds = Math.floor((timeLeft % (60 * 1000)) / 1000);
+  
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
