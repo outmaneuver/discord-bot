@@ -199,4 +199,4 @@ function formatNFTCounts(nftCounts) {
     .join('\n');
 }
 
-export { checkNFTOwnership, getBUXBalance, addWallet, removeWallet, getWalletData, aggregateWalletData };
+export { checkNFTOwnership, getBUXBalance, addWallet, removeWallet, getWalletData };
