@@ -157,17 +157,14 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
       await new Promise(resolve => client.once('ready', resolve));
     }
 
-    // Get guild from cache first
-    let guild = client.guilds.cache.get(GUILD_ID);
-    
-    // If not in cache, try to fetch
-    if (!guild) {
-      try {
-        guild = await client.guilds.fetch(GUILD_ID);
-      } catch (error) {
-        console.error('Error fetching guild:', error);
-        return;
-      }
+    // Get guild using client.guilds.fetch directly
+    let guild;
+    try {
+      guild = await client.guilds.fetch(GUILD_ID);
+    } catch (error) {
+      console.error('Error fetching guild:', error);
+      // Don't throw error, just return since role updates are optional
+      return;
     }
 
     if (!guild) {
@@ -175,17 +172,13 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
       return;
     }
 
-    // Get member from cache first
-    let member = guild.members.cache.get(userId);
-    
-    // If not in cache, try to fetch
-    if (!member) {
-      try {
-        member = await guild.members.fetch(userId);
-      } catch (error) {
-        console.error('Error fetching member:', error);
-        return;
-      }
+    // Get member using guild.members.fetch directly
+    let member;
+    try {
+      member = await guild.members.fetch(userId);
+    } catch (error) {
+      console.error('Error fetching member:', error);
+      return;
     }
 
     if (!member) {
@@ -195,28 +188,15 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
 
     console.log('Updating Discord roles based on all connected wallets');
 
-    // Money Monsters 3D Whale Check
-    const mm3dCount = aggregatedData.nftCounts.money_monsters3d.length;
-    const mm3dWhaleThreshold = 25;
-    console.log(`Money Monsters 3D count: ${mm3dCount}, Whale threshold: ${mm3dWhaleThreshold}`);
-
-    // Money Monsters Whale Check
-    const mmCount = aggregatedData.nftCounts.money_monsters.length;
-    const mmWhaleThreshold = 25;
-
-    // Remove Top 10 roles first
-    await member.roles.remove('1095033759612547133').catch(console.error);
-    await member.roles.remove('1095033566070583457').catch(console.error);
-
     // Update roles based on NFT counts
     const rolesToAdd = [];
     const rolesToRemove = [];
 
-    // Add your role update logic here...
-    if (aggregatedData.nftCounts.fcked_catz.length > 0) {
-      rolesToAdd.push('1093607187454111825'); // CAT role
+    // Money Monsters 3D role
+    if (aggregatedData.nftCounts.money_monsters3d.length > 0) {
+      rolesToAdd.push('1093607056696692828'); // MM3D role
     } else {
-      rolesToRemove.push('1093607187454111825');
+      rolesToRemove.push('1093607056696692828');
     }
 
     // Add/remove roles
@@ -233,9 +213,11 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
       removed: rolesToRemove
     });
 
+    return true;
   } catch (error) {
     console.error('Error updating Discord roles:', error);
-    throw error;
+    // Don't throw error, just return false
+    return false;
   }
 }
 
