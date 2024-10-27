@@ -15,7 +15,7 @@ import { initializeSalesListings } from './sales_listings.js';
 import { verifyHolder, sendVerificationMessage, updateDiscordRoles } from './verify.js';
 import { sendProfileMessage, updateUserProfile } from './profile.js';
 
-import { handleMainCommands } from './main_commands.js';
+import { handleMainCommands, handleButtonInteraction } from './main_commands.js';
 import { handleVerifyCommands } from './verify_commands.js';
 import { handleProfileCommands } from './profile_commands.js';
 import { handleSalesListingsCommands } from './sales_listings_commands.js';
@@ -289,6 +289,12 @@ client.on('messageCreate', async (message) => {
   await handleVerifyCommands(message, client);
   await handleProfileCommands(message, client);
   await handleSalesListingsCommands(message, client);
+});
+
+client.on('interactionCreate', async (interaction) => {
+  if (interaction.isButton()) {
+    await handleButtonInteraction(interaction);
+  }
 });
 
 client.login(process.env.DISCORD_TOKEN)

@@ -30,11 +30,13 @@ const initializeHashlists = async () => {
 // Call this function when your bot starts up
 initializeHashlists();
 
-async function addWallet(userId, walletAddress) {
+export async function addWallet(userId, walletAddress) {
   const key = `wallets:${userId}`;
   try {
-    const result = await redis.sadd(key, walletAddress);
-    console.log(`Added wallet ${walletAddress} for user ${userId}. Result: ${result}`);
+    // Remove angle brackets if present
+    const cleanWalletAddress = walletAddress.replace(/[<>]/g, '');
+    const result = await redis.sadd(key, cleanWalletAddress);
+    console.log(`Added wallet ${cleanWalletAddress} for user ${userId}. Result: ${result}`);
     return result === 1; // Returns true if the wallet was successfully added
   } catch (error) {
     console.error(`Error adding wallet ${walletAddress} for user ${userId}:`, error);
@@ -42,7 +44,7 @@ async function addWallet(userId, walletAddress) {
   }
 }
 
-async function removeWallet(userId, walletAddress) {
+export async function removeWallet(userId, walletAddress) {
   const key = `wallets:${userId}`;
   try {
     const result = await redis.srem(key, walletAddress);
@@ -54,7 +56,8 @@ async function removeWallet(userId, walletAddress) {
   }
 }
 
-async function getWalletData(userId) {
+export async function getWalletData(userId) {
+  console.log(`Retrieving wallet data for user: ${userId}`);
   const key = `wallets:${userId}`;
   try {
     const walletAddresses = await redis.smembers(key);
@@ -106,7 +109,7 @@ async function aggregateWalletData(wallets) {
   };
 }
 
-async function updateUserProfile(channel, userId, client) {
+export async function updateUserProfile(channel, userId, client) {
   try {
     console.log('Updating profile for user:', userId);
     const walletData = await getWalletData(userId);
@@ -158,7 +161,7 @@ async function updateUserProfile(channel, userId, client) {
   }
 }
 
-async function sendProfileMessage(channel, userId) {
+export async function sendProfileMessage(channel, userId) {
   try {
     await updateUserProfile(channel, userId, channel.client);
   } catch (error) {
@@ -172,5 +175,3 @@ function formatNFTCounts(nftCounts) {
     .map(([collection, count]) => `${collection}: ${count.length}`)
     .join('\n');
 }
-
-export { addWallet, removeWallet, getWalletData, updateUserProfile, sendProfileMessage };

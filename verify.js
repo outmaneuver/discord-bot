@@ -106,9 +106,10 @@ export async function checkNFTOwnership(walletAddress) {
 }
 
 export async function getBUXBalance(walletAddress) {
-  // Implement the logic to get BUX balance
-  // This is just a placeholder
-  return 1000; // Return a dummy value for now
+  // Implement the actual logic to fetch BUX balance
+  // This is a placeholder - replace with actual implementation
+  const balance = await fetchBUXBalanceFromBlockchain(walletAddress);
+  return balance;
 }
 
 export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) {
@@ -125,7 +126,8 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) 
       process.env.ROLE_ID_50000_BUX,
       process.env.ROLE_ID_25000_BUX,
       process.env.ROLE_ID_10000_BUX,
-      process.env.ROLE_ID_2500_BUX
+      process.env.ROLE_ID_2500_BUX,
+      process.env.ROLE_ID_MONSTER_3D_WHALE // Add this line
     ];
 
     const rolesToAdd = [];
@@ -136,6 +138,9 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) 
     if (nftCounts.money_monsters.length > 0) rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS);
     if (nftCounts.money_monsters3d.length > 0) rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS_3D);
     if (nftCounts.ai_bitbots.length > 0) rolesToAdd.push(process.env.ROLE_ID_AI_BITBOTS);
+
+    // Add Monster 3D Whale role
+    if (nftCounts.money_monsters3d.length >= 20) rolesToAdd.push(process.env.ROLE_ID_MONSTER_3D_WHALE);
 
     // Add BUX balance roles
     if (buxBalance >= 50000) {
