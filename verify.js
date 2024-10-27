@@ -149,13 +149,42 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
       throw new Error('Discord client is undefined');
     }
 
-    const guild = await client.guilds.cache.get(GUILD_ID);
+    // Wait for client to be ready
+    if (!client.isReady()) {
+      await new Promise(resolve => client.once('ready', resolve));
+    }
+
+    // Get guild from cache first
+    let guild = client.guilds.cache.get(GUILD_ID);
+    
+    // If not in cache, try to fetch
+    if (!guild) {
+      try {
+        guild = await client.guilds.fetch(GUILD_ID);
+      } catch (error) {
+        console.error('Error fetching guild:', error);
+        return;
+      }
+    }
+
     if (!guild) {
       console.error('Guild not found');
       return;
     }
 
-    const member = await guild.members.fetch(userId);
+    // Get member from cache first
+    let member = guild.members.cache.get(userId);
+    
+    // If not in cache, try to fetch
+    if (!member) {
+      try {
+        member = await guild.members.fetch(userId);
+      } catch (error) {
+        console.error('Error fetching member:', error);
+        return;
+      }
+    }
+
     if (!member) {
       console.error('Member not found');
       return;
