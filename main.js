@@ -43,14 +43,26 @@ console.log('Discord client created');
 const app = express();
 console.log('Express app created');
 
-// Move these to the top, right after the middleware setup but before routes
+// Redis setup - MOVE THIS UP before using it
+const redisClient = new Redis(process.env.REDIS_URL, {
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
+const redisStore = new RedisStore({
+  client: redisClient,
+  prefix: "session:",
+});
+
+// Middleware setup
 app.use(express.json());
 app.use(cors({
   origin: process.env.CLIENT_URL || 'https://buxdao-verify-d1faffc83da7.herokuapp.com',
   credentials: true
 }));
 
-// Session middleware setup
+// Session middleware setup - AFTER Redis store is created
 app.use(session({
   store: redisStore,
   secret: process.env.SESSION_SECRET || 'your-secret-key',
@@ -66,7 +78,7 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Static file serving - after auth middleware but before routes
+// Static file serving
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Add routes after static file serving
@@ -80,18 +92,6 @@ app.get('/holder-verify/', (req, res) => {
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Redis setup for sessions
-const redisClient = new Redis(process.env.REDIS_URL, {
-  tls: {
-    rejectUnauthorized: false
-  }
-});
-
-const redisStore = new RedisStore({
-  client: redisClient,
-  prefix: "session:",
 });
 
 // Passport setup
