@@ -382,13 +382,19 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance, 
       }
     }
 
+    // Money Monsters 3D
     console.log(`Money Monsters 3D count: ${nftCounts.money_monsters3d.length}`);
     console.log(`Money Monsters 3D whale threshold: ${process.env.WHALE_THRESHOLD_MONEY_MONSTERS3D}`);
     const whaleThreshold = parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS3D) || 25;
     console.log(`Parsed Money Monsters 3D whale threshold: ${whaleThreshold}`);
-    if (nftCounts.money_monsters3d.length >= whaleThreshold) {
-      console.log(`Adding Money Monsters 3D whale role: ${process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D}`);
-      rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
+    if (nftCounts.money_monsters3d.length > 0) {
+      console.log(`Adding Money Monsters 3D role: ${process.env.ROLE_ID_MONEY_MONSTERS3D}`);
+      rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
+      
+      if (nftCounts.money_monsters3d.length >= whaleThreshold) {
+        console.log(`Adding Money Monsters 3D whale role: ${process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D}`);
+        rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
+      }
     }
 
     if (nftCounts.ai_bitbots.length > 0) {
