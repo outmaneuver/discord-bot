@@ -13,7 +13,7 @@ import Redis from 'ioredis';
 
 import { initializeSalesListings } from './sales_listings.js';
 import { verifyHolder, sendVerificationMessage, updateDiscordRoles } from './verify.js';
-import { sendProfileMessage, updateUserProfile } from './profile.js';
+import { updateUserProfile } from './profile.js';
 
 import { handleMainCommands, handleButtonInteraction, handleMainInteraction } from './main_commands.js';
 import { handleVerifyCommands, handleVerifyInteraction } from './verify_commands.js';
