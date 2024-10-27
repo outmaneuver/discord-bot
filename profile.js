@@ -1,4 +1,4 @@
-import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import { checkNFTOwnership, getBUXBalance } from './verify.js';
 import Redis from 'ioredis';
 
