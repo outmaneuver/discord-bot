@@ -87,29 +87,57 @@ async function getAllWallets(userId) {
 }
 
 export async function checkNFTOwnership(walletAddress) {
-  console.log(`Checking NFT ownership for wallet: ${walletAddress}`);
-  const nftCounts = {
-    fcked_catz: [],
-    celebcatz: [],
-    money_monsters: [],
-    money_monsters3d: [],
-    ai_bitbots: []
-  };
+  console.log('Checking NFT ownership for wallet:', walletAddress);
+  
+  try {
+    // Get all NFTs for the wallet
+    const nfts = await connection.getParsedTokenAccountsByOwner(
+      new PublicKey(walletAddress),
+      {
+        programId: TOKEN_PROGRAM_ID,
+      }
+    );
 
-  // Fetch all NFTs for the wallet from Redis
-  const nfts = await redis.smembers(`nfts:${walletAddress}`);
-  console.log(`Retrieved ${nfts.length} NFTs for wallet ${walletAddress}`);
+    console.log(`Found ${nfts.value.length} tokens for wallet ${walletAddress}`);
 
-  for (const nft of nfts) {
-    if (fckedCatzHashlist.has(nft)) nftCounts.fcked_catz.push(nft);
-    else if (celebcatzHashlist.has(nft)) nftCounts.celebcatz.push(nft);
-    else if (moneyMonstersHashlist.has(nft)) nftCounts.money_monsters.push(nft);
-    else if (moneyMonsters3dHashlist.has(nft)) nftCounts.money_monsters3d.push(nft);
-    else if (aiBitbotsHashlist.has(nft)) nftCounts.ai_bitbots.push(nft);
+    // Initialize counts
+    const nftCounts = {
+      fcked_catz: [],
+      celebcatz: [],
+      money_monsters: [],
+      money_monsters3d: [],
+      ai_bitbots: []
+    };
+
+    // Check each NFT
+    for (const item of nfts.value) {
+      const mint = item.account.data.parsed.info.mint;
+      
+      // Check each collection
+      if (fckedCatzHashlist.has(mint)) {
+        nftCounts.fcked_catz.push(mint);
+      }
+      if (celebcatzHashlist.has(mint)) {
+        nftCounts.celebcatz.push(mint);
+      }
+      if (moneyMonstersHashlist.has(mint)) {
+        nftCounts.money_monsters.push(mint);
+      }
+      if (moneyMonsters3dHashlist.has(mint)) {
+        nftCounts.money_monsters3d.push(mint);
+      }
+      if (aiBitbotsHashlist.has(mint)) {
+        nftCounts.ai_bitbots.push(mint);
+      }
+    }
+
+    console.log('NFT counts:', nftCounts);
+    return nftCounts;
+
+  } catch (error) {
+    console.error('Error checking NFT ownership:', error);
+    throw error;
   }
-
-  console.log('NFT counts:', JSON.stringify(nftCounts, null, 2));
-  return nftCounts;
 }
 
 async function fetchBUXBalanceFromBlockchain(walletAddress) {
