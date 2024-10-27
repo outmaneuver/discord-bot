@@ -104,7 +104,14 @@ export function generateProfileHtml(walletData, pokerStats, spadesStats) {
 
 async function getAllWallets(userId) {
   const key = `wallets:${userId}`;
-  return await redis.smembers(key);
+  try {
+    const wallets = await redis.smembers(key);
+    console.log(`Retrieved wallets for user ${userId}:`, wallets);
+    return wallets;
+  } catch (error) {
+    console.error(`Error retrieving wallets for user ${userId}:`, error);
+    return [];
+  }
 }
 
 async function aggregateWalletData(wallets) {
@@ -118,17 +125,28 @@ async function aggregateWalletData(wallets) {
   let totalBuxBalance = 0;
 
   for (const wallet of wallets) {
-    const nftCounts = await checkNFTOwnership(wallet);
-    const buxBalance = await getBUXBalance(wallet);
+    console.log(`Aggregating data for wallet: ${wallet}`);
+    try {
+      const nftCounts = await checkNFTOwnership(wallet);
+      const buxBalance = await getBUXBalance(wallet);
 
-    // Aggregate NFT counts
-    for (const [collection, nfts] of Object.entries(nftCounts)) {
-      aggregatedNftCounts[collection] = [...aggregatedNftCounts[collection], ...nfts];
+      console.log(`NFT counts for wallet ${wallet}:`, nftCounts);
+      console.log(`BUX balance for wallet ${wallet}:`, buxBalance);
+
+      // Aggregate NFT counts
+      for (const [collection, nfts] of Object.entries(nftCounts)) {
+        aggregatedNftCounts[collection] = [...aggregatedNftCounts[collection], ...nfts];
+      }
+
+      // Aggregate BUX balance
+      totalBuxBalance += buxBalance;
+    } catch (error) {
+      console.error(`Error aggregating data for wallet ${wallet}:`, error);
     }
-
-    // Aggregate BUX balance
-    totalBuxBalance += buxBalance;
   }
+
+  console.log('Aggregated NFT counts:', aggregatedNftCounts);
+  console.log('Total BUX balance:', totalBuxBalance);
 
   return {
     nftCounts: aggregatedNftCounts,
