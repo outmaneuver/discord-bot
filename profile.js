@@ -1,5 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
-import { updateDiscordRoles, checkNFTOwnership, getBUXBalance } from './verify.js';
+import { updateDiscordRoles } from './verify.js';
 import Redis from 'ioredis';
 import fs from 'fs/promises';
 import path from 'path';
@@ -29,32 +29,6 @@ const initializeHashlists = async () => {
 
 // Call this function when your bot starts up
 initializeHashlists();
-
-async function checkNFTOwnership(walletAddress) {
-  console.log(`Checking NFT ownership for wallet: ${walletAddress}`);
-  const nftCounts = {
-    fcked_catz: [],
-    celebcatz: [],
-    money_monsters: [],
-    money_monsters3d: [],
-    ai_bitbots: []
-  };
-
-  // Fetch all NFTs for the wallet from Redis
-  const nfts = await redis.smembers(`nfts:${walletAddress}`);
-  console.log(`Retrieved ${nfts.length} NFTs for wallet ${walletAddress}`);
-
-  for (const nft of nfts) {
-    if (fckedCatzHashlist.has(nft)) nftCounts.fcked_catz.push(nft);
-    else if (celebcatzHashlist.has(nft)) nftCounts.celebcatz.push(nft);
-    else if (moneyMonstersHashlist.has(nft)) nftCounts.money_monsters.push(nft);
-    else if (moneyMonsters3dHashlist.has(nft)) nftCounts.money_monsters3d.push(nft);
-    else if (aiBitbotsHashlist.has(nft)) nftCounts.ai_bitbots.push(nft);
-  }
-
-  console.log('NFT counts:', JSON.stringify(nftCounts, null, 2));
-  return nftCounts;
-}
 
 export async function addWallet(userId, walletAddress) {
   const key = `wallets:${userId}`;

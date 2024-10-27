@@ -1,4 +1,4 @@
-import { sendProfileMessage } from './profile.js';
+import { sendProfileMessage, updateUserProfile } from './profile.js';
 
 export async function handleProfileCommands(message, client) {
   if (message.content.toLowerCase() === '!profile') {
@@ -28,6 +28,14 @@ export async function handleProfileCommands(message, client) {
     } catch (error) {
       console.error('Error sending profile message:', error);
       await message.reply(`An error occurred while fetching the profile for ${mentionedUser.username}.`);
+    }
+  } else if (message.content.toLowerCase() === '!update') {
+    try {
+      await updateUserProfile(message.channel, message.author.id, client);
+      await message.reply('Your profile has been updated.');
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      await message.reply('An error occurred while updating your profile.');
     }
   }
   // Add other profile-related commands here

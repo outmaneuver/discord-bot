@@ -12,8 +12,8 @@ import { fileURLToPath } from 'url';
 import Redis from 'ioredis';
 
 import { initializeSalesListings } from './sales_listings.js';
-import { verifyHolder, sendVerificationMessage, checkNFTOwnership, getBUXBalance, updateDiscordRoles } from './verify.js';
-import { sendProfileMessage } from './profile.js';
+import { verifyHolder, sendVerificationMessage, updateDiscordRoles } from './verify.js';
+import { sendProfileMessage, updateUserProfile } from './profile.js';
 
 import { handleMainCommands } from './main_commands.js';
 import { handleVerifyCommands } from './verify_commands.js';
