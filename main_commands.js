@@ -48,73 +48,34 @@ export async function handleMainCommands(message, client) {
     }
   } else if (message.content.toLowerCase().startsWith('!remove')) {
     const args = message.content.split(' ');
-    if (args.length === 1) {
-      // No wallet address provided, show options
-      const walletData = await getWalletData(message.author.id);
-      if (!walletData || walletData.walletAddresses.length === 0) {
-        await message.reply('You have no connected wallets to remove.');
+    if (args.length < 2) {
+      await message.reply('Usage: !remove <wallet_address> or !remove @user <wallet_address>');
+      return;
+    }
+
+    let targetUserId = message.author.id;
+    let walletToRemove = args[1];
+
+    if (message.mentions.users.size > 0) {
+      // Admin is trying to remove a wallet from another user's profile
+      if (!message.member.permissions.has('ADMINISTRATOR')) {
+        await message.reply("You don't have permission to remove wallets from other users' profiles.");
         return;
       }
+      targetUserId = message.mentions.users.first().id;
+      walletToRemove = args[2];
+    }
 
-      const embed = new EmbedBuilder()
-        .setColor('#0099ff')
-        .setTitle('Remove Wallet')
-        .setDescription('Choose a wallet to remove:');
-
-      walletData.walletAddresses.forEach((address, index) => {
-        embed.addFields({ name: `Wallet ${index + 1}`, value: address });
-      });
-
-      const row = new ActionRowBuilder();
-
-      walletData.walletAddresses.forEach((address, index) => {
-        row.addComponents(
-          new ButtonBuilder()
-            .setCustomId(`remove_wallet_${index}`)
-            .setLabel(`Remove Wallet ${index + 1}`)
-            .setStyle(ButtonStyle.Danger)
-        );
-      });
-
-      const reply = await message.reply({ embeds: [embed], components: [row] });
-
-      const filter = i => i.customId.startsWith('remove_wallet_') && i.user.id === message.author.id;
-      const collector = reply.createMessageComponentCollector({ filter, time: 60000 });
-
-      collector.on('collect', async i => {
-        const index = parseInt(i.customId.split('_')[2]);
-        const walletToRemove = walletData.walletAddresses[index];
-        try {
-          const result = await removeWallet(message.author.id, walletToRemove);
-          if (result) {
-            await i.update({ content: `Wallet ${walletToRemove} has been removed from your profile.`, components: [], embeds: [] });
-          } else {
-            await i.update({ content: `Failed to remove wallet ${walletToRemove} from your profile.`, components: [], embeds: [] });
-          }
-        } catch (error) {
-          console.error('Error removing wallet:', error);
-          await i.update({ content: 'An error occurred while removing the wallet. Please try again later.', components: [], embeds: [] });
-        }
-      });
-
-      collector.on('end', collected => {
-        if (collected.size === 0) {
-          reply.edit({ content: 'Wallet removal timed out.', components: [], embeds: [] });
-        }
-      });
-    } else {
-      const walletToRemove = args[1];
-      try {
-        const result = await removeWallet(message.author.id, walletToRemove);
-        if (result) {
-          await message.reply(`Wallet ${walletToRemove} has been removed from your profile.`);
-        } else {
-          await message.reply(`Wallet ${walletToRemove} was not found in your profile.`);
-        }
-      } catch (error) {
-        console.error('Error removing wallet:', error);
-        await message.reply('An error occurred while removing the wallet. Please try again later.');
+    try {
+      const result = await removeWallet(targetUserId, walletToRemove);
+      if (result) {
+        await message.reply(`Wallet ${walletToRemove} has been removed from the profile.`);
+      } else {
+        await message.reply(`Wallet ${walletToRemove} was not found in the profile.`);
       }
+    } catch (error) {
+      console.error('Error removing wallet:', error);
+      await message.reply('An error occurred while removing the wallet. Please try again later.');
     }
   } else if (message.content.toLowerCase().startsWith('!add')) {
     // Check if the user has administrator permissions
