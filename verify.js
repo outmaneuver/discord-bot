@@ -60,7 +60,33 @@ const initializeHashlists = async () => {
 initializeHashlists();
 
 export async function verifyHolder(client, userId, walletAddress) {
-    // ... (existing verifyHolder function)
+  try {
+    console.log(`Verifying wallet: ${walletAddress}`);
+    const nftCounts = await checkNFTOwnership(walletAddress);
+    console.log('NFT ownership check complete:', nftCounts);
+
+    const buxBalance = await getBUXBalance(walletAddress);
+    console.log('BUX balance:', buxBalance);
+
+    const rolesUpdated = await updateDiscordRoles(client, userId, nftCounts, buxBalance, walletAddress);
+
+    // Calculate daily reward (previously called daily yield)
+    const dailyReward = calculateDailyReward(nftCounts, buxBalance);
+
+    const formattedResponse = `Hi ${client.users.cache.get(userId).username}!\n\nVERIFIED ASSETS:\nFcked Catz - ${nftCounts.fcked_catz.length}\nCeleb Catz - ${nftCounts.celebcatz.length}\nMoney Monsters - ${nftCounts.money_monsters.length}\nMoney Monsters 3D - ${nftCounts.money_monsters3d.length}\nA.I. BitBots - ${nftCounts.ai_bitbots.length}\n$BUX - ${buxBalance}\n\nDaily reward = ${dailyReward} $BUX`;
+
+    return {
+      success: true,
+      rolesUpdated,
+      nftCounts,
+      buxBalance,
+      dailyReward,
+      formattedResponse
+    };
+  } catch (error) {
+    console.error('Error in verifyHolder:', error);
+    return { success: false, error: error.message };
+  }
 }
 
 // Modify the checkNFTOwnership function
@@ -413,3 +439,4 @@ export function sendVerificationMessage(channel) {
 
     return channel.send({ embeds: [embed], components: [row] });
 }
+
