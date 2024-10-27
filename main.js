@@ -37,16 +37,72 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildPresences,
   ],
+  partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
+});
+
+// Add message event handler
+client.on('messageCreate', async (message) => {
+  // Ignore messages from bots
+  if (message.author.bot) return;
+
+  try {
+    // Handle main commands
+    if (message.content.startsWith('=')) {
+      await handleMainCommands(message, client);
+    }
+  } catch (error) {
+    console.error('Error handling message:', error);
+    await message.reply('An error occurred while processing your command. Please try again later.');
+  }
+});
+
+// Add interaction event handler
+client.on('interactionCreate', async (interaction) => {
+  try {
+    if (interaction.isButton()) {
+      await handleButtonInteraction(interaction);
+    } else if (interaction.isCommand()) {
+      await handleMainInteraction(interaction);
+    }
+  } catch (error) {
+    console.error('Error handling interaction:', error);
+    await interaction.reply({
+      content: 'An error occurred while processing your interaction. Please try again later.',
+      ephemeral: true
+    });
+  }
 });
 
 // Add this after client creation
-client.on('ready', () => {
+client.on('ready', async () => {
   console.log(`Logged in as ${client.user.tag}!`);
   
-  // Verify guild access
+  // Verify guild access and permissions
   const guild = client.guilds.cache.get(process.env.GUILD_ID);
   if (guild) {
     console.log(`Connected to guild: ${guild.name}`);
+    
+    // Check bot's permissions
+    const botMember = guild.members.cache.get(client.user.id);
+    if (botMember) {
+      const permissions = botMember.permissions.toArray();
+      console.log('Bot permissions:', permissions);
+      
+      const requiredPermissions = [
+        'MANAGE_ROLES',
+        'VIEW_CHANNEL',
+        'SEND_MESSAGES'
+      ];
+      
+      const missingPermissions = requiredPermissions.filter(perm => !permissions.includes(perm));
+      if (missingPermissions.length > 0) {
+        console.error('Missing required permissions:', missingPermissions);
+      } else {
+        console.log('Bot has all required permissions');
+      }
+    } else {
+      console.error('Bot member not found in guild');
+    }
   } else {
     console.error(`Could not find guild with ID: ${process.env.GUILD_ID}`);
   }
