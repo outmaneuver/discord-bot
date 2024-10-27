@@ -116,7 +116,7 @@ export async function updateUserProfile(channel, userId, client) {
 
     if (!walletData || walletData.walletAddresses.length === 0) {
       console.log('No wallet data found for user:', userId);
-      await channel.send('No connected wallets found. Please verify your wallet first using the `!verify` command.');
+      await channel.send('No connected wallets found. Please verify your wallet first using the `=verify` command.');
       return;
     }
 
