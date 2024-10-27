@@ -2,6 +2,7 @@ import { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } from 'disc
 import { updateDiscordRoles, checkNFTOwnership, getBUXBalance } from './verify.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim } from './rewards.js';
 import Redis from 'ioredis';
+import ms from 'ms';
 
 const redis = new Redis(process.env.REDIS_URL, {
   tls: {
@@ -56,12 +57,31 @@ async function aggregateWalletData(walletData) {
     buxBalance: 0
   };
 
+  // Add delay between RPC calls to avoid rate limiting
+  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+  
   for (const walletAddress of walletData.walletAddresses) {
     try {
       console.log('Aggregating data for wallet:', walletAddress);
       
-      // Get NFT data
-      const nftCounts = await checkNFTOwnership(walletAddress);
+      // Get NFT data with retries
+      let nftCounts;
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          nftCounts = await checkNFTOwnership(walletAddress);
+          break;
+        } catch (error) {
+          if (error.message.includes('429') && retries > 1) {
+            console.log(`Rate limited, retrying in ${(4-retries)*2}s...`);
+            await delay((4-retries) * 2000);
+            retries--;
+            continue;
+          }
+          throw error;
+        }
+      }
+      
       console.log('NFT counts for wallet', walletAddress + ':', nftCounts);
       
       // Merge NFT arrays
@@ -72,10 +92,29 @@ async function aggregateWalletData(walletData) {
         ];
       });
 
-      // Get BUX balance
-      const balance = await getBUXBalance(walletAddress);
+      // Get BUX balance with retries
+      let balance;
+      retries = 3;
+      while (retries > 0) {
+        try {
+          balance = await getBUXBalance(walletAddress);
+          break;
+        } catch (error) {
+          if (error.message.includes('429') && retries > 1) {
+            console.log(`Rate limited, retrying in ${(4-retries)*2}s...`);
+            await delay((4-retries) * 2000);
+            retries--;
+            continue;
+          }
+          throw error;
+        }
+      }
+      
       console.log('BUX balance for wallet', walletAddress + ':', balance);
       aggregatedData.buxBalance += balance;
+
+      // Add delay between wallets
+      await delay(1000);
 
     } catch (error) {
       console.error('Error aggregating data for wallet', walletAddress + ':', error);
