@@ -97,22 +97,61 @@ export async function updateUserProfile(channel, userId, client) {
 
     const timerData = await startOrUpdateDailyTimer(userId, aggregatedData.nftCounts, aggregatedData.buxBalance);
     const timeUntilNext = await getTimeUntilNextClaim(userId);
+
+    // Calculate daily reward based on NFT holdings
+    const dailyReward = calculateDailyReward(aggregatedData.nftCounts);
     
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
-      .setTitle(`${username}'s Updated BUX DAO Profile`)
+      .setTitle(`${username}'s BUX DAO Profile`)
       .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 128 }))
       .addFields(
-        { name: 'Connected Wallets', value: walletData.walletAddresses.join('\n') || 'No wallets connected' },
+        { 
+          name: 'Connected Wallets', 
+          value: walletData.walletAddresses.length > 0 ? 
+            walletData.walletAddresses.join('\n') : 
+            'No wallets connected' 
+        },
         { name: '\u200B', value: '─'.repeat(40) },
-        { name: 'NFTs', value: formatNFTCounts(aggregatedData.nftCounts) || 'No NFTs' },
+        { 
+          name: 'NFTs', 
+          value: formatNFTCounts(aggregatedData.nftCounts) || 'No NFTs' 
+        },
         { name: '\u200B', value: '─'.repeat(40) },
-        { name: 'BUX Balance', value: `${aggregatedData.buxBalance} BUX` },
-        { name: 'BUX Claim', value: `${timerData.claimAmount} BUX` },
-        { name: 'Next Claim', value: timeUntilNext ? `Updates in ${timeUntilNext}` : 'Start timer by verifying wallet' }
+        { 
+          name: 'BUX Balance', 
+          value: `${aggregatedData.buxBalance.toLocaleString()} BUX` 
+        },
+        { 
+          name: 'Daily Reward', 
+          value: `${dailyReward.toLocaleString()} BUX` 
+        },
+        { 
+          name: 'BUX Claim', 
+          value: `${timerData.claimAmount.toLocaleString()} BUX` 
+        },
+        { 
+          name: 'Claim updates in', 
+          value: timeUntilNext || 'Start timer by verifying wallet',
+          inline: true 
+        }
       );
 
-    await channel.send({ embeds: [embed] });
+    // Create claim button (disabled for now)
+    const claimButton = new ButtonBuilder()
+      .setCustomId('claim_bux')
+      .setLabel('CLAIM')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(true);
+
+    const row = new ActionRowBuilder()
+      .addComponents(claimButton);
+
+    await channel.send({ 
+      embeds: [embed],
+      components: [row]
+    });
+    
     await updateDiscordRoles(userId, aggregatedData, client);
   } catch (error) {
     console.error('Error updating user profile:', error);
@@ -124,4 +163,17 @@ function formatNFTCounts(nftCounts) {
   return Object.entries(nftCounts)
     .map(([collection, nfts]) => `${collection}: ${nfts.length}`)
     .join('\n');
+}
+
+function calculateDailyReward(nftCounts) {
+  let reward = 0;
+  
+  // Add reward for each NFT type
+  reward += nftCounts.fcked_catz.length * 10;    // 10 BUX per FCatz
+  reward += nftCounts.celebcatz.length * 20;     // 20 BUX per CelebCatz
+  reward += nftCounts.money_monsters.length * 15; // 15 BUX per MM
+  reward += nftCounts.money_monsters3d.length * 25; // 25 BUX per MM3D
+  reward += nftCounts.ai_bitbots.length * 30;    // 30 BUX per AI Bitbot
+
+  return reward;
 }
