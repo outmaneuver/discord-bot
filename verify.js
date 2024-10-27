@@ -21,7 +21,7 @@ const loadHashlist = async (filename) => {
   return new Set(JSON.parse(data));
 };
 
-let fckedCatzHashlist, celebcatzHashlist, moneyMonstersHashlist, moneyMonsters3dHashlist, aiBitbotsHashlist;
+let fckedCatzHashlist, celebcatzHashlist, moneyMonstersHashlist, moneyMonsters3dHashlist, aiBitbotsHashlist, MM_TOP10_HASHLIST, MM3D_TOP10_HASHLIST;
 
 const initializeHashlists = async () => {
   fckedCatzHashlist = await loadHashlist('fcked_catz.json');
@@ -29,6 +29,8 @@ const initializeHashlists = async () => {
   moneyMonstersHashlist = await loadHashlist('money_monsters.json');
   moneyMonsters3dHashlist = await loadHashlist('money_monsters3d.json');
   aiBitbotsHashlist = await loadHashlist('ai_bitbots.json');
+  MM_TOP10_HASHLIST = await loadHashlist('MM_top10.json');
+  MM3D_TOP10_HASHLIST = await loadHashlist('MM3D_top10.json');
 };
 
 // Call this function when your bot starts up
@@ -189,11 +191,24 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) 
     if (nftCounts.money_monsters3d.length > 0) {
       rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
       rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_MONEY_MONSTERS3D), 1);
+      
       if (nftCounts.money_monsters3d.length >= parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS3D)) {
         rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
         rolesToRemove.splice(rolesToRemove.indexOf(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D), 1);
         console.log(`Adding Money Monsters 3D Whale role. NFT count: ${nftCounts.money_monsters3d.length}`);
+      } else {
+        // Remove whale role if below threshold
+        rolesToRemove.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
+        const whaleRoleIndex = rolesToAdd.indexOf(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
+        if (whaleRoleIndex > -1) {
+          rolesToAdd.splice(whaleRoleIndex, 1);
+        }
+        console.log(`Removing Money Monsters 3D Whale role. NFT count: ${nftCounts.money_monsters3d.length}`);
       }
+    } else {
+      // Remove both roles if no NFTs
+      rolesToRemove.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
+      rolesToRemove.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
     }
     if (nftCounts.ai_bitbots.length > 0) {
       rolesToAdd.push(process.env.ROLE_ID_AI_BITBOTS);
@@ -219,10 +234,31 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) 
       rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_2500_BUX), 1);
     }
 
+    // Handle Money Monsters Top 10
+    if (nftCounts.money_monsters.some(nft => MM_TOP10_HASHLIST.has(nft))) {
+      rolesToAdd.push(process.env.ROLE_ID_MM_TOP10);
+      rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_MM_TOP10), 1);
+      console.log(`Adding Money Monsters Top 10 role for user ${userId}`);
+    } else {
+      rolesToRemove.push(process.env.ROLE_ID_MM_TOP10);
+      console.log(`Removing Money Monsters Top 10 role for user ${userId}`);
+    }
+
+    // Handle Money Monsters 3D Top 10
+    if (nftCounts.money_monsters3d.some(nft => MM3D_TOP10_HASHLIST.has(nft))) {
+      rolesToAdd.push(process.env.ROLE_ID_MM3D_TOP10);
+      rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_MM3D_TOP10), 1);
+      console.log(`Adding Money Monsters 3D Top 10 role for user ${userId}`);
+    } else {
+      rolesToRemove.push(process.env.ROLE_ID_MM3D_TOP10);
+      console.log(`Removing Money Monsters 3D Top 10 role for user ${userId}`);
+    }
+
     // Remove roles that are in rolesToRemove
     for (const roleId of rolesToRemove) {
       if (roleId && member.roles.cache.has(roleId)) {
         await member.roles.remove(roleId);
+        console.log(`Removed role ${roleId} from user ${userId}`);
       }
     }
 
@@ -230,6 +266,7 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) 
     for (const roleId of rolesToAdd) {
       if (roleId && !member.roles.cache.has(roleId)) {
         await member.roles.add(roleId);
+        console.log(`Added role ${roleId} to user ${userId}`);
       }
     }
 
