@@ -57,11 +57,14 @@ const redisStore = new RedisStore({
 
 // CORS setup - before other middleware
 app.use(cors({
-  origin: true, // Allow all origins for now
+  origin: 'https://buxdao-verify-d1faffc83da7.herokuapp.com',
   credentials: true,
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
+
+// Trust proxy
+app.set('trust proxy', 1);
 
 // Session middleware setup
 app.use(session({
@@ -69,19 +72,15 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
-  proxy: true, // Trust the reverse proxy
+  proxy: true,
   cookie: {
     secure: true,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: 'none',
-    path: '/',
-    domain: '.herokuapp.com' // Allow cookies for all subdomains
+    path: '/'
   }
 }));
-
-// Trust proxy
-app.set('trust proxy', 1);
 
 app.use(express.json());
 app.use(passport.initialize());
@@ -91,11 +90,10 @@ app.use(passport.session());
 passport.use(new DiscordStrategy({
   clientID: process.env.DISCORD_CLIENT_ID,
   clientSecret: process.env.DISCORD_CLIENT_SECRET,
-  callbackURL: process.env.DISCORD_CALLBACK_URL,
+  callbackURL: 'https://buxdao-verify-d1faffc83da7.herokuapp.com/auth/discord/callback',
   scope: ['identify'],
-  proxy: true // Trust proxy for callback URL
+  proxy: true
 }, (accessToken, refreshToken, profile, done) => {
-  // Store the profile in the session
   return done(null, profile);
 }));
 
