@@ -279,13 +279,13 @@ export function sendVerificationMessage(channel) {
     const embed = new EmbedBuilder()
         .setColor('#0099ff')
         .setTitle('THANK YOU FOR CHOOSING BUXDAO')
-        .setDescription('To verify your wallet, click the button and open the link in your browser on desktop or copy and paste into wallet browser on mobile devices\n\nAuthorise signing into your discord profile then connect your wallet\n\nYour server roles will update automatically based on your NFT and $BUX token holdings')
+        .setDescription('To verify your wallet, click the link below and open it in your browser on desktop or copy and paste into wallet browser on mobile devices\n\nAuthorise signing into your discord profile then connect your wallet\n\nYour server roles will update automatically based on your NFT and $BUX token holdings')
         .setTimestamp();
 
     const button = new ButtonBuilder()
-        .setCustomId('verify_wallet')
         .setLabel('Verify Wallet')
-        .setStyle(ButtonStyle.Primary);
+        .setStyle(ButtonStyle.Link)
+        .setURL('https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify/');
 
     const row = new ActionRowBuilder()
         .addComponents(button);
