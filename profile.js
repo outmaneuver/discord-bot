@@ -1,12 +1,105 @@
 import { EmbedBuilder } from 'discord.js';
-import { checkNFTOwnership, getBUXBalance, updateDiscordRoles } from './verify.js';
+import { updateDiscordRoles } from './verify.js';
 import Redis from 'ioredis';
+import fs from 'fs/promises';
+import path from 'path';
 
 const redis = new Redis(process.env.REDIS_URL, {
   tls: {
     rejectUnauthorized: false
   }
 });
+
+// Load hashlists
+const loadHashlist = async (filename) => {
+  const filePath = path.join(process.cwd(), 'hashlists', filename);
+  const data = await fs.readFile(filePath, 'utf8');
+  return new Set(JSON.parse(data));
+};
+
+let fckedCatzHashlist, celebcatzHashlist, moneyMonstersHashlist, moneyMonsters3dHashlist, aiBitbotsHashlist;
+
+const initializeHashlists = async () => {
+  fckedCatzHashlist = await loadHashlist('fcked_catz.json');
+  celebcatzHashlist = await loadHashlist('celebcatz.json');
+  moneyMonstersHashlist = await loadHashlist('money_monsters.json');
+  moneyMonsters3dHashlist = await loadHashlist('money_monsters3d.json');
+  aiBitbotsHashlist = await loadHashlist('ai_bitbots.json');
+};
+
+// Call this function when your bot starts up
+initializeHashlists();
+
+async function checkNFTOwnership(walletAddress) {
+  console.log(`Checking NFT ownership for wallet: ${walletAddress}`);
+  const nftCounts = {
+    fcked_catz: [],
+    celebcatz: [],
+    money_monsters: [],
+    money_monsters3d: [],
+    ai_bitbots: []
+  };
+
+  // Fetch all NFTs for the wallet
+  const nfts = await redis.smembers(`nfts:${walletAddress}`);
+
+  for (const nft of nfts) {
+    if (fckedCatzHashlist.has(nft)) nftCounts.fcked_catz.push(nft);
+    else if (celebcatzHashlist.has(nft)) nftCounts.celebcatz.push(nft);
+    else if (moneyMonstersHashlist.has(nft)) nftCounts.money_monsters.push(nft);
+    else if (moneyMonsters3dHashlist.has(nft)) nftCounts.money_monsters3d.push(nft);
+    else if (aiBitbotsHashlist.has(nft)) nftCounts.ai_bitbots.push(nft);
+  }
+
+  console.log('NFT counts:', JSON.stringify(nftCounts, null, 2));
+  return nftCounts;
+}
+
+async function getBUXBalance(walletAddress) {
+  console.log(`Getting BUX balance for wallet: ${walletAddress}`);
+  const balance = await redis.get(`bux_balance:${walletAddress}`);
+  return balance ? parseFloat(balance) : 0;
+}
+
+async function aggregateWalletData(wallets) {
+  let aggregatedNftCounts = {
+    fcked_catz: [],
+    celebcatz: [],
+    money_monsters: [],
+    money_monsters3d: [],
+    ai_bitbots: []
+  };
+  let totalBuxBalance = 0;
+
+  for (const wallet of wallets) {
+    console.log(`Aggregating data for wallet: ${wallet}`);
+    try {
+      const nftCounts = await checkNFTOwnership(wallet);
+      const buxBalance = await getBUXBalance(wallet);
+
+      console.log(`NFT counts for wallet ${wallet}:`, JSON.stringify(nftCounts, null, 2));
+      console.log(`BUX balance for wallet ${wallet}:`, buxBalance);
+
+      // Aggregate NFT counts
+      for (const [collection, nfts] of Object.entries(nftCounts)) {
+        aggregatedNftCounts[collection] = [...aggregatedNftCounts[collection], ...nfts];
+      }
+
+      // Aggregate BUX balance
+      totalBuxBalance += buxBalance;
+    } catch (error) {
+      console.error(`Error aggregating data for wallet ${wallet}:`, error);
+    }
+  }
+
+  console.log('Aggregated NFT counts:', JSON.stringify(aggregatedNftCounts, null, 2));
+  console.log('Total BUX balance:', totalBuxBalance);
+
+  return {
+    nftCounts: aggregatedNftCounts,
+    buxBalance: totalBuxBalance
+  };
+}
 
 export async function getWalletData(userId) {
   console.log('Retrieving wallet data for user:', userId);
@@ -118,46 +211,6 @@ async function getAllWallets(userId) {
     console.error(`Error retrieving wallets for user ${userId}:`, error);
     return [];
   }
-}
-
-async function aggregateWalletData(wallets) {
-  let aggregatedNftCounts = {
-    fcked_catz: [],
-    celebcatz: [],
-    money_monsters: [],
-    money_monsters3d: [],
-    ai_bitbots: []
-  };
-  let totalBuxBalance = 0;
-
-  for (const wallet of wallets) {
-    console.log(`Aggregating data for wallet: ${wallet}`);
-    try {
-      const nftCounts = await retryWithBackoff(() => checkNFTOwnership(wallet));
-      const buxBalance = await retryWithBackoff(() => getBUXBalance(wallet));
-
-      console.log(`NFT counts for wallet ${wallet}:`, JSON.stringify(nftCounts, null, 2));
-      console.log(`BUX balance for wallet ${wallet}:`, buxBalance);
-
-      // Aggregate NFT counts
-      for (const [collection, nfts] of Object.entries(nftCounts)) {
-        aggregatedNftCounts[collection] = [...aggregatedNftCounts[collection], ...nfts];
-      }
-
-      // Aggregate BUX balance
-      totalBuxBalance += buxBalance;
-    } catch (error) {
-      console.error(`Error aggregating data for wallet ${wallet}:`, error);
-    }
-  }
-
-  console.log('Aggregated NFT counts:', JSON.stringify(aggregatedNftCounts, null, 2));
-  console.log('Total BUX balance:', totalBuxBalance);
-
-  return {
-    nftCounts: aggregatedNftCounts,
-    buxBalance: totalBuxBalance
-  };
 }
 
 async function retryWithBackoff(fn, maxRetries = 5, initialDelay = 1000) {
