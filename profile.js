@@ -207,12 +207,12 @@ function formatNFTCounts(nftCounts) {
 function calculateDailyReward(nftCounts) {
   let reward = 0;
   
-  // Add reward for each NFT type
-  reward += nftCounts.fcked_catz.length * 10;    // 10 BUX per FCatz
-  reward += nftCounts.celebcatz.length * 20;     // 20 BUX per CelebCatz
-  reward += nftCounts.money_monsters.length * 15; // 15 BUX per MM
-  reward += nftCounts.money_monsters3d.length * 25; // 25 BUX per MM3D
-  reward += nftCounts.ai_bitbots.length * 30;    // 30 BUX per AI Bitbot
+  // Updated reward multipliers
+  reward += nftCounts.fcked_catz.length * 2;      // 2 BUX per FCatz
+  reward += nftCounts.celebcatz.length * 8;       // 8 BUX per CelebCatz
+  reward += nftCounts.money_monsters.length * 2;   // 2 BUX per MM
+  reward += nftCounts.money_monsters3d.length * 4; // 4 BUX per MM3D
+  reward += nftCounts.ai_bitbots.length * 1;      // 1 BUX per AI Bitbot
 
   return reward;
 }
