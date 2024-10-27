@@ -30,7 +30,7 @@ const initializeHashlists = async () => {
 // Call this function when your bot starts up
 initializeHashlists();
 
-export async function addWallet(userId, walletAddress) {
+async function addWallet(userId, walletAddress) {
   const key = `wallets:${userId}`;
   try {
     const result = await redis.sadd(key, walletAddress);
@@ -42,7 +42,7 @@ export async function addWallet(userId, walletAddress) {
   }
 }
 
-export async function removeWallet(userId, walletAddress) {
+async function removeWallet(userId, walletAddress) {
   const key = `wallets:${userId}`;
   try {
     const result = await redis.srem(key, walletAddress);
@@ -54,7 +54,7 @@ export async function removeWallet(userId, walletAddress) {
   }
 }
 
-export async function getWalletData(userId) {
+async function getWalletData(userId) {
   const key = `wallets:${userId}`;
   try {
     const walletAddresses = await redis.smembers(key);
@@ -66,7 +66,7 @@ export async function getWalletData(userId) {
   }
 }
 
-export async function aggregateWalletData(wallets) {
+async function aggregateWalletData(wallets) {
   let aggregatedNftCounts = {
     fcked_catz: [],
     celebcatz: [],
@@ -106,7 +106,7 @@ export async function aggregateWalletData(wallets) {
   };
 }
 
-export async function updateUserProfile(channel, userId, client) {
+async function updateUserProfile(channel, userId, client) {
   try {
     console.log('Updating profile for user:', userId);
     const walletData = await getWalletData(userId);
@@ -158,7 +158,7 @@ export async function updateUserProfile(channel, userId, client) {
   }
 }
 
-export async function sendProfileMessage(channel, userId) {
+async function sendProfileMessage(channel, userId) {
   try {
     await updateUserProfile(channel, userId, channel.client);
   } catch (error) {
