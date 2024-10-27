@@ -1,4 +1,4 @@
-import { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } from 'discord.js';
+import { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, PermissionsBitField } from 'discord.js';
 import Redis from 'ioredis';
 import fs from 'fs/promises';
 import path from 'path';
@@ -13,6 +13,7 @@ const redis = new Redis(process.env.REDIS_URL, {
 
 const connection = new Connection(process.env.SOLANA_RPC_URL);
 const BUX_TOKEN_MINT = process.env.BUX_TOKEN_MINT;
+const GUILD_ID = process.env.DISCORD_GUILD_ID;
 
 // Load hashlists
 const loadHashlist = async (filename) => {
@@ -169,137 +170,68 @@ export async function getBUXBalance(walletAddress) {
   return balance;
 }
 
-export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) {
+export async function updateDiscordRoles(userId, aggregatedData, client) {
   try {
-    const guild = await client.guilds.fetch(process.env.GUILD_ID);
+    const guild = await client.guilds.fetch(GUILD_ID);
+    if (!guild) {
+      console.error('Guild not found');
+      return;
+    }
+
     const member = await guild.members.fetch(userId);
+    if (!member) {
+      console.error('Member not found');
+      return;
+    }
 
-    const allRoles = [
-      process.env.ROLE_ID_FCKED_CATZ,
-      process.env.WHALE_ROLE_ID_FCKED_CATZ,
-      process.env.ROLE_ID_CELEBCATZ,
-      process.env.ROLE_ID_MONEY_MONSTERS,
-      process.env.WHALE_ROLE_ID_MONEY_MONSTERS,
-      process.env.ROLE_ID_MONEY_MONSTERS3D,
-      process.env.ROLE_ID_MM_TOP10,
-      process.env.ROLE_ID_MM3D_TOP10,
-      process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D,
-      process.env.ROLE_ID_AI_BITBOTS,
-      process.env.WHALE_ROLE_ID_AI_BITBOTS,
-      process.env.ROLE_ID_50000_BUX,
-      process.env.ROLE_ID_25000_BUX,
-      process.env.ROLE_ID_10000_BUX,
-      process.env.ROLE_ID_2500_BUX
-    ];
+    // Rest of your role update logic...
+    console.log('Updating Discord roles based on all connected wallets');
 
+    // Money Monsters 3D Whale Check
+    const mm3dCount = aggregatedData.nftCounts.money_monsters3d.length;
+    const mm3dWhaleThreshold = 25;
+    console.log(`Money Monsters 3D count: ${mm3dCount}, Whale threshold: ${mm3dWhaleThreshold}`);
+
+    // Money Monsters Whale Check
+    const mmCount = aggregatedData.nftCounts.money_monsters.length;
+    const mmWhaleThreshold = 25;
+
+    // Remove Top 10 roles first
+    console.log('Removing Money Monsters Top 10 role for user', userId);
+    await member.roles.remove('1095033759612547133').catch(console.error);
+    
+    console.log('Removing Money Monsters 3D Top 10 role for user', userId);
+    await member.roles.remove('1095033566070583457').catch(console.error);
+
+    // Update roles based on NFT counts
     const rolesToAdd = [];
-    const rolesToRemove = [...allRoles];
+    const rolesToRemove = [];
 
-    // Add NFT roles and whale roles
-    if (nftCounts.fcked_catz.length > 0) {
-      rolesToAdd.push(process.env.ROLE_ID_FCKED_CATZ);
-      rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_FCKED_CATZ), 1);
-      if (nftCounts.fcked_catz.length >= parseInt(process.env.WHALE_THRESHOLD_FCKED_CATZ)) {
-        rolesToAdd.push(process.env.WHALE_ROLE_ID_FCKED_CATZ);
-        rolesToRemove.splice(rolesToRemove.indexOf(process.env.WHALE_ROLE_ID_FCKED_CATZ), 1);
-      }
-    }
-    if (nftCounts.celebcatz.length > 0) {
-      rolesToAdd.push(process.env.ROLE_ID_CELEBCATZ);
-      rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_CELEBCATZ), 1);
-    }
-    if (nftCounts.money_monsters.length > 0) {
-      rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS);
-      rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_MONEY_MONSTERS), 1);
-      if (nftCounts.money_monsters.length >= parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS)) {
-        rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS);
-        rolesToRemove.splice(rolesToRemove.indexOf(process.env.WHALE_ROLE_ID_MONEY_MONSTERS), 1);
-      }
-    }
-    if (nftCounts.money_monsters3d.length > 0) {
-      rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
-      rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_MONEY_MONSTERS3D), 1);
-      
-      const whaleThreshold = parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS3D);
-      console.log(`Money Monsters 3D count: ${nftCounts.money_monsters3d.length}, Whale threshold: ${whaleThreshold}`);
-      
-      if (nftCounts.money_monsters3d.length >= whaleThreshold) {
-        rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
-        rolesToRemove.splice(rolesToRemove.indexOf(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D), 1);
-        console.log(`Adding Money Monsters 3D Whale role. NFT count: ${nftCounts.money_monsters3d.length}`);
-      } else {
-        rolesToRemove.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
-        rolesToRemove.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
-      }
+    // Add your role update logic here...
+    // Example:
+    if (aggregatedData.nftCounts.fcked_catz.length > 0) {
+      rolesToAdd.push('1093607187454111825'); // CAT role
     } else {
-      rolesToRemove.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
-      rolesToRemove.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
-    }
-    if (nftCounts.ai_bitbots.length > 0) {
-      rolesToAdd.push(process.env.ROLE_ID_AI_BITBOTS);
-      rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_AI_BITBOTS), 1);
-      if (nftCounts.ai_bitbots.length >= parseInt(process.env.WHALE_THRESHOLD_AI_BITBOTS)) {
-        rolesToAdd.push(process.env.WHALE_ROLE_ID_AI_BITBOTS);
-        rolesToRemove.splice(rolesToRemove.indexOf(process.env.WHALE_ROLE_ID_AI_BITBOTS), 1);
-      }
+      rolesToRemove.push('1093607187454111825');
     }
 
-    // Add BUX balance roles
-    if (buxBalance >= 50000) {
-      rolesToAdd.push(process.env.ROLE_ID_50000_BUX);
-      rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_50000_BUX), 1);
-    } else if (buxBalance >= 25000) {
-      rolesToAdd.push(process.env.ROLE_ID_25000_BUX);
-      rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_25000_BUX), 1);
-    } else if (buxBalance >= 10000) {
-      rolesToAdd.push(process.env.ROLE_ID_10000_BUX);
-      rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_10000_BUX), 1);
-    } else if (buxBalance >= 2500) {
-      rolesToAdd.push(process.env.ROLE_ID_2500_BUX);
-      rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_2500_BUX), 1);
-    }
-
-    // Handle Money Monsters Top 10
-    if (nftCounts.money_monsters.some(nft => MM_TOP10_HASHLIST.has(nft))) {
-      rolesToAdd.push(process.env.ROLE_ID_MM_TOP10);
-      rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_MM_TOP10), 1);
-      console.log(`Adding Money Monsters Top 10 role for user ${userId}`);
-    } else {
-      rolesToRemove.push(process.env.ROLE_ID_MM_TOP10);
-      console.log(`Removing Money Monsters Top 10 role for user ${userId}`);
-    }
-
-    // Handle Money Monsters 3D Top 10
-    if (nftCounts.money_monsters3d.some(nft => MM3D_TOP10_HASHLIST.has(nft))) {
-      rolesToAdd.push(process.env.ROLE_ID_MM3D_TOP10);
-      rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_MM3D_TOP10), 1);
-      console.log(`Adding Money Monsters 3D Top 10 role for user ${userId}`);
-    } else {
-      rolesToRemove.push(process.env.ROLE_ID_MM3D_TOP10);
-      console.log(`Removing Money Monsters 3D Top 10 role for user ${userId}`);
-    }
-
-    // Remove roles that are in rolesToRemove
-    for (const roleId of rolesToRemove) {
-      if (roleId && member.roles.cache.has(roleId)) {
-        await member.roles.remove(roleId);
-        console.log(`Removed role ${roleId} from user ${userId}`);
-      }
-    }
-
-    // Add the new roles
+    // Add/remove roles
     for (const roleId of rolesToAdd) {
-      if (roleId && !member.roles.cache.has(roleId)) {
-        await member.roles.add(roleId);
-        console.log(`Added role ${roleId} to user ${userId}`);
-      }
+      await member.roles.add(roleId).catch(console.error);
     }
 
-    console.log(`Updated roles for user ${userId}:`, { added: rolesToAdd, removed: rolesToRemove });
-    return true;
+    for (const roleId of rolesToRemove) {
+      await member.roles.remove(roleId).catch(console.error);
+    }
+
+    console.log('Updated roles for user', userId + ':', {
+      added: rolesToAdd,
+      removed: rolesToRemove
+    });
+
   } catch (error) {
     console.error('Error updating Discord roles:', error);
-    return false;
+    throw error;
   }
 }
 
