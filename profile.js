@@ -1,5 +1,6 @@
 import { EmbedBuilder } from 'discord.js';
-import { updateDiscordRoles, checkNFTOwnership, getBUXBalance, startOrUpdateDailyTimer, getTimeUntilNextClaim } from './verify.js';
+import { updateDiscordRoles, checkNFTOwnership, getBUXBalance } from './verify.js';
+import { startOrUpdateDailyTimer, getTimeUntilNextClaim } from './rewards.js';
 import Redis from 'ioredis';
 import fs from 'fs/promises';
 import path from 'path';
