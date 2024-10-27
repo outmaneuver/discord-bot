@@ -300,7 +300,21 @@ client.on('messageCreate', async (message) => {
 });
 
 client.on('interactionCreate', async interaction => {
-  console.log('Interaction received:', interaction);
+  // Handle button interactions
+  if (interaction.isButton()) {
+    if (interaction.customId === 'verify_wallet') {
+      try {
+        await interaction.reply({
+          content: 'Please visit this link to verify your wallet: https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify/',
+          ephemeral: true
+        });
+      } catch (error) {
+        console.error('Error handling verify_wallet button:', error);
+      }
+    }
+    return;
+  }
+
   if (!interaction.isCommand()) {
     console.log('Interaction is not a command');
     return;
@@ -318,12 +332,7 @@ client.on('interactionCreate', async interaction => {
       await handleMainInteraction(interaction);
     } else if (commandName === 'verify') {
       await handleVerifyInteraction(interaction);
-    }
-    // Remove or comment out this line:
-    // else if (commandName === 'sales' || commandName === 'listings') {
-    //   await handleSalesListingsInteraction(interaction);
-    // }
-    else {
+    } else {
       console.log('Unknown command:', commandName);
     }
   } catch (error) {
