@@ -9,3 +9,15 @@ export async function addWallet(userId, walletAddress) {
     throw error;
   }
 }
+
+export async function getWalletData(userId) {
+  const key = `wallets:${userId}`;
+  try {
+    const walletAddresses = await redis.smembers(key);
+    console.log(`Retrieved wallets for user ${userId}:`, walletAddresses);
+    return { walletAddresses };
+  } catch (error) {
+    console.error(`Error retrieving wallet data for user ${userId}:`, error);
+    throw error;
+  }
+}
