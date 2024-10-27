@@ -2,6 +2,17 @@ import { updateUserProfile, removeWallet, getWalletData, addWallet } from './pro
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 
 export async function handleMainCommands(message, client) {
+  if (message.content === '=') {
+    const commands = [
+      '=help', '=profile', '=update', '=verify', '=remove', '=add',
+      '=testsale', '=testlisting', '=testalllistings', '=sendverification'
+    ];
+    
+    const response = 'Available commands:\n' + commands.join(', ');
+    await message.channel.send(response);
+    return;
+  }
+
   console.log('Received message:', message.content);
   if (message.content.toLowerCase() === '=help') {
     console.log('Handling =help command');
