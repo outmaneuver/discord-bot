@@ -183,7 +183,7 @@ export async function checkNFTOwnership(walletAddress) {
             }
         }
 
-        console.log('NFT counts:', nftCounts);
+        console.log('NFT counts:', JSON.stringify(nftCounts, null, 2));
         return nftCounts;
     } catch (error) {
         console.error('Error checking NFT ownership:', error);
@@ -495,3 +495,4 @@ export function sendVerificationMessage(channel) {
 
     return channel.send({ embeds: [embed], components: [row] });
 }
+

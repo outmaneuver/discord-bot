@@ -136,7 +136,7 @@ async function aggregateWalletData(wallets) {
       const nftCounts = await checkNFTOwnership(wallet);
       const buxBalance = await getBUXBalance(wallet);
 
-      console.log(`NFT counts for wallet ${wallet}:`, nftCounts);
+      console.log(`NFT counts for wallet ${wallet}:`, JSON.stringify(nftCounts, null, 2));
       console.log(`BUX balance for wallet ${wallet}:`, buxBalance);
 
       // Aggregate NFT counts
@@ -151,7 +151,7 @@ async function aggregateWalletData(wallets) {
     }
   }
 
-  console.log('Aggregated NFT counts:', aggregatedNftCounts);
+  console.log('Aggregated NFT counts:', JSON.stringify(aggregatedNftCounts, null, 2));
   console.log('Total BUX balance:', totalBuxBalance);
 
   return {
@@ -170,6 +170,8 @@ export async function updateUserProfile(channel, userId, client) {
       await channel.send('No connected wallets found. Please verify your wallet first using the `!verify` command.');
       return;
     }
+
+    console.log('Wallet data:', JSON.stringify(walletData, null, 2));
 
     // Update Discord roles based on aggregated wallet data
     console.log('Updating Discord roles based on all connected wallets');
