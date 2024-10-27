@@ -15,6 +15,31 @@ const connection = new Connection(process.env.SOLANA_RPC_URL);
 const BUX_TOKEN_MINT = process.env.BUX_TOKEN_MINT;
 const GUILD_ID = process.env.DISCORD_GUILD_ID;
 
+// Add BUX balance checking function
+export async function getBUXBalance(walletAddress) {
+  try {
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      new PublicKey(walletAddress),
+      {
+        programId: TOKEN_PROGRAM_ID,
+        mint: new PublicKey(BUX_TOKEN_MINT)
+      }
+    );
+
+    let totalBalance = 0;
+    for (const account of tokenAccounts.value) {
+      const amount = account.account.data.parsed.info.tokenAmount.uiAmount;
+      totalBalance += amount;
+    }
+
+    console.log(`Fetched BUX balance for ${walletAddress}: ${totalBalance}`);
+    return totalBalance;
+  } catch (error) {
+    console.error('Error getting BUX balance:', error);
+    return 0;
+  }
+}
+
 // Load hashlists and convert to Sets
 const loadHashlist = async (filename) => {
   try {
@@ -93,6 +118,66 @@ export async function checkNFTOwnership(walletAddress) {
     return nftCounts;
   } catch (error) {
     console.error('Error checking NFT ownership:', error);
+    throw error;
+  }
+}
+
+export async function updateDiscordRoles(userId, aggregatedData, client) {
+  try {
+    const guild = await client.guilds.fetch(GUILD_ID);
+    if (!guild) {
+      console.error('Guild not found');
+      return;
+    }
+
+    const member = await guild.members.fetch(userId);
+    if (!member) {
+      console.error('Member not found');
+      return;
+    }
+
+    console.log('Updating Discord roles based on all connected wallets');
+
+    // Money Monsters 3D Whale Check
+    const mm3dCount = aggregatedData.nftCounts.money_monsters3d.length;
+    const mm3dWhaleThreshold = 25;
+    console.log(`Money Monsters 3D count: ${mm3dCount}, Whale threshold: ${mm3dWhaleThreshold}`);
+
+    // Money Monsters Whale Check
+    const mmCount = aggregatedData.nftCounts.money_monsters.length;
+    const mmWhaleThreshold = 25;
+
+    // Remove Top 10 roles first
+    await member.roles.remove('1095033759612547133').catch(console.error);
+    await member.roles.remove('1095033566070583457').catch(console.error);
+
+    // Update roles based on NFT counts
+    const rolesToAdd = [];
+    const rolesToRemove = [];
+
+    // Add your role update logic here...
+    if (aggregatedData.nftCounts.fcked_catz.length > 0) {
+      rolesToAdd.push('1093607187454111825'); // CAT role
+    } else {
+      rolesToRemove.push('1093607187454111825');
+    }
+
+    // Add/remove roles
+    for (const roleId of rolesToAdd) {
+      await member.roles.add(roleId).catch(console.error);
+    }
+
+    for (const roleId of rolesToRemove) {
+      await member.roles.remove(roleId).catch(console.error);
+    }
+
+    console.log('Updated roles for user', userId + ':', {
+      added: rolesToAdd,
+      removed: rolesToRemove
+    });
+
+  } catch (error) {
+    console.error('Error updating Discord roles:', error);
     throw error;
   }
 }
