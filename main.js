@@ -140,19 +140,31 @@ app.post('/holder-verify/verify', async (req, res) => {
   }
 
   try {
-    const { walletAddress } = req.body;
-    if (!walletAddress) {
-      return res.status(400).json({ success: false, error: 'No wallet address provided' });
+    console.log('Received verification request:', req.body);
+    
+    if (!req.body || !req.body.walletAddress) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'No wallet address provided',
+        details: 'Request body must include walletAddress'
+      });
     }
 
-    const result = await verifyHolder(walletAddress, req.user.id, client);
+    const walletData = {
+      walletAddress: req.body.walletAddress
+    };
+
+    console.log('Processing wallet verification for:', walletData);
+    
+    const result = await verifyHolder(walletData, req.user.id, client);
     res.json(result);
   } catch (error) {
     console.error('Error during wallet verification:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
-      details: error.message
+      details: error.message,
+      requestBody: req.body // Add this for debugging
     });
   }
 });
