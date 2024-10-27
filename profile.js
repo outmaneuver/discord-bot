@@ -12,8 +12,8 @@ const redis = new Redis(process.env.REDIS_URL, {
 // Export getWalletData function
 export async function getWalletData(userId) {
   try {
-    // Get wallet addresses as a Set from Redis
-    const wallets = await redis.smembers(`user:${userId}:wallets`);
+    // Get wallet addresses from Redis - use the correct key format
+    const wallets = await redis.smembers(`wallets:${userId}`);
     console.log(`Retrieved wallets for user ${userId}:`, wallets);
     return { walletAddresses: wallets || [] };
   } catch (error) {
@@ -24,7 +24,8 @@ export async function getWalletData(userId) {
 
 export async function addWallet(userId, walletAddress) {
   try {
-    await redis.sadd(`user:${userId}:wallets`, walletAddress);
+    // Use the correct key format
+    await redis.sadd(`wallets:${userId}`, walletAddress);
     return true;
   } catch (error) {
     console.error('Error adding wallet:', error);
@@ -34,7 +35,8 @@ export async function addWallet(userId, walletAddress) {
 
 export async function removeWallet(userId, walletAddress) {
   try {
-    await redis.srem(`user:${userId}:wallets`, walletAddress);
+    // Use the correct key format
+    await redis.srem(`wallets:${userId}`, walletAddress);
     return true;
   } catch (error) {
     console.error('Error removing wallet:', error);
