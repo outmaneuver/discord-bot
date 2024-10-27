@@ -9,7 +9,8 @@ const redis = new Redis(process.env.REDIS_URL, {
   }
 });
 
-async function getWalletData(userId) {
+// Export getWalletData function
+export async function getWalletData(userId) {
   try {
     // Get wallet addresses as a Set from Redis
     const wallets = await redis.smembers(`user:${userId}:wallets`);
