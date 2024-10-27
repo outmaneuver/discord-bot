@@ -248,7 +248,7 @@
         checkAuthStatus();
 
         function formatResponse(response) {
-            return response.replace(/<yellow>(.*?)<\/yellow>/g, '<span class="yellow-text">$1</span>')
+            return response.replace(/\*\*(.*?)\*\*/g, '<span class="yellow-text">$1</span>')
                            .replace(/\n/g, '<br>');
         }
 
