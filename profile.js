@@ -1,4 +1,4 @@
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } from 'discord.js';
 import { updateDiscordRoles, checkNFTOwnership, getBUXBalance } from './verify.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim } from './rewards.js';
 import Redis from 'ioredis';
