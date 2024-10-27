@@ -199,4 +199,4 @@ function formatNFTCounts(nftCounts) {
     .join('\n');
 }
 
-export { addWallet, removeWallet, getWalletData, aggregateWalletData, updateUserProfile, sendProfileMessage };
+export { addWallet, removeWallet, getWalletData, updateUserProfile, sendProfileMessage };
