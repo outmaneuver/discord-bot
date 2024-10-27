@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits } from 'discord.js';
+import { Client, GatewayIntentBits, REST } from 'discord.js';
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
