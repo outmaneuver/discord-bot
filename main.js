@@ -138,10 +138,17 @@ app.post('/holder-verify/verify', async (req, res) => {
   try {
     console.log('Verifying wallet:', req.body.walletAddress);
     
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Not authenticated' 
+      });
+    }
+
     const verificationResult = await verifyHolder({
       walletAddress: req.body.walletAddress,
-      userId: req.session.userId,
-      client: req.app.get('discord-client')
+      userId: req.user.id,
+      client: req.app.get('discord-client') // Get the Discord client from app settings
     });
 
     if (verificationResult.success) {
