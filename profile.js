@@ -1,3 +1,17 @@
+import { EmbedBuilder } from 'discord.js';
+import { updateDiscordRoles } from './verify.js';
+import Redis from 'ioredis';
+import fs from 'fs/promises';
+import path from 'path';
+
+const redis = new Redis(process.env.REDIS_URL, {
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
+// ... (existing code for loading hashlists)
+
 export async function addWallet(userId, walletAddress) {
   const key = `wallets:${userId}`;
   try {
@@ -6,6 +20,18 @@ export async function addWallet(userId, walletAddress) {
     return result === 1; // Returns true if the wallet was successfully added
   } catch (error) {
     console.error(`Error adding wallet ${walletAddress} for user ${userId}:`, error);
+    throw error;
+  }
+}
+
+export async function removeWallet(userId, walletAddress) {
+  const key = `wallets:${userId}`;
+  try {
+    const result = await redis.srem(key, walletAddress);
+    console.log(`Removed wallet ${walletAddress} for user ${userId}. Result: ${result}`);
+    return result === 1; // Returns true if the wallet was successfully removed
+  } catch (error) {
+    console.error(`Error removing wallet ${walletAddress} for user ${userId}:`, error);
     throw error;
   }
 }
@@ -21,3 +47,69 @@ export async function getWalletData(userId) {
     throw error;
   }
 }
+
+export async function updateUserProfile(channel, userId, client) {
+  try {
+    console.log('Updating profile for user:', userId);
+    const walletData = await getWalletData(userId);
+
+    if (!walletData || walletData.walletAddresses.length === 0) {
+      console.log('No wallet data found for user:', userId);
+      await channel.send('No connected wallets found. Please verify your wallet first using the `!verify` command.');
+      return;
+    }
+
+    console.log('Wallet data:', JSON.stringify(walletData, null, 2));
+
+    const aggregatedData = await aggregateWalletData(walletData.walletAddresses);
+
+    // Update Discord roles based on aggregated wallet data
+    console.log('Updating Discord roles based on all connected wallets');
+    await updateDiscordRoles(client, userId, aggregatedData.nftCounts, aggregatedData.buxBalance);
+
+    // Fetch updated member data after role update
+    const guild = await client.guilds.fetch(process.env.GUILD_ID);
+    const member = await guild.members.fetch(userId);
+    const roles = member.roles.cache
+      .filter(role => role.name !== '@everyone')
+      .sort((a, b) => b.position - a.position)
+      .map(role => role.name)
+      .join(', ');
+
+    const user = await client.users.fetch(userId);
+    const username = user.username;
+
+    console.log('Creating updated profile embed for user:', username);
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle(`${username}'s Updated BUX DAO Profile`)
+      .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 128 }))
+      .addFields(
+        { name: 'Connected Wallets', value: walletData.walletAddresses.join('\n') },
+        { name: 'BUX Balance', value: `${aggregatedData.buxBalance} BUX` },
+        { name: 'NFTs', value: formatNFTCounts(aggregatedData.nftCounts) },
+        { name: 'Updated Server Roles', value: roles || 'No roles' }
+      )
+      .setTimestamp();
+
+    console.log('Sending updated profile embed');
+    await channel.send({ embeds: [embed] });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    throw error;
+  }
+}
+
+// ... (rest of the existing code)
+
+export async function sendProfileMessage(channel, userId) {
+  try {
+    await updateUserProfile(channel, userId, channel.client);
+  } catch (error) {
+    console.error('Error sending profile message:', error);
+    await channel.send('An error occurred while fetching your profile. Please try again later.');
+  }
+}
+
+// Make sure to export all necessary functions
+export { checkNFTOwnership, getBUXBalance, aggregateWalletData, formatNFTCounts };
