@@ -1,5 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
-import { updateDiscordRoles } from './verify.js';
+import { updateDiscordRoles, checkNFTOwnership, getBUXBalance } from './verify.js';
 import Redis from 'ioredis';
 import fs from 'fs/promises';
 import path from 'path';
@@ -154,6 +154,3 @@ function formatNFTCounts(nftCounts) {
     .map(([collection, count]) => `${collection}: ${count.length}`)
     .join('\n');
 }
-
-// Make sure to export all necessary functions
-export { checkNFTOwnership, getBUXBalance };
