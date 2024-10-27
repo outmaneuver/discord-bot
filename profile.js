@@ -57,57 +57,60 @@ export async function removeWallet(userId, walletAddress) {
   }
 }
 
-export async function getWalletData(userId) {
-  console.log(`Retrieving wallet data for user: ${userId}`);
-  const key = `wallets:${userId}`;
+async function getWalletData(userId) {
   try {
-    const walletAddresses = await redis.smembers(key);
-    console.log(`Retrieved wallets for user ${userId}:`, walletAddresses);
-    return { walletAddresses };
+    const data = await redis.get(`wallets:${userId}`);
+    if (!data) {
+      return { walletAddresses: [] };
+    }
+    return JSON.parse(data);
   } catch (error) {
-    console.error(`Error retrieving wallet data for user ${userId}:`, error);
-    throw error;
+    console.error('Error getting wallet data:', error);
+    return { walletAddresses: [] };
   }
 }
 
-async function aggregateWalletData(wallets) {
-  let aggregatedNftCounts = {
-    fcked_catz: [],
-    celebcatz: [],
-    money_monsters: [],
-    money_monsters3d: [],
-    ai_bitbots: []
+async function aggregateWalletData(walletData) {
+  const aggregatedData = {
+    nftCounts: {
+      fcked_catz: [],
+      celebcatz: [],
+      money_monsters: [],
+      money_monsters3d: [],
+      ai_bitbots: []
+    },
+    buxBalance: 0
   };
-  let totalBuxBalance = 0;
 
-  for (const wallet of wallets) {
-    console.log(`Aggregating data for wallet: ${wallet}`);
+  for (const walletAddress of walletData.walletAddresses) {
     try {
-      const nftCounts = await checkNFTOwnership(wallet);
-      const buxBalance = await getBUXBalance(wallet);
+      console.log('Aggregating data for wallet:', walletAddress);
+      
+      // Get NFT data
+      const nftCounts = await checkNFTOwnership(walletAddress);
+      console.log('NFT counts for wallet', walletAddress + ':', nftCounts);
+      
+      // Merge NFT arrays
+      Object.keys(nftCounts).forEach(collection => {
+        aggregatedData.nftCounts[collection] = [
+          ...aggregatedData.nftCounts[collection],
+          ...nftCounts[collection]
+        ];
+      });
 
-      console.log(`NFT counts for wallet ${wallet}:`, JSON.stringify(nftCounts, null, 2));
-      console.log(`BUX balance for wallet ${wallet}:`, buxBalance);
+      // Get BUX balance
+      const balance = await getBUXBalance(walletAddress);
+      console.log('BUX balance for wallet', walletAddress + ':', balance);
+      aggregatedData.buxBalance += balance;
 
-      // Aggregate NFT counts
-      for (const [collection, nfts] of Object.entries(nftCounts)) {
-        aggregatedNftCounts[collection] = [...aggregatedNftCounts[collection], ...nfts];
-      }
-
-      // Aggregate BUX balance
-      totalBuxBalance += buxBalance;
     } catch (error) {
-      console.error(`Error aggregating data for wallet ${wallet}:`, error);
+      console.error('Error aggregating data for wallet', walletAddress + ':', error);
     }
   }
 
-  console.log('Aggregated NFT counts:', JSON.stringify(aggregatedNftCounts, null, 2));
-  console.log('Total BUX balance:', totalBuxBalance);
-
-  return {
-    nftCounts: aggregatedNftCounts,
-    buxBalance: totalBuxBalance
-  };
+  console.log('Aggregated NFT counts:', aggregatedData.nftCounts);
+  console.log('Total BUX balance:', aggregatedData.buxBalance);
+  return aggregatedData;
 }
 
 export async function updateUserProfile(channel, userId, client) {
@@ -119,7 +122,7 @@ export async function updateUserProfile(channel, userId, client) {
     const user = await client.users.fetch(userId);
     const username = user.username;
 
-    const timerData = await startOrUpdateDailyTimer(userId);
+    const timerData = await startOrUpdateDailyTimer(userId, aggregatedData.nftCounts, aggregatedData.buxBalance);
     const timeUntilNext = await getTimeUntilNextClaim(userId);
     
     const embed = new EmbedBuilder()
@@ -127,11 +130,9 @@ export async function updateUserProfile(channel, userId, client) {
       .setTitle(`${username}'s Updated BUX DAO Profile`)
       .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 128 }))
       .addFields(
-        { name: 'Connected Wallets', value: walletData.walletAddresses.join('\n') },
+        { name: 'Connected Wallets', value: walletData.walletAddresses.join('\n') || 'No wallets connected' },
         { name: '\u200B', value: '─'.repeat(40) },
-        { name: 'NFTs', value: formatNFTCounts(aggregatedData.nftCounts) },
-        { name: '\u200B', value: '─'.repeat(40) },
-        { name: 'Updated Server Roles', value: roles || 'No roles' },
+        { name: 'NFTs', value: formatNFTCounts(aggregatedData.nftCounts) || 'No NFTs' },
         { name: '\u200B', value: '─'.repeat(40) },
         { name: 'BUX Balance', value: `${aggregatedData.buxBalance} BUX` },
         { name: 'BUX Claim', value: `${timerData.claimAmount} BUX` },
@@ -156,6 +157,6 @@ export async function sendProfileMessage(channel, userId) {
 
 function formatNFTCounts(nftCounts) {
   return Object.entries(nftCounts)
-    .map(([collection, count]) => `${collection}: ${count.length}`)
+    .map(([collection, nfts]) => `${collection}: ${nfts.length}`)
     .join('\n');
 }
