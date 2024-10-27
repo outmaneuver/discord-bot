@@ -37,31 +37,6 @@ export async function sendVerificationMessage(channel) {
   });
 }
 
-// Add BUX balance checking function
-export async function getBUXBalance(walletAddress) {
-  try {
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-      new PublicKey(walletAddress),
-      {
-        programId: TOKEN_PROGRAM_ID,
-        mint: new PublicKey(BUX_TOKEN_MINT)
-      }
-    );
-
-    let totalBalance = 0;
-    for (const account of tokenAccounts.value) {
-      const amount = account.account.data.parsed.info.tokenAmount.uiAmount;
-      totalBalance += amount;
-    }
-
-    console.log(`Fetched BUX balance for ${walletAddress}: ${totalBalance}`);
-    return totalBalance;
-  } catch (error) {
-    console.error('Error getting BUX balance:', error);
-    return 0;
-  }
-}
-
 // Load hashlists and convert to Sets
 const loadHashlist = async (filename) => {
   try {
@@ -99,6 +74,30 @@ async function initializeHashlists() {
 
 // Call initialization
 initializeHashlists().catch(console.error);
+
+export async function getBUXBalance(walletAddress) {
+  try {
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      new PublicKey(walletAddress),
+      {
+        programId: TOKEN_PROGRAM_ID,
+        mint: new PublicKey(BUX_TOKEN_MINT)
+      }
+    );
+
+    let totalBalance = 0;
+    for (const account of tokenAccounts.value) {
+      const amount = account.account.data.parsed.info.tokenAmount.uiAmount;
+      totalBalance += amount;
+    }
+
+    console.log(`Fetched BUX balance for ${walletAddress}: ${totalBalance}`);
+    return totalBalance;
+  } catch (error) {
+    console.error('Error getting BUX balance:', error);
+    return 0;
+  }
+}
 
 export async function checkNFTOwnership(walletAddress) {
   try {
@@ -146,6 +145,10 @@ export async function checkNFTOwnership(walletAddress) {
 
 export async function updateDiscordRoles(userId, aggregatedData, client) {
   try {
+    if (!client) {
+      throw new Error('Discord client is undefined');
+    }
+
     const guild = await client.guilds.fetch(GUILD_ID);
     if (!guild) {
       console.error('Guild not found');
