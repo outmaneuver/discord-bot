@@ -1,5 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
-import { updateDiscordRoles, checkNFTOwnership, getBUXBalance } from './verify.js';
+import { updateDiscordRoles } from './verify.js';
 import Redis from 'ioredis';
 import fs from 'fs/promises';
 import path from 'path';
@@ -10,7 +10,51 @@ const redis = new Redis(process.env.REDIS_URL, {
   }
 });
 
-// ... (existing code for loading hashlists)
+// Load hashlists
+const loadHashlist = async (filename) => {
+  const filePath = path.join(process.cwd(), 'hashlists', filename);
+  const data = await fs.readFile(filePath, 'utf8');
+  return new Set(JSON.parse(data));
+};
+
+let fckedCatzHashlist, celebcatzHashlist, moneyMonstersHashlist, moneyMonsters3dHashlist, aiBitbotsHashlist;
+
+const initializeHashlists = async () => {
+  fckedCatzHashlist = await loadHashlist('fcked_catz.json');
+  celebcatzHashlist = await loadHashlist('celebcatz.json');
+  moneyMonstersHashlist = await loadHashlist('money_monsters.json');
+  moneyMonsters3dHashlist = await loadHashlist('money_monsters3d.json');
+  aiBitbotsHashlist = await loadHashlist('ai_bitbots.json');
+};
+
+// Call this function when your bot starts up
+initializeHashlists();
+
+async function checkNFTOwnership(walletAddress) {
+  console.log(`Checking NFT ownership for wallet: ${walletAddress}`);
+  const nftCounts = {
+    fcked_catz: [],
+    celebcatz: [],
+    money_monsters: [],
+    money_monsters3d: [],
+    ai_bitbots: []
+  };
+
+  // Fetch all NFTs for the wallet from Redis
+  const nfts = await redis.smembers(`nfts:${walletAddress}`);
+  console.log(`Retrieved ${nfts.length} NFTs for wallet ${walletAddress}`);
+
+  for (const nft of nfts) {
+    if (fckedCatzHashlist.has(nft)) nftCounts.fcked_catz.push(nft);
+    else if (celebcatzHashlist.has(nft)) nftCounts.celebcatz.push(nft);
+    else if (moneyMonstersHashlist.has(nft)) nftCounts.money_monsters.push(nft);
+    else if (moneyMonsters3dHashlist.has(nft)) nftCounts.money_monsters3d.push(nft);
+    else if (aiBitbotsHashlist.has(nft)) nftCounts.ai_bitbots.push(nft);
+  }
+
+  console.log('NFT counts:', JSON.stringify(nftCounts, null, 2));
+  return nftCounts;
+}
 
 export async function addWallet(userId, walletAddress) {
   const key = `wallets:${userId}`;
@@ -154,3 +198,5 @@ function formatNFTCounts(nftCounts) {
     .map(([collection, count]) => `${collection}: ${count.length}`)
     .join('\n');
 }
+
+export { checkNFTOwnership, getBUXBalance, addWallet, removeWallet, getWalletData };
