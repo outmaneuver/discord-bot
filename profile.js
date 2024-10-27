@@ -237,7 +237,7 @@ export async function updateUserProfile(channel, userId, client) {
     console.log('Updating profile for user:', userId);
     const walletData = await getWalletData(userId);
 
-    if (!walletData) {
+    if (!walletData || walletData.walletAddresses.length === 0) {
       console.log('No wallet data found for user:', userId);
       await channel.send('No connected wallets found. Please verify your wallet first using the `!verify` command.');
       return;
@@ -278,6 +278,18 @@ export async function updateUserProfile(channel, userId, client) {
     await channel.send({ embeds: [embed] });
   } catch (error) {
     console.error('Error updating user profile:', error);
+    throw error;
+  }
+}
+
+export async function removeWallet(userId, walletToRemove) {
+  const key = `wallets:${userId}`;
+  try {
+    const result = await redis.srem(key, walletToRemove);
+    console.log(`Removed wallet ${walletToRemove} for user ${userId}. Result: ${result}`);
+    return result === 1; // Returns true if the wallet was successfully removed
+  } catch (error) {
+    console.error(`Error removing wallet ${walletToRemove} for user ${userId}:`, error);
     throw error;
   }
 }
