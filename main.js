@@ -55,6 +55,33 @@ const redisStore = new RedisStore({
   prefix: "session:",
 });
 
+// CORS setup - before other middleware
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'https://buxdao-verify-d1faffc83da7.herokuapp.com',
+  credentials: true,
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+}));
+
+// Session middleware setup
+app.use(session({
+  store: redisStore,
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: true,
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'none',
+    domain: 'buxdao-verify-d1faffc83da7.herokuapp.com'
+  }
+}));
+
+app.use(express.json());
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Passport setup
 passport.use(new DiscordStrategy({
   clientID: process.env.DISCORD_CLIENT_ID,
@@ -74,34 +101,7 @@ passport.deserializeUser((user, done) => {
   done(null, user);
 });
 
-// CORS setup
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'https://buxdao-verify-d1faffc83da7.herokuapp.com',
-  credentials: true,
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-// Session middleware setup
-app.use(session({
-  store: redisStore,
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax',
-    domain: '.herokuapp.com'
-  }
-}));
-
-app.use(express.json());
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Static file serving - after auth middleware
+// Static file serving
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/holder-verify', express.static(path.join(__dirname, 'public')));
 
