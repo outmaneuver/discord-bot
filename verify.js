@@ -192,7 +192,10 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) 
       rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
       rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_MONEY_MONSTERS3D), 1);
       
-      if (nftCounts.money_monsters3d.length >= parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS3D)) {
+      const whaleThreshold = parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS3D);
+      console.log(`Money Monsters 3D count: ${nftCounts.money_monsters3d.length}, Whale threshold: ${whaleThreshold}`);
+      
+      if (nftCounts.money_monsters3d.length >= whaleThreshold) {
         rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
         rolesToRemove.splice(rolesToRemove.indexOf(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D), 1);
         console.log(`Adding Money Monsters 3D Whale role. NFT count: ${nftCounts.money_monsters3d.length}`);
@@ -202,7 +205,7 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) 
         if (whaleRoleIndex > -1) {
           rolesToAdd.splice(whaleRoleIndex, 1);
         }
-        console.log(`Removing Money Monsters 3D Whale role. NFT count: ${nftCounts.money_monsters3d.length}`);
+        console.log(`Not adding Money Monsters 3D Whale role. NFT count: ${nftCounts.money_monsters3d.length}`);
       }
     } else {
       rolesToRemove.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
