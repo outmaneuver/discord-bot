@@ -165,10 +165,14 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) 
     const rolesToAdd = [];
     const rolesToRemove = [...allRoles];
 
-    // Add NFT roles and remove from rolesToRemove
+    // Add NFT roles and whale roles
     if (nftCounts.fcked_catz.length > 0) {
       rolesToAdd.push(process.env.ROLE_ID_FCKED_CATZ);
       rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_FCKED_CATZ), 1);
+      if (nftCounts.fcked_catz.length >= parseInt(process.env.WHALE_THRESHOLD_FCKED_CATZ)) {
+        rolesToAdd.push(process.env.WHALE_ROLE_ID_FCKED_CATZ);
+        rolesToRemove.splice(rolesToRemove.indexOf(process.env.WHALE_ROLE_ID_FCKED_CATZ), 1);
+      }
     }
     if (nftCounts.celebcatz.length > 0) {
       rolesToAdd.push(process.env.ROLE_ID_CELEBCATZ);
@@ -177,24 +181,26 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) 
     if (nftCounts.money_monsters.length > 0) {
       rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS);
       rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_MONEY_MONSTERS), 1);
+      if (nftCounts.money_monsters.length >= parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS)) {
+        rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS);
+        rolesToRemove.splice(rolesToRemove.indexOf(process.env.WHALE_ROLE_ID_MONEY_MONSTERS), 1);
+      }
     }
     if (nftCounts.money_monsters3d.length > 0) {
       rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
       rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_MONEY_MONSTERS3D), 1);
+      if (nftCounts.money_monsters3d.length >= parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS3D)) {
+        rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
+        rolesToRemove.splice(rolesToRemove.indexOf(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D), 1);
+      }
     }
     if (nftCounts.ai_bitbots.length > 0) {
       rolesToAdd.push(process.env.ROLE_ID_AI_BITBOTS);
       rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_AI_BITBOTS), 1);
-    }
-
-    // Add Whale roles and remove from rolesToRemove
-    if (nftCounts.fcked_catz.length >= parseInt(process.env.WHALE_THRESHOLD_FCKED_CATZ)) {
-      rolesToAdd.push(process.env.WHALE_ROLE_ID_FCKED_CATZ);
-      rolesToRemove.splice(rolesToRemove.indexOf(process.env.WHALE_ROLE_ID_FCKED_CATZ), 1);
-    }
-    if (nftCounts.money_monsters3d.length >= parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS3D)) {
-      rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
-      rolesToRemove.splice(rolesToRemove.indexOf(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D), 1);
+      if (nftCounts.ai_bitbots.length >= parseInt(process.env.WHALE_THRESHOLD_AI_BITBOTS)) {
+        rolesToAdd.push(process.env.WHALE_ROLE_ID_AI_BITBOTS);
+        rolesToRemove.splice(rolesToRemove.indexOf(process.env.WHALE_ROLE_ID_AI_BITBOTS), 1);
+      }
     }
 
     // Add BUX balance roles
@@ -204,6 +210,12 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) 
     } else if (buxBalance >= 25000) {
       rolesToAdd.push(process.env.ROLE_ID_25000_BUX);
       rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_25000_BUX), 1);
+    } else if (buxBalance >= 10000) {
+      rolesToAdd.push(process.env.ROLE_ID_10000_BUX);
+      rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_10000_BUX), 1);
+    } else if (buxBalance >= 2500) {
+      rolesToAdd.push(process.env.ROLE_ID_2500_BUX);
+      rolesToRemove.splice(rolesToRemove.indexOf(process.env.ROLE_ID_2500_BUX), 1);
     }
 
     // Remove roles that are in rolesToRemove
