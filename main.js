@@ -55,13 +55,6 @@ const redisStore = new RedisStore({
   prefix: "session:",
 });
 
-// Middleware setup
-app.use(express.json());
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'https://buxdao-verify-d1faffc83da7.herokuapp.com',
-  credentials: true
-}));
-
 // Session middleware setup - AFTER Redis store is created
 app.use(session({
   store: redisStore,
@@ -71,15 +64,24 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax'
   }
+}));
+
+// Middleware setup
+app.use(express.json());
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'https://buxdao-verify-d1faffc83da7.herokuapp.com',
+  credentials: true
 }));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Static file serving
+// Static file serving - serve from root for all paths
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/holder-verify', express.static(path.join(__dirname, 'public')));
 
 // Add routes after static file serving
 app.get('/holder-verify', (req, res) => {
