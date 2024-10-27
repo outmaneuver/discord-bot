@@ -61,14 +61,18 @@ export async function handleMainCommands(message, client) {
         .setTitle('Remove Wallet')
         .setDescription('Choose a wallet to remove:');
 
+      walletData.walletAddresses.forEach((address, index) => {
+        embed.addFields({ name: `Wallet ${index + 1}`, value: address });
+      });
+
       const row = new ActionRowBuilder();
 
       walletData.walletAddresses.forEach((address, index) => {
         row.addComponents(
           new ButtonBuilder()
             .setCustomId(`remove_wallet_${index}`)
-            .setLabel(`Wallet ${index + 1}`)
-            .setStyle(ButtonStyle.Primary)
+            .setLabel(`Remove Wallet ${index + 1}`)
+            .setStyle(ButtonStyle.Danger)
         );
       });
 
@@ -83,19 +87,19 @@ export async function handleMainCommands(message, client) {
         try {
           const result = await removeWallet(message.author.id, walletToRemove);
           if (result) {
-            await i.update({ content: `Wallet ${walletToRemove} has been removed from your profile.`, components: [] });
+            await i.update({ content: `Wallet ${walletToRemove} has been removed from your profile.`, components: [], embeds: [] });
           } else {
-            await i.update({ content: `Failed to remove wallet ${walletToRemove} from your profile.`, components: [] });
+            await i.update({ content: `Failed to remove wallet ${walletToRemove} from your profile.`, components: [], embeds: [] });
           }
         } catch (error) {
           console.error('Error removing wallet:', error);
-          await i.update({ content: 'An error occurred while removing the wallet. Please try again later.', components: [] });
+          await i.update({ content: 'An error occurred while removing the wallet. Please try again later.', components: [], embeds: [] });
         }
       });
 
       collector.on('end', collected => {
         if (collected.size === 0) {
-          reply.edit({ content: 'Wallet removal timed out.', components: [] });
+          reply.edit({ content: 'Wallet removal timed out.', components: [], embeds: [] });
         }
       });
     } else {
