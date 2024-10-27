@@ -2,6 +2,17 @@ import { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } from 'disc
 import Redis from 'ioredis';
 import fs from 'fs/promises';
 import path from 'path';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+
+const redis = new Redis(process.env.REDIS_URL, {
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
+const connection = new Connection(process.env.SOLANA_RPC_URL);
+const BUX_TOKEN_MINT = process.env.BUX_TOKEN_MINT;
 
 // Load hashlists
 const loadHashlist = async (filename) => {
@@ -22,12 +33,6 @@ const initializeHashlists = async () => {
 
 // Call this function when your bot starts up
 initializeHashlists();
-
-const redis = new Redis(process.env.REDIS_URL, {
-  tls: {
-    rejectUnauthorized: false
-  }
-});
 
 export async function verifyHolder(message) {
   try {
@@ -105,9 +110,31 @@ export async function checkNFTOwnership(walletAddress) {
   return nftCounts;
 }
 
+async function fetchBUXBalanceFromBlockchain(walletAddress) {
+  try {
+    const publicKey = new PublicKey(walletAddress);
+    const buxMint = new PublicKey(BUX_TOKEN_MINT);
+
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+      mint: buxMint
+    });
+
+    if (tokenAccounts.value.length > 0) {
+      const balance = tokenAccounts.value[0].account.data.parsed.info.tokenAmount.uiAmount;
+      console.log(`Fetched BUX balance for ${walletAddress}: ${balance}`);
+      return balance;
+    }
+
+    console.log(`No BUX balance found for ${walletAddress}`);
+    return 0;
+  } catch (error) {
+    console.error(`Error fetching BUX balance for ${walletAddress}:`, error);
+    return 0;
+  }
+}
+
 export async function getBUXBalance(walletAddress) {
-  // Implement the actual logic to fetch BUX balance
-  // This is a placeholder - replace with actual implementation
+  console.log(`Getting BUX balance for wallet: ${walletAddress}`);
   const balance = await fetchBUXBalanceFromBlockchain(walletAddress);
   return balance;
 }
@@ -127,7 +154,7 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) 
       process.env.ROLE_ID_25000_BUX,
       process.env.ROLE_ID_10000_BUX,
       process.env.ROLE_ID_2500_BUX,
-      process.env.ROLE_ID_MONSTER_3D_WHALE // Add this line
+      process.env.ROLE_ID_MONSTER_3D_WHALE
     ];
 
     const rolesToAdd = [];
@@ -171,7 +198,7 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) 
     return true;
   } catch (error) {
     console.error('Error updating Discord roles:', error);
-    throw error;
+    return false;
   }
 }
 
