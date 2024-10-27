@@ -18,7 +18,7 @@ import { sendProfileMessage, updateUserProfile } from './profile.js';
 import { handleMainCommands, handleButtonInteraction, handleMainInteraction } from './main_commands.js';
 import { handleVerifyCommands, handleVerifyInteraction } from './verify_commands.js';
 import { handleProfileCommands, handleProfileInteraction } from './profile_commands.js';
-import { handleSalesListingsCommands, handleSalesListingsInteraction } from './sales_listings_commands.js';
+import { handleSalesListingsCommands } from './sales_listings_commands.js';
 
 // Add this near the top of the file, after the imports
 global.userWallets = new Map();
@@ -348,7 +348,12 @@ client.on('interactionCreate', async interaction => {
       await handleMainInteraction(interaction);
     } else if (commandName === 'verify') {
       await handleVerifyInteraction(interaction);
-    } else {
+    }
+    // Remove or comment out this line:
+    // else if (commandName === 'sales' || commandName === 'listings') {
+    //   await handleSalesListingsInteraction(interaction);
+    // }
+    else {
       console.log('Unknown command:', commandName);
     }
   } catch (error) {
