@@ -190,6 +190,13 @@ const WHALE_THRESHOLDS = {
   AI_BITBOTS: parseInt(process.env.WHALE_THRESHOLD_AI_BITBOTS)
 };
 
+// Add required intents and permissions
+const requiredPermissions = [
+  PermissionsBitField.Flags.ManageRoles,
+  PermissionsBitField.Flags.ViewChannel,
+  PermissionsBitField.Flags.SendMessages
+];
+
 export async function updateDiscordRoles(userId, aggregatedData, client) {
   try {
     if (!client) {
@@ -216,6 +223,19 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
 
     if (!guild) {
       console.error('Guild not found');
+      return false;
+    }
+
+    // Check bot permissions
+    const botMember = guild.members.cache.get(client.user.id);
+    if (!botMember) {
+      console.error('Bot member not found in guild');
+      return false;
+    }
+
+    const missingPermissions = requiredPermissions.filter(perm => !botMember.permissions.has(perm));
+    if (missingPermissions.length > 0) {
+      console.error('Missing required permissions:', missingPermissions);
       return false;
     }
 
@@ -327,24 +347,48 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
       rolesToRemove.push(ROLE_IDS.BUX_2500);
     }
 
-    // Add roles with error handling
+    // Add roles with error handling and position check
     for (const roleId of rolesToAdd) {
       try {
+        const role = guild.roles.cache.get(roleId);
+        if (!role) {
+          console.error(`Role ${roleId} not found`);
+          continue;
+        }
+
+        // Check if bot's highest role is above the role to be assigned
+        if (botMember.roles.highest.comparePositionTo(role) <= 0) {
+          console.error(`Bot's highest role is not high enough to assign role ${roleId}`);
+          continue;
+        }
+
         if (!member.roles.cache.has(roleId)) {
           await member.roles.add(roleId);
-          console.log(`Added role ${roleId} to user ${userId}`);
+          console.log(`Added role ${role.name} (${roleId}) to user ${userId}`);
         }
       } catch (error) {
         console.error(`Error adding role ${roleId}:`, error);
       }
     }
 
-    // Remove roles with error handling
+    // Remove roles with error handling and position check
     for (const roleId of rolesToRemove) {
       try {
+        const role = guild.roles.cache.get(roleId);
+        if (!role) {
+          console.error(`Role ${roleId} not found`);
+          continue;
+        }
+
+        // Check if bot's highest role is above the role to be removed
+        if (botMember.roles.highest.comparePositionTo(role) <= 0) {
+          console.error(`Bot's highest role is not high enough to remove role ${roleId}`);
+          continue;
+        }
+
         if (member.roles.cache.has(roleId)) {
           await member.roles.remove(roleId);
-          console.log(`Removed role ${roleId} from user ${userId}`);
+          console.log(`Removed role ${role.name} (${roleId}) from user ${userId}`);
         }
       } catch (error) {
         console.error(`Error removing role ${roleId}:`, error);
