@@ -163,10 +163,7 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
     // If not in cache, try to fetch with force option
     if (!guild) {
       try {
-        guild = await client.guilds.fetch({
-          guild: GUILD_ID,
-          force: true
-        });
+        guild = await client.guilds.fetch(GUILD_ID);
       } catch (error) {
         console.error('Error fetching guild:', error);
         return false;
@@ -184,10 +181,7 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
     // If not in cache, try to fetch
     if (!member) {
       try {
-        member = await guild.members.fetch({
-          user: userId,
-          force: true
-        });
+        member = await guild.members.fetch(userId);
       } catch (error) {
         console.error('Error fetching member:', error);
         return false;
