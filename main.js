@@ -315,38 +315,9 @@ const commands = [
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
-(async () => {
-  try {
-    console.log('Started refreshing application (/) commands.');
-
-    await rest.put(
-      Routes.applicationCommands(process.env.DISCORD_CLIENT_ID),
-      { body: commands },
-    );
-
-    console.log('Successfully reloaded application (/) commands.');
-  } catch (error) {
-    console.error(error);
-  }
-})();
-
-client.once('ready', async () => {
+client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
   initializeSalesListings(client);
-
-  // Register slash commands
-  try {
-    console.log('Started refreshing application (/) commands.');
-
-    await rest.put(
-      Routes.applicationCommands(process.env.DISCORD_CLIENT_ID),
-      { body: commands },
-    );
-
-    console.log('Successfully reloaded application (/) commands.');
-  } catch (error) {
-    console.error('Error registering slash commands:', error);
-  }
 });
 
 client.on('messageCreate', async (message) => {
@@ -359,22 +330,31 @@ client.on('messageCreate', async (message) => {
 });
 
 client.on('interactionCreate', async interaction => {
-  console.log('Interaction received:', interaction.commandName);
-  if (!interaction.isCommand()) return;
+  console.log('Interaction received:', interaction);
+  if (!interaction.isCommand()) {
+    console.log('Interaction is not a command');
+    return;
+  }
 
   const { commandName } = interaction;
+  console.log('Command name:', commandName);
 
-  if (commandName === 'help') {
-    // Handle help command
-    await handleMainInteraction(interaction);
-  } else if (commandName === 'profile') {
-    await handleProfileInteraction(interaction);
-  } else if (commandName === 'update') {
-    await handleMainInteraction(interaction);
-  } else if (commandName === 'verify') {
-    await handleVerifyInteraction(interaction);
+  try {
+    if (commandName === 'help') {
+      await handleMainInteraction(interaction);
+    } else if (commandName === 'profile') {
+      await handleProfileInteraction(interaction);
+    } else if (commandName === 'update') {
+      await handleMainInteraction(interaction);
+    } else if (commandName === 'verify') {
+      await handleVerifyInteraction(interaction);
+    } else {
+      console.log('Unknown command:', commandName);
+    }
+  } catch (error) {
+    console.error('Error handling interaction:', error);
+    await interaction.reply({ content: 'An error occurred while processing the command.', ephemeral: true });
   }
-  // ... handle other commands
 });
 
 client.login(process.env.DISCORD_TOKEN)

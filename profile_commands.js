@@ -1,9 +1,9 @@
 import { sendProfileMessage, updateUserProfile } from './profile.js';
 
 export async function handleProfileCommands(message, client) {
-  if (message.content.toLowerCase() === '/profile') {
+  if (message.content.toLowerCase() === '=profile') {
     await handleProfileCommand(message.channel, message.author.id, message.member.permissions);
-  } else if (message.content.toLowerCase().startsWith('/profile ')) {
+  } else if (message.content.toLowerCase().startsWith('=profile ')) {
     const mentionedUser = message.mentions.users.first();
     await handleProfileCommand(message.channel, mentionedUser ? mentionedUser.id : message.author.id, message.member.permissions, mentionedUser);
   }

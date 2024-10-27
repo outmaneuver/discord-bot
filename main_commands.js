@@ -2,10 +2,10 @@ import { updateUserProfile, removeWallet, getWalletData, addWallet } from './pro
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 
 export async function handleMainCommands(message, client) {
-  if (message.content === '/') {
+  if (message.content === '=') {
     const commands = [
-      '/help', '/profile', '/update', '/verify', '/remove', '/add',
-      '/testsale', '/testlisting', '/testalllistings', '/sendverification'
+      '=help', '=profile', '=update', '=verify', '=remove', '=add',
+      '=testsale', '=testlisting', '=testalllistings', '=sendverification'
     ];
     
     const response = 'Available commands:\n' + commands.join(', ');
@@ -14,19 +14,19 @@ export async function handleMainCommands(message, client) {
   }
 
   console.log('Received message:', message.content);
-  if (message.content.toLowerCase() === '/help') {
-    console.log('Handling /help command');
+  if (message.content.toLowerCase() === '=help') {
+    console.log('Handling =help command');
     const commands = [
-      { name: '/help', description: 'Show this help message' },
-      { name: '/profile', description: 'View your profile' },
-      { name: '/profile @user', description: 'View another user\'s profile (Admin only)' },
-      { name: '/update', description: 'Update your profile' },
-      { name: '/update @user', description: 'Update another user\'s profile (Admin only)' },
-      { name: '/verify', description: 'Get a link to verify your wallet' },
-      { name: '/testsale', description: 'Test a sale notification (Admin only)' },
-      { name: '/testlisting', description: 'Test a listing notification (Admin only)' },
-      { name: '/testalllistings', description: 'Test all listing notifications (Admin only)' },
-      { name: '/sendverification', description: 'Send a verification message to the channel (Admin only)' }
+      { name: '=help', description: 'Show this help message' },
+      { name: '=profile', description: 'View your profile' },
+      { name: '=profile @user', description: 'View another user\'s profile (Admin only)' },
+      { name: '=update', description: 'Update your profile' },
+      { name: '=update @user', description: 'Update another user\'s profile (Admin only)' },
+      { name: '=verify', description: 'Get a link to verify your wallet' },
+      { name: '=testsale', description: 'Test a sale notification (Admin only)' },
+      { name: '=testlisting', description: 'Test a listing notification (Admin only)' },
+      { name: '=testalllistings', description: 'Test all listing notifications (Admin only)' },
+      { name: '=sendverification', description: 'Send a verification message to the channel (Admin only)' }
     ];
 
     const helpEmbed = {
@@ -42,7 +42,7 @@ export async function handleMainCommands(message, client) {
     };
 
     await message.channel.send({ embeds: [helpEmbed] });
-  } else if (message.content.toLowerCase().startsWith('/update')) {
+  } else if (message.content.toLowerCase().startsWith('=update')) {
     try {
       const mentionedUser = message.mentions.users.first();
       const targetUserId = mentionedUser ? mentionedUser.id : message.author.id;
@@ -59,7 +59,7 @@ export async function handleMainCommands(message, client) {
       console.error('Error updating user profile:', error);
       await message.reply('An error occurred while updating the profile. Please try again later.');
     }
-  } else if (message.content.toLowerCase().startsWith('/remove')) {
+  } else if (message.content.toLowerCase().startsWith('=remove')) {
     const args = message.content.split(' ');
     let targetUserId = message.author.id;
     let targetUser = message.author;
@@ -114,7 +114,7 @@ export async function handleMainCommands(message, client) {
       console.error('Error removing wallet:', error);
       await message.reply('An error occurred while removing the wallet. Please try again later.');
     }
-  } else if (message.content.toLowerCase().startsWith('/add')) {
+  } else if (message.content.toLowerCase().startsWith('=add')) {
     // Check if the user has administrator permissions
     if (!message.member.permissions.has('ADMINISTRATOR')) {
       await message.reply("You don't have permission to use this command.");
