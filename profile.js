@@ -92,7 +92,7 @@ export async function getWalletData(userId) {
   }
 }
 
-async function aggregateWalletData(wallets) {
+export async function aggregateWalletData(wallets) {
   let aggregatedNftCounts = {
     fcked_catz: [],
     celebcatz: [],
@@ -199,4 +199,4 @@ function formatNFTCounts(nftCounts) {
     .join('\n');
 }
 
-export { checkNFTOwnership, getBUXBalance, addWallet, removeWallet, getWalletData };
+export { checkNFTOwnership, getBUXBalance, addWallet, removeWallet, getWalletData, aggregateWalletData };
