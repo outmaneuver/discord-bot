@@ -50,7 +50,7 @@ export async function verifyHolder(message) {
     // Calculate daily reward
     const dailyReward = calculateDailyReward(nftCounts, buxBalance);
 
-    const formattedResponse = `Verification complete!\n\n**VERIFIED ASSETS:**\nFcked Catz - ${nftCounts.fcked_catz.length}\nCeleb Catz - ${nftCounts.celebcatz.length}\nMoney Monsters - ${nftCounts.money_monsters.length}\nMoney Monsters 3D - ${nftCounts.money_monsters3d.length}\nA.I. BitBots - ${nftCounts.ai_bitbots.length}\n$BUX - ${buxBalance}\n\n**Daily reward = ${dailyReward} $BUX**`;
+    const formattedResponse = `**VERIFIED ASSETS:**\nFcked Catz - ${nftCounts.fcked_catz.length}\nCeleb Catz - ${nftCounts.celebcatz.length}\nMoney Monsters - ${nftCounts.money_monsters.length}\nMoney Monsters 3D - ${nftCounts.money_monsters3d.length}\nA.I. BitBots - ${nftCounts.ai_bitbots.length}\n$BUX - ${buxBalance}\n\n**Daily reward = ${dailyReward} $BUX**`;
 
     return {
       success: true,
@@ -200,12 +200,8 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) 
         rolesToRemove.splice(rolesToRemove.indexOf(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D), 1);
         console.log(`Adding Money Monsters 3D Whale role. NFT count: ${nftCounts.money_monsters3d.length}`);
       } else {
+        rolesToRemove.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
         rolesToRemove.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
-        const whaleRoleIndex = rolesToAdd.indexOf(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
-        if (whaleRoleIndex > -1) {
-          rolesToAdd.splice(whaleRoleIndex, 1);
-        }
-        console.log(`Not adding Money Monsters 3D Whale role. NFT count: ${nftCounts.money_monsters3d.length}`);
       }
     } else {
       rolesToRemove.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
