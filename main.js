@@ -1,15 +1,12 @@
-import { Client, GatewayIntentBits, REST, Routes } from 'discord.js';
+import { Client, GatewayIntentBits } from 'discord.js';
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import passport from 'passport';
 import { Strategy as DiscordStrategy } from 'passport-discord';
 import session from 'express-session';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import Redis from 'ioredis';
+import RedisStore from 'connect-redis';
 
 import { initializeSalesListings } from './sales_listings.js';
 import { verifyHolder, sendVerificationMessage, updateDiscordRoles } from './verify.js';
@@ -44,108 +41,99 @@ console.log('Discord client created');
 const app = express();
 console.log('Express app created');
 
-// Express middleware and session setup
-app.use(cors({
-  origin: ['https://yourdomain.com', 'https://anotherdomain.com']
-}));
-app.use(express.json());
-app.set('trust proxy', 1);
+// Redis setup for sessions
+const redisClient = new Redis(process.env.REDIS_URL, {
+  tls: {
+    rejectUnauthorized: false
+  }
+});
 
+const redisStore = new RedisStore({
+  client: redisClient,
+  prefix: "session:",
+});
+
+// Session middleware setup
 app.use(session({
-    secret: process.env.SESSION_SECRET,
-    resave: true,
-    saveUninitialized: true,
-    cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000,
-        sameSite: 'lax'
-    }
+  store: redisStore,
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
 }));
-app.use(passport.initialize());
-app.use(passport.session());
 
-console.log('Express middleware set up');
+// CORS setup
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'https://buxdao-verify-d1faffc83da7.herokuapp.com',
+  credentials: true
+}));
 
-// Passport configuration
+app.use(express.json());
+
+// Passport setup
 passport.use(new DiscordStrategy({
-    clientID: process.env.DISCORD_CLIENT_ID,
-    clientSecret: process.env.DISCORD_CLIENT_SECRET,
-    callbackURL: process.env.DISCORD_REDIRECT_URI,
-    scope: ['identify', 'guilds.join']
-}, function(accessToken, refreshToken, profile, done) {
-    process.nextTick(function() {
-        return done(null, profile);
-    });
+  clientID: process.env.DISCORD_CLIENT_ID,
+  clientSecret: process.env.DISCORD_CLIENT_SECRET,
+  callbackURL: process.env.DISCORD_CALLBACK_URL,
+  scope: ['identify']
+}, (accessToken, refreshToken, profile, done) => {
+  return done(null, profile);
 }));
 
 passport.serializeUser((user, done) => {
-    done(null, user);
+  done(null, user);
 });
 
-passport.deserializeUser((obj, done) => {
-    done(null, obj);
+passport.deserializeUser((user, done) => {
+  done(null, user);
 });
 
-// Move this block before defining any routes
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      connectSrc: ["'self'", "https://api.mainnet-beta.solana.com"],
-    },
-  },
-}));
+app.use(passport.initialize());
+app.use(passport.session());
 
-// Define routes
-app.get('/', (req, res) => {
-  res.send('Hello World!');
-});
-
-// Discord auth routes
+// Auth routes
 app.get('/auth/discord', passport.authenticate('discord'));
 
 app.get('/auth/discord/callback', 
-    passport.authenticate('discord', { failureRedirect: '/holder-verify' }),
-    function(req, res) {
-        res.redirect('/holder-verify');
-    }
+  passport.authenticate('discord', { 
+    failureRedirect: '/holder-verify/' 
+  }), 
+  (req, res) => {
+    res.redirect('/holder-verify/');
+  }
 );
 
-// Serve static files
-app.use('/holder-verify', express.static(path.join(__dirname, 'public')));
-
-// Serve index.html for /holder-verify route
-app.get('/holder-verify', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Auth status route
 app.get('/auth/status', (req, res) => {
-    res.json({ 
-        authenticated: req.isAuthenticated(),
-        username: req.user ? req.user.username : null,
-        id: req.user ? req.user.id : null
+  if (req.isAuthenticated()) {
+    res.json({
+      authenticated: true,
+      username: req.user.username,
+      id: req.user.id
     });
+  } else {
+    res.json({
+      authenticated: false
+    });
+  }
 });
 
-// Verification route
+// Verify endpoint
 app.post('/holder-verify/verify', async (req, res) => {
-  if (!req.session.userId) {
+  if (!req.isAuthenticated()) {
     return res.status(401).json({ success: false, error: 'Not authenticated' });
   }
 
   try {
-    const walletData = req.body;
-    if (!walletData || !walletData.walletAddress) {
+    const { walletAddress } = req.body;
+    if (!walletAddress) {
       return res.status(400).json({ success: false, error: 'No wallet address provided' });
     }
 
-    const result = await verifyHolder(walletData, req.session.userId, client);
+    const result = await verifyHolder(walletAddress, req.user.id, client);
     res.json(result);
   } catch (error) {
     console.error('Error during wallet verification:', error);
