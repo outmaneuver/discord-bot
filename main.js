@@ -374,4 +374,3 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 console.log('Application setup complete');
-
