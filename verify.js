@@ -15,6 +15,28 @@ const connection = new Connection(process.env.SOLANA_RPC_URL);
 const BUX_TOKEN_MINT = process.env.BUX_TOKEN_MINT;
 const GUILD_ID = process.env.DISCORD_GUILD_ID;
 
+// Add verification message function
+export async function sendVerificationMessage(channel) {
+  const embed = new EmbedBuilder()
+    .setColor('#0099ff')
+    .setTitle('BUX DAO Wallet Verification')
+    .setDescription('Click the button below to verify your wallet and receive your roles!')
+    .setThumbnail('https://i.imgur.com/AfFp7pu.png');
+
+  const button = new ButtonBuilder()
+    .setCustomId('verify_wallet')
+    .setLabel('Verify Wallet')
+    .setStyle(ButtonStyle.Primary);
+
+  const row = new ActionRowBuilder()
+    .addComponents(button);
+
+  await channel.send({
+    embeds: [embed],
+    components: [row]
+  });
+}
+
 // Add BUX balance checking function
 export async function getBUXBalance(walletAddress) {
   try {
@@ -183,3 +205,26 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
 }
 
 // Rest of verify.js remains the same...
+
+export async function verifyHolder(walletAddress, userId, client) {
+  console.log(`Verifying wallet: ${walletAddress}`);
+  try {
+    const nftCounts = await checkNFTOwnership(walletAddress);
+    console.log('NFT counts:', nftCounts);
+    
+    const buxBalance = await getBUXBalance(walletAddress);
+    console.log('BUX balance:', buxBalance);
+    
+    const rolesUpdated = await updateDiscordRoles(userId, { nftCounts, buxBalance }, client);
+    
+    return {
+      success: true,
+      rolesUpdated,
+      nftCounts,
+      buxBalance
+    };
+  } catch (error) {
+    console.error('Error in verifyHolder:', error);
+    throw error;
+  }
+}
