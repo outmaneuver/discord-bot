@@ -500,5 +500,3 @@ export function sendVerificationMessage(channel) {
     return channel.send({ embeds: [embed], components: [row] });
 }
 
-// Make sure to export these functions at the end of the file
-export { checkNFTOwnership, getBUXBalance };
