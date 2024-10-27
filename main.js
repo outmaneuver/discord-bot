@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits } from 'discord.js';
+import { Client, GatewayIntentBits, REST, Routes } from 'discord.js';
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
@@ -15,10 +15,10 @@ import { initializeSalesListings } from './sales_listings.js';
 import { verifyHolder, sendVerificationMessage, updateDiscordRoles } from './verify.js';
 import { sendProfileMessage, updateUserProfile } from './profile.js';
 
-import { handleMainCommands, handleButtonInteraction } from './main_commands.js';
-import { handleVerifyCommands } from './verify_commands.js';
-import { handleProfileCommands } from './profile_commands.js';
-import { handleSalesListingsCommands } from './sales_listings_commands.js';
+import { handleMainCommands, handleButtonInteraction, handleMainInteraction } from './main_commands.js';
+import { handleVerifyCommands, handleVerifyInteraction } from './verify_commands.js';
+import { handleProfileCommands, handleProfileInteraction } from './profile_commands.js';
+import { handleSalesListingsCommands, handleSalesListingsInteraction } from './sales_listings_commands.js';
 
 // Add this near the top of the file, after the imports
 global.userWallets = new Map();
@@ -277,6 +277,59 @@ server.on('listening', () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
+const commands = [
+  {
+    name: 'help',
+    description: 'Show help message'
+  },
+  {
+    name: 'profile',
+    description: 'View your profile or another user\'s profile',
+    options: [
+      {
+        name: 'user',
+        type: 6, // USER type
+        description: 'The user whose profile to view (Admin only)',
+        required: false
+      }
+    ]
+  },
+  {
+    name: 'update',
+    description: 'Update your profile or another user\'s profile',
+    options: [
+      {
+        name: 'user',
+        type: 6, // USER type
+        description: 'The user whose profile to update (Admin only)',
+        required: false
+      }
+    ]
+  },
+  {
+    name: 'verify',
+    description: 'Get a link to verify your wallet'
+  },
+  // ... (add other commands)
+];
+
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+
+(async () => {
+  try {
+    console.log('Started refreshing application (/) commands.');
+
+    await rest.put(
+      Routes.applicationCommands(process.env.DISCORD_CLIENT_ID),
+      { body: commands },
+    );
+
+    console.log('Successfully reloaded application (/) commands.');
+  } catch (error) {
+    console.error(error);
+  }
+})();
+
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
   initializeSalesListings(client);
@@ -291,10 +344,22 @@ client.on('messageCreate', async (message) => {
   await handleSalesListingsCommands(message, client);
 });
 
-client.on('interactionCreate', async (interaction) => {
-  if (interaction.isButton()) {
-    await handleButtonInteraction(interaction);
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isCommand()) return;
+
+  const { commandName } = interaction;
+
+  if (commandName === 'help') {
+    // Handle help command
+    await handleMainInteraction(interaction);
+  } else if (commandName === 'profile') {
+    await handleProfileInteraction(interaction);
+  } else if (commandName === 'update') {
+    await handleMainInteraction(interaction);
+  } else if (commandName === 'verify') {
+    await handleVerifyInteraction(interaction);
   }
+  // ... handle other commands
 });
 
 client.login(process.env.DISCORD_TOKEN)
@@ -309,3 +374,4 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 console.log('Application setup complete');
+
