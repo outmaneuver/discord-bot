@@ -1,3 +1,5 @@
+import { updateUserProfile } from './profile.js';
+
 export async function handleMainCommands(message, client) {
   console.log('Received message:', message.content);
   if (message.content.toLowerCase() === '!help') {
@@ -26,6 +28,14 @@ export async function handleMainCommands(message, client) {
     };
 
     await message.channel.send({ embeds: [helpEmbed] });
+  } else if (message.content.toLowerCase() === '!update') {
+    try {
+      await updateUserProfile(message.channel, message.author.id, client);
+      await message.reply('Your profile has been updated based on all connected wallets.');
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      await message.reply('An error occurred while updating your profile. Please try again later.');
+    }
   }
   // Add other main commands here
 }

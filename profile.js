@@ -159,3 +159,51 @@ async function aggregateWalletData(wallets) {
     buxBalance: totalBuxBalance
   };
 }
+
+export async function updateUserProfile(channel, userId, client) {
+  try {
+    console.log('Updating profile for user:', userId);
+    const walletData = await getWalletData(userId);
+
+    if (!walletData) {
+      console.log('No wallet data found for user:', userId);
+      await channel.send('No connected wallets found. Please verify your wallet first using the `!verify` command.');
+      return;
+    }
+
+    // Update Discord roles based on aggregated wallet data
+    console.log('Updating Discord roles based on all connected wallets');
+    await updateDiscordRoles(client, userId, walletData.nftCounts, walletData.buxBalance);
+
+    // Fetch updated member data after role update
+    const guild = await client.guilds.fetch(process.env.GUILD_ID);
+    const member = await guild.members.fetch(userId);
+    const roles = member.roles.cache
+      .filter(role => role.name !== '@everyone')
+      .sort((a, b) => b.position - a.position)
+      .map(role => role.name)
+      .join(', ');
+
+    const user = await client.users.fetch(userId);
+    const username = user.username;
+
+    console.log('Creating updated profile embed for user:', username);
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle(`${username}'s Updated BUX DAO Profile`)
+      .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 128 }))
+      .addFields(
+        { name: 'Connected Wallets', value: walletData.walletAddresses.join('\n') },
+        { name: 'BUX Balance', value: `${walletData.buxBalance} BUX` },
+        { name: 'NFTs', value: formatNFTCounts(walletData.nftCounts) },
+        { name: 'Updated Server Roles', value: roles || 'No roles' }
+      )
+      .setTimestamp();
+
+    console.log('Sending updated profile embed');
+    await channel.send({ embeds: [embed] });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    throw error;
+  }
+}
