@@ -101,8 +101,11 @@ export async function getBUXBalance(walletAddress) {
 
 export async function checkNFTOwnership(walletAddress) {
   try {
+    // Validate wallet address
+    const pubKey = new PublicKey(walletAddress);
+    
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-      new PublicKey(walletAddress),
+      pubKey,
       { programId: TOKEN_PROGRAM_ID }
     );
 
@@ -236,11 +239,27 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
   }
 }
 
-// Rest of verify.js remains the same...
+function formatNFTCounts(nftCounts) {
+  return Object.entries(nftCounts)
+    .map(([collection, nfts]) => `${collection}: ${nfts.length}`)
+    .join('\n');
+}
 
 export async function verifyHolder(walletAddress, userId, client) {
-  console.log(`Verifying wallet: ${walletAddress}`);
   try {
+    console.log(`Verifying wallet: ${walletAddress}`);
+    
+    // Validate wallet address format
+    if (typeof walletAddress !== 'string' || walletAddress.length !== 44) {
+      throw new Error('Invalid wallet address format');
+    }
+
+    try {
+      new PublicKey(walletAddress);
+    } catch (err) {
+      throw new Error('Invalid Solana wallet address');
+    }
+
     const nftCounts = await checkNFTOwnership(walletAddress);
     console.log('NFT counts:', nftCounts);
     
@@ -253,7 +272,8 @@ export async function verifyHolder(walletAddress, userId, client) {
       success: true,
       rolesUpdated,
       nftCounts,
-      buxBalance
+      buxBalance,
+      formattedResponse: `Successfully verified wallet!\n\n**NFT Holdings**:\n${formatNFTCounts(nftCounts)}\n\n**BUX Balance**: ${buxBalance} BUX`
     };
   } catch (error) {
     console.error('Error in verifyHolder:', error);
