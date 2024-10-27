@@ -35,7 +35,21 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildPresences,
   ],
+});
+
+// Add this after client creation
+client.on('ready', () => {
+  console.log(`Logged in as ${client.user.tag}!`);
+  
+  // Verify guild access
+  const guild = client.guilds.cache.get(process.env.GUILD_ID);
+  if (guild) {
+    console.log(`Connected to guild: ${guild.name}`);
+  } else {
+    console.error(`Could not find guild with ID: ${process.env.GUILD_ID}`);
+  }
 });
 
 console.log('Discord client created');
@@ -285,62 +299,6 @@ const commands = [
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
-
-client.once('ready', () => {
-  console.log(`Logged in as ${client.user.tag}!`);
-  initializeSalesListings(client);
-});
-
-client.on('messageCreate', async (message) => {
-  if (message.author.bot) return;
-
-  await handleMainCommands(message, client);
-  await handleVerifyCommands(message, client);
-  await handleProfileCommands(message, client);
-  await handleSalesListingsCommands(message, client);
-});
-
-client.on('interactionCreate', async interaction => {
-  // Handle button interactions
-  if (interaction.isButton()) {
-    if (interaction.customId === 'verify_wallet') {
-      try {
-        await interaction.reply({
-          content: 'Please visit this link to verify your wallet: https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify/',
-          ephemeral: true
-        });
-      } catch (error) {
-        console.error('Error handling verify_wallet button:', error);
-      }
-    }
-    return;
-  }
-
-  if (!interaction.isCommand()) {
-    console.log('Interaction is not a command');
-    return;
-  }
-
-  const { commandName } = interaction;
-  console.log('Command name:', commandName);
-
-  try {
-    if (commandName === 'help') {
-      await handleMainInteraction(interaction);
-    } else if (commandName === 'profile') {
-      await handleProfileInteraction(interaction);
-    } else if (commandName === 'update') {
-      await handleMainInteraction(interaction);
-    } else if (commandName === 'verify') {
-      await handleVerifyInteraction(interaction);
-    } else {
-      console.log('Unknown command:', commandName);
-    }
-  } catch (error) {
-    console.error('Error handling interaction:', error);
-    await interaction.reply({ content: 'An error occurred while processing the command.', ephemeral: true });
-  }
-});
 
 client.login(process.env.DISCORD_TOKEN)
   .then(() => console.log('Discord bot logged in'))

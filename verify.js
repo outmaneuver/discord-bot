@@ -13,7 +13,7 @@ const redis = new Redis(process.env.REDIS_URL, {
 
 const connection = new Connection(process.env.SOLANA_RPC_URL);
 const BUX_TOKEN_MINT = process.env.BUX_TOKEN_MINT;
-const GUILD_ID = '1093606438674382858'; // Hardcode the guild ID
+const GUILD_ID = process.env.GUILD_ID;
 
 // Add verification message function
 export async function sendVerificationMessage(channel) {
@@ -204,10 +204,14 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
     // Get guild from cache first
     let guild = client.guilds.cache.get(GUILD_ID);
     
-    // If not in cache, try to fetch
+    // If not in cache, try to fetch with force option
     if (!guild) {
       try {
-        guild = await client.guilds.fetch(GUILD_ID);
+        guild = await client.guilds.fetch({
+          guild: GUILD_ID,
+          force: true,
+          cache: true
+        });
       } catch (error) {
         console.error('Error fetching guild:', error);
         return false;
