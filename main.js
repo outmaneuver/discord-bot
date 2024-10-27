@@ -55,7 +55,15 @@ const redisStore = new RedisStore({
   prefix: "session:",
 });
 
-// Session middleware setup - AFTER Redis store is created
+// CORS setup - before other middleware
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'https://buxdao-verify-d1faffc83da7.herokuapp.com',
+  credentials: true,
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Session middleware setup - AFTER CORS but before routes
 app.use(session({
   store: redisStore,
   secret: process.env.SESSION_SECRET || 'your-secret-key',
@@ -65,65 +73,27 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax'
+    sameSite: 'lax',
+    domain: '.herokuapp.com'
   }
 }));
 
-// Middleware setup
 app.use(express.json());
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'https://buxdao-verify-d1faffc83da7.herokuapp.com',
-  credentials: true
-}));
-
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Static file serving - serve from root for all paths
+// Static file serving - after auth middleware
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/holder-verify', express.static(path.join(__dirname, 'public')));
-
-// Add routes after static file serving
-app.get('/holder-verify', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/holder-verify/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Passport setup
-passport.use(new DiscordStrategy({
-  clientID: process.env.DISCORD_CLIENT_ID,
-  clientSecret: process.env.DISCORD_CLIENT_SECRET,
-  callbackURL: process.env.DISCORD_CALLBACK_URL,
-  scope: ['identify']
-}, (accessToken, refreshToken, profile, done) => {
-  return done(null, profile);
-}));
-
-passport.serializeUser((user, done) => {
-  done(null, user);
-});
-
-passport.deserializeUser((user, done) => {
-  done(null, user);
-});
 
 // Auth routes
 app.get('/auth/discord', passport.authenticate('discord'));
 
 app.get('/auth/discord/callback', 
   passport.authenticate('discord', { 
-    failureRedirect: '/holder-verify/' 
-  }), 
-  (req, res) => {
-    res.redirect('/holder-verify/');
-  }
+    failureRedirect: '/holder-verify/',
+    successRedirect: '/holder-verify/'
+  })
 );
 
 app.get('/auth/status', (req, res) => {
