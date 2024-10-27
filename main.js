@@ -43,7 +43,7 @@ console.log('Discord client created');
 const app = express();
 console.log('Express app created');
 
-// Redis setup - MOVE THIS UP before using it
+// Redis setup
 const redisClient = new Redis(process.env.REDIS_URL, {
   tls: {
     rejectUnauthorized: false
@@ -55,7 +55,26 @@ const redisStore = new RedisStore({
   prefix: "session:",
 });
 
-// CORS setup - before other middleware
+// Passport setup
+passport.use(new DiscordStrategy({
+  clientID: process.env.DISCORD_CLIENT_ID,
+  clientSecret: process.env.DISCORD_CLIENT_SECRET,
+  callbackURL: process.env.DISCORD_CALLBACK_URL,
+  scope: ['identify']
+}, (accessToken, refreshToken, profile, done) => {
+  // Store the profile in the session
+  return done(null, profile);
+}));
+
+passport.serializeUser((user, done) => {
+  done(null, user);
+});
+
+passport.deserializeUser((user, done) => {
+  done(null, user);
+});
+
+// CORS setup
 app.use(cors({
   origin: process.env.CLIENT_URL || 'https://buxdao-verify-d1faffc83da7.herokuapp.com',
   credentials: true,
@@ -63,7 +82,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Session middleware setup - AFTER CORS but before routes
+// Session middleware setup
 app.use(session({
   store: redisStore,
   secret: process.env.SESSION_SECRET || 'your-secret-key',
