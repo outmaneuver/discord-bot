@@ -40,8 +40,9 @@ async function checkNFTOwnership(walletAddress) {
     ai_bitbots: []
   };
 
-  // Fetch all NFTs for the wallet
+  // Fetch all NFTs for the wallet from Redis
   const nfts = await redis.smembers(`nfts:${walletAddress}`);
+  console.log(`Retrieved ${nfts.length} NFTs for wallet ${walletAddress}`);
 
   for (const nft of nfts) {
     if (fckedCatzHashlist.has(nft)) nftCounts.fcked_catz.push(nft);
@@ -58,7 +59,9 @@ async function checkNFTOwnership(walletAddress) {
 async function getBUXBalance(walletAddress) {
   console.log(`Getting BUX balance for wallet: ${walletAddress}`);
   const balance = await redis.get(`bux_balance:${walletAddress}`);
-  return balance ? parseFloat(balance) : 0;
+  const parsedBalance = balance ? parseFloat(balance) : 0;
+  console.log(`BUX balance for ${walletAddress}: ${parsedBalance}`);
+  return parsedBalance;
 }
 
 async function aggregateWalletData(wallets) {
