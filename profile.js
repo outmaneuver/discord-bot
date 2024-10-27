@@ -1,5 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
-import { updateDiscordRoles } from './verify.js';
+import { updateDiscordRoles, checkNFTOwnership, getBUXBalance } from './verify.js';
 import Redis from 'ioredis';
 import fs from 'fs/promises';
 import path from 'path';
@@ -199,4 +199,4 @@ function formatNFTCounts(nftCounts) {
     .join('\n');
 }
 
-export { checkNFTOwnership, getBUXBalance, addWallet, removeWallet, getWalletData };
+export { addWallet, removeWallet, getWalletData, aggregateWalletData, updateUserProfile, sendProfileMessage };
