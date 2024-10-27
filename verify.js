@@ -70,7 +70,7 @@ export async function verifyHolder(client, userId, walletAddress) {
 
     const rolesUpdated = await updateDiscordRoles(client, userId, nftCounts, buxBalance, walletAddress);
 
-    // Calculate daily reward
+    // Calculate daily reward (previously called daily yield)
     const dailyReward = calculateDailyReward(nftCounts, buxBalance);
 
     const formattedResponse = `Verification complete!\n\n**VERIFIED ASSETS:**\nFcked Catz - ${nftCounts.fcked_catz.length}\nCeleb Catz - ${nftCounts.celebcatz.length}\nMoney Monsters - ${nftCounts.money_monsters.length}\nMoney Monsters 3D - ${nftCounts.money_monsters3d.length}\nA.I. BitBots - ${nftCounts.ai_bitbots.length}\n$BUX - ${buxBalance}\n\n**Daily reward = ${dailyReward} $BUX**`;
