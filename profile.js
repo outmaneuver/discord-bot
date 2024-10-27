@@ -1,5 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
-import { checkNFTOwnership, getBUXBalance } from './verify.js';
+import { checkNFTOwnership, getBUXBalance, updateDiscordRoles } from './verify.js';
 import Redis from 'ioredis';
 
 const redis = new Redis(process.env.REDIS_URL, {
@@ -63,6 +63,10 @@ export async function sendProfileMessage(channel, userId) {
 
     const user = await channel.client.users.fetch(userId);
     const username = user.username;
+
+    // Update Discord roles based on aggregated wallet data
+    console.log('Updating Discord roles based on all connected wallets');
+    await updateDiscordRoles(channel.client, userId, walletData.nftCounts, walletData.buxBalance);
 
     const member = await channel.guild.members.fetch(userId);
     const roles = member.roles.cache
