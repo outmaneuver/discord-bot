@@ -43,6 +43,27 @@ console.log('Discord client created');
 const app = express();
 console.log('Express app created');
 
+// Move these to the top, right after the middleware setup
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json());
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'https://buxdao-verify-d1faffc83da7.herokuapp.com',
+  credentials: true
+}));
+
+// Add routes right after the middleware
+app.get('/holder-verify', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/holder-verify/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Redis setup for sessions
 const redisClient = new Redis(process.env.REDIS_URL, {
   tls: {
@@ -67,14 +88,6 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
-
-// CORS setup
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'https://buxdao-verify-d1faffc83da7.herokuapp.com',
-  credentials: true
-}));
-
-app.use(express.json());
 
 // Passport setup
 passport.use(new DiscordStrategy({
