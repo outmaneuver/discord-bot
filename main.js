@@ -7,6 +7,8 @@ import { Strategy as DiscordStrategy } from 'passport-discord';
 import session from 'express-session';
 import Redis from 'ioredis';
 import RedisStore from 'connect-redis';
+import { fileURLToPath } from 'url';
+import path from 'path';
 
 import { initializeSalesListings } from './sales_listings.js';
 import { verifyHolder, sendVerificationMessage, updateDiscordRoles } from './verify.js';
