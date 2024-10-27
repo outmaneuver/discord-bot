@@ -1,37 +1,50 @@
-import { sendProfileMessage, updateUserProfile } from './profile.js';
+import { updateUserProfile } from './profile.js';
+import { PermissionsBitField } from 'discord.js';
 
 export async function handleProfileCommands(message, client) {
-  if (message.content.toLowerCase() === '=profile') {
-    await handleProfileCommand(message.channel, message.author.id, message.member.permissions);
-  } else if (message.content.toLowerCase().startsWith('=profile ')) {
-    const mentionedUser = message.mentions.users.first();
-    await handleProfileCommand(message.channel, mentionedUser ? mentionedUser.id : message.author.id, message.member.permissions, mentionedUser);
+  if (message.content.toLowerCase().startsWith('=profile')) {
+    await handleProfileCommand(message, client);
+  }
+}
+
+async function handleProfileCommand(message, client) {
+  const mentionedUser = message.mentions.users.first();
+  
+  // If viewing someone else's profile, check admin permissions
+  if (mentionedUser && !message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+    await message.reply("You don't have permission to view other users' profiles.");
+    return;
+  }
+
+  const targetUserId = mentionedUser ? mentionedUser.id : message.author.id;
+
+  try {
+    await updateUserProfile(message.channel, targetUserId, client);
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    await message.reply('An error occurred while updating the profile. Please try again later.');
   }
 }
 
 export async function handleProfileInteraction(interaction) {
-  // Handle profile commands
-}
-
-async function handleProfileCommand(channelOrInteraction, userId, permissions, mentionedUser = null) {
-  if (mentionedUser && !permissions.has('ADMINISTRATOR')) {
-    await replyToCommand(channelOrInteraction, 'You do not have permission to view other users\' profiles.');
+  // Handle slash command interactions
+  const targetUser = interaction.options.getUser('user') || interaction.user;
+  
+  if (targetUser.id !== interaction.user.id && 
+      !interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+    await interaction.reply({ 
+      content: "You don't have permission to view other users' profiles.",
+      ephemeral: true 
+    });
     return;
   }
 
   try {
-    await sendProfileMessage(channelOrInteraction, userId);
-    console.log(`Profile message for ${mentionedUser ? mentionedUser.username : 'user'} sent successfully`);
+    await interaction.deferReply();
+    await updateUserProfile(interaction.channel, targetUser.id, interaction.client);
+    await interaction.editReply('Profile updated!');
   } catch (error) {
-    console.error('Error sending profile message:', error);
-    await replyToCommand(channelOrInteraction, `An error occurred while fetching the profile${mentionedUser ? ` for ${mentionedUser.username}` : ''}.`);
-  }
-}
-
-async function replyToCommand(channelOrInteraction, message) {
-  if (channelOrInteraction.reply) {
-    await channelOrInteraction.reply(message);
-  } else {
-    await channelOrInteraction.send(message);
+    console.error('Error handling profile interaction:', error);
+    await interaction.editReply('An error occurred while updating the profile.');
   }
 }
