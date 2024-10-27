@@ -77,6 +77,7 @@ async function aggregateWalletData(wallets) {
   for (const wallet of wallets) {
     console.log(`Aggregating data for wallet: ${wallet}`);
     try {
+      await ensureWalletData(wallet);
       const nftCounts = await checkNFTOwnership(wallet);
       const buxBalance = await getBUXBalance(wallet);
 
@@ -305,7 +306,19 @@ async function ensureWalletData(walletAddress) {
     console.log(`Fetching data from blockchain for wallet: ${walletAddress}`);
     // Here, you should implement the logic to fetch data from the blockchain
     // and store it in Redis. This might involve calling functions from verify.js
-    // For now, we'll just log a message
-    console.log('Blockchain data fetching not implemented yet');
+    const { checkNFTOwnership, getBUXBalance } = await import('./verify.js');
+    
+    const nftCounts = await checkNFTOwnership(walletAddress);
+    const balance = await getBUXBalance(walletAddress);
+
+    // Store the fetched data in Redis
+    for (const [collection, nfts] of Object.entries(nftCounts)) {
+      if (nfts.length > 0) {
+        await redis.sadd(`nfts:${walletAddress}`, ...nfts);
+      }
+    }
+    await redis.set(`bux_balance:${walletAddress}`, balance.toString());
+
+    console.log(`Data fetched and stored for wallet: ${walletAddress}`);
   }
 }
