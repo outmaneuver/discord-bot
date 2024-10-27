@@ -13,7 +13,7 @@ const redis = new Redis(process.env.REDIS_URL, {
 
 const connection = new Connection(process.env.SOLANA_RPC_URL);
 const BUX_TOKEN_MINT = process.env.BUX_TOKEN_MINT;
-const GUILD_ID = process.env.DISCORD_GUILD_ID;
+const GUILD_ID = '1093606438674382858'; // Hardcode the guild ID
 
 // Add verification message function
 export async function sendVerificationMessage(channel) {
@@ -149,7 +149,7 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
       throw new Error('Discord client is undefined');
     }
 
-    const guild = await client.guilds.fetch(GUILD_ID);
+    const guild = await client.guilds.cache.get(GUILD_ID);
     if (!guild) {
       console.error('Guild not found');
       return;
