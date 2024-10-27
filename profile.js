@@ -12,24 +12,20 @@ export async function getWalletData(userId) {
   console.log('Retrieving wallet data for user:', userId);
   
   try {
-    const walletAddress = await redis.get(`wallet:${userId}`);
-    console.log('Retrieved wallet address:', walletAddress);
+    const walletAddresses = await getAllWallets(userId);
+    console.log('Retrieved wallet addresses:', walletAddresses);
 
-    if (!walletAddress) {
-      console.log('No wallet connected for user:', userId);
-      return null; // No wallet connected
+    if (walletAddresses.length === 0) {
+      console.log('No wallets connected for user:', userId);
+      return null;
     }
 
-    // Fetch NFT and BUX data for this wallet address
-    const nftCounts = await checkNFTOwnership(walletAddress);
-    const buxBalance = await getBUXBalance(walletAddress);
-
-    console.log('Fetched data:', { nftCounts, buxBalance });
+    const aggregatedData = await aggregateWalletData(walletAddresses);
 
     return {
-      walletAddress,
-      nftCounts,
-      buxBalance,
+      walletAddresses,
+      nftCounts: aggregatedData.nftCounts,
+      buxBalance: aggregatedData.buxBalance,
     };
   } catch (error) {
     console.error('Error fetching wallet data:', error);
@@ -68,7 +64,6 @@ export async function sendProfileMessage(channel, userId) {
     const user = await channel.client.users.fetch(userId);
     const username = user.username;
 
-    // Fetch the member object to get the roles
     const member = await channel.guild.members.fetch(userId);
     const roles = member.roles.cache
       .filter(role => role.name !== '@everyone')
@@ -82,7 +77,7 @@ export async function sendProfileMessage(channel, userId) {
       .setTitle(`${username}'s BUX DAO Profile`)
       .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 128 }))
       .addFields(
-        { name: 'Wallet Address', value: walletData.walletAddress },
+        { name: 'Connected Wallets', value: walletData.walletAddresses.join('\n') },
         { name: 'BUX Balance', value: `${walletData.buxBalance} BUX` },
         { name: 'NFTs', value: formatNFTCounts(walletData.nftCounts) },
         { name: 'Server Roles', value: roles || 'No roles' }

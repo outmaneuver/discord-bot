@@ -238,7 +238,7 @@ app.post('/store-wallet', async (req, res) => {
   const userId = req.user.id;
 
   try {
-    await redis.set(`wallet:${userId}`, walletAddress);
+    await storeWalletAddress(userId, walletAddress);
     console.log(`Stored wallet address ${walletAddress} for user ${userId}`);
     res.json({ success: true });
   } catch (error) {
@@ -298,3 +298,4 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 console.log('Application setup complete');
+

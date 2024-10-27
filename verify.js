@@ -4,6 +4,7 @@ import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import * as borsh from 'borsh';
 import fs from 'fs/promises';
 import path from 'path';
+import Redis from 'ioredis';
 
 const GUILD_ID = process.env.GUILD_ID;
 const BUX_TOKEN_MINT = process.env.BUX_TOKEN_MINT;
@@ -59,6 +60,12 @@ const initializeHashlists = async () => {
 // Call this function when your bot starts up
 initializeHashlists();
 
+const redis = new Redis(process.env.REDIS_URL, {
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
 export async function verifyHolder(client, userId, walletAddress) {
   try {
     console.log(`Verifying wallet: ${walletAddress}`);
@@ -68,25 +75,76 @@ export async function verifyHolder(client, userId, walletAddress) {
     const buxBalance = await getBUXBalance(walletAddress);
     console.log('BUX balance:', buxBalance);
 
-    const rolesUpdated = await updateDiscordRoles(client, userId, nftCounts, buxBalance, walletAddress);
+    // Store the new wallet address
+    await storeWalletAddress(userId, walletAddress);
 
-    // Calculate daily reward
-    const dailyReward = calculateDailyReward(nftCounts, buxBalance);
+    // Get all wallet addresses for this user
+    const allWallets = await getAllWallets(userId);
+    console.log(`All wallets for user ${userId}:`, allWallets);
 
-    const formattedResponse = `Verification complete!\n\n**VERIFIED ASSETS:**\nFcked Catz - ${nftCounts.fcked_catz.length}\nCeleb Catz - ${nftCounts.celebcatz.length}\nMoney Monsters - ${nftCounts.money_monsters.length}\nMoney Monsters 3D - ${nftCounts.money_monsters3d.length}\nA.I. BitBots - ${nftCounts.ai_bitbots.length}\n$BUX - ${buxBalance}\n\n**Daily reward = ${dailyReward} $BUX**`;
+    // Aggregate NFT counts and BUX balance across all wallets
+    const aggregatedData = await aggregateWalletData(allWallets);
+    console.log('Aggregated data:', aggregatedData);
+
+    const rolesUpdated = await updateDiscordRoles(client, userId, aggregatedData.nftCounts, aggregatedData.buxBalance);
+
+    // Calculate daily reward based on aggregated data
+    const dailyReward = calculateDailyReward(aggregatedData.nftCounts, aggregatedData.buxBalance);
+
+    const formattedResponse = `Verification complete!\n\n**VERIFIED ASSETS:**\nFcked Catz - ${aggregatedData.nftCounts.fcked_catz.length}\nCeleb Catz - ${aggregatedData.nftCounts.celebcatz.length}\nMoney Monsters - ${aggregatedData.nftCounts.money_monsters.length}\nMoney Monsters 3D - ${aggregatedData.nftCounts.money_monsters3d.length}\nA.I. BitBots - ${aggregatedData.nftCounts.ai_bitbots.length}\n$BUX - ${aggregatedData.buxBalance}\n\n**Daily reward = ${dailyReward} $BUX**\n\n**Connected Wallets:**\n${allWallets.join('\n')}`;
 
     return {
       success: true,
       rolesUpdated,
-      nftCounts,
-      buxBalance,
+      nftCounts: aggregatedData.nftCounts,
+      buxBalance: aggregatedData.buxBalance,
       dailyReward,
-      formattedResponse
+      formattedResponse,
+      wallets: allWallets
     };
   } catch (error) {
     console.error('Error in verifyHolder:', error);
     return { success: false, error: error.message };
   }
+}
+
+async function storeWalletAddress(userId, walletAddress) {
+  const key = `wallets:${userId}`;
+  await redis.sadd(key, walletAddress);
+}
+
+async function getAllWallets(userId) {
+  const key = `wallets:${userId}`;
+  return await redis.smembers(key);
+}
+
+async function aggregateWalletData(wallets) {
+  let aggregatedNftCounts = {
+    fcked_catz: [],
+    celebcatz: [],
+    money_monsters: [],
+    money_monsters3d: [],
+    ai_bitbots: []
+  };
+  let totalBuxBalance = 0;
+
+  for (const wallet of wallets) {
+    const nftCounts = await checkNFTOwnership(wallet);
+    const buxBalance = await getBUXBalance(wallet);
+
+    // Aggregate NFT counts
+    for (const [collection, nfts] of Object.entries(nftCounts)) {
+      aggregatedNftCounts[collection] = [...aggregatedNftCounts[collection], ...nfts];
+    }
+
+    // Aggregate BUX balance
+    totalBuxBalance += buxBalance;
+  }
+
+  return {
+    nftCounts: aggregatedNftCounts,
+    buxBalance: totalBuxBalance
+  };
 }
 
 // Modify the checkNFTOwnership function
@@ -448,4 +506,3 @@ export function sendVerificationMessage(channel) {
 
     return channel.send({ embeds: [embed], components: [row] });
 }
-
