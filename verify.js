@@ -163,6 +163,33 @@ export async function checkNFTOwnership(walletAddress) {
   }
 }
 
+// Get role IDs from environment variables
+const ROLE_IDS = {
+  FCKED_CATZ: process.env.ROLE_ID_FCKED_CATZ,
+  CELEBCATZ: process.env.ROLE_ID_CELEBCATZ,
+  MONEY_MONSTERS: process.env.ROLE_ID_MONEY_MONSTERS,
+  MONEY_MONSTERS3D: process.env.ROLE_ID_MONEY_MONSTERS3D,
+  AI_BITBOTS: process.env.ROLE_ID_AI_BITBOTS,
+  MM_TOP10: process.env.ROLE_ID_MM_TOP10,
+  MM3D_TOP10: process.env.ROLE_ID_MM3D_TOP10,
+  WHALE_FCKED_CATZ: process.env.WHALE_ROLE_ID_FCKED_CATZ,
+  WHALE_MONEY_MONSTERS: process.env.WHALE_ROLE_ID_MONEY_MONSTERS,
+  WHALE_MONEY_MONSTERS3D: process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D,
+  WHALE_AI_BITBOTS: process.env.WHALE_ROLE_ID_AI_BITBOTS,
+  BUX_2500: process.env.ROLE_ID_2500_BUX,
+  BUX_10000: process.env.ROLE_ID_10000_BUX,
+  BUX_25000: process.env.ROLE_ID_25000_BUX,
+  BUX_50000: process.env.ROLE_ID_50000_BUX
+};
+
+// Get whale thresholds from environment variables
+const WHALE_THRESHOLDS = {
+  FCKED_CATZ: parseInt(process.env.WHALE_THRESHOLD_FCKED_CATZ),
+  MONEY_MONSTERS: parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS),
+  MONEY_MONSTERS3D: parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS3D),
+  AI_BITBOTS: parseInt(process.env.WHALE_THRESHOLD_AI_BITBOTS)
+};
+
 export async function updateDiscordRoles(userId, aggregatedData, client) {
   try {
     if (!client) {
@@ -177,7 +204,7 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
     // Get guild from cache first
     let guild = client.guilds.cache.get(GUILD_ID);
     
-    // If not in cache, try to fetch with force option
+    // If not in cache, try to fetch
     if (!guild) {
       try {
         guild = await client.guilds.fetch(GUILD_ID);
@@ -210,26 +237,104 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
       return false;
     }
 
-    console.log('Updating Discord roles based on all connected wallets');
+    console.log('Updating Discord roles based on NFT holdings');
 
-    // Update roles based on NFT counts
     const rolesToAdd = [];
     const rolesToRemove = [];
 
-    // Money Monsters 3D role
-    if (aggregatedData.nftCounts.money_monsters3d.length > 0) {
-      rolesToAdd.push('1093607056696692828'); // MM3D role
+    // NFT Collection roles
+    if (aggregatedData.nftCounts.fcked_catz.length > 0) {
+      rolesToAdd.push(ROLE_IDS.FCKED_CATZ);
+      if (aggregatedData.nftCounts.fcked_catz.length >= WHALE_THRESHOLDS.FCKED_CATZ) {
+        rolesToAdd.push(ROLE_IDS.WHALE_FCKED_CATZ);
+      }
     } else {
-      rolesToRemove.push('1093607056696692828');
+      rolesToRemove.push(ROLE_IDS.FCKED_CATZ);
+      rolesToRemove.push(ROLE_IDS.WHALE_FCKED_CATZ);
     }
 
-    // Add/remove roles
+    if (aggregatedData.nftCounts.celebcatz.length > 0) {
+      rolesToAdd.push(ROLE_IDS.CELEBCATZ);
+    } else {
+      rolesToRemove.push(ROLE_IDS.CELEBCATZ);
+    }
+
+    if (aggregatedData.nftCounts.money_monsters.length > 0) {
+      rolesToAdd.push(ROLE_IDS.MONEY_MONSTERS);
+      if (aggregatedData.nftCounts.money_monsters.length >= WHALE_THRESHOLDS.MONEY_MONSTERS) {
+        rolesToAdd.push(ROLE_IDS.WHALE_MONEY_MONSTERS);
+      }
+    } else {
+      rolesToRemove.push(ROLE_IDS.MONEY_MONSTERS);
+      rolesToRemove.push(ROLE_IDS.WHALE_MONEY_MONSTERS);
+    }
+
+    if (aggregatedData.nftCounts.money_monsters3d.length > 0) {
+      rolesToAdd.push(ROLE_IDS.MONEY_MONSTERS3D);
+      if (aggregatedData.nftCounts.money_monsters3d.length >= WHALE_THRESHOLDS.MONEY_MONSTERS3D) {
+        rolesToAdd.push(ROLE_IDS.WHALE_MONEY_MONSTERS3D);
+      }
+    } else {
+      rolesToRemove.push(ROLE_IDS.MONEY_MONSTERS3D);
+      rolesToRemove.push(ROLE_IDS.WHALE_MONEY_MONSTERS3D);
+    }
+
+    if (aggregatedData.nftCounts.ai_bitbots.length > 0) {
+      rolesToAdd.push(ROLE_IDS.AI_BITBOTS);
+      if (aggregatedData.nftCounts.ai_bitbots.length >= WHALE_THRESHOLDS.AI_BITBOTS) {
+        rolesToAdd.push(ROLE_IDS.WHALE_AI_BITBOTS);
+      }
+    } else {
+      rolesToRemove.push(ROLE_IDS.AI_BITBOTS);
+      rolesToRemove.push(ROLE_IDS.WHALE_AI_BITBOTS);
+    }
+
+    // BUX Balance roles
+    if (aggregatedData.buxBalance >= 50000) {
+      rolesToAdd.push(ROLE_IDS.BUX_50000);
+      rolesToAdd.push(ROLE_IDS.BUX_25000);
+      rolesToAdd.push(ROLE_IDS.BUX_10000);
+      rolesToAdd.push(ROLE_IDS.BUX_2500);
+    } else if (aggregatedData.buxBalance >= 25000) {
+      rolesToAdd.push(ROLE_IDS.BUX_25000);
+      rolesToAdd.push(ROLE_IDS.BUX_10000);
+      rolesToAdd.push(ROLE_IDS.BUX_2500);
+      rolesToRemove.push(ROLE_IDS.BUX_50000);
+    } else if (aggregatedData.buxBalance >= 10000) {
+      rolesToAdd.push(ROLE_IDS.BUX_10000);
+      rolesToAdd.push(ROLE_IDS.BUX_2500);
+      rolesToRemove.push(ROLE_IDS.BUX_50000);
+      rolesToRemove.push(ROLE_IDS.BUX_25000);
+    } else if (aggregatedData.buxBalance >= 2500) {
+      rolesToAdd.push(ROLE_IDS.BUX_2500);
+      rolesToRemove.push(ROLE_IDS.BUX_50000);
+      rolesToRemove.push(ROLE_IDS.BUX_25000);
+      rolesToRemove.push(ROLE_IDS.BUX_10000);
+    } else {
+      rolesToRemove.push(ROLE_IDS.BUX_50000);
+      rolesToRemove.push(ROLE_IDS.BUX_25000);
+      rolesToRemove.push(ROLE_IDS.BUX_10000);
+      rolesToRemove.push(ROLE_IDS.BUX_2500);
+    }
+
+    // Add roles
     for (const roleId of rolesToAdd) {
-      await member.roles.add(roleId).catch(console.error);
+      try {
+        await member.roles.add(roleId);
+        console.log(`Added role ${roleId} to user ${userId}`);
+      } catch (error) {
+        console.error(`Error adding role ${roleId}:`, error);
+      }
     }
 
+    // Remove roles
     for (const roleId of rolesToRemove) {
-      await member.roles.remove(roleId).catch(console.error);
+      try {
+        await member.roles.remove(roleId);
+        console.log(`Removed role ${roleId} from user ${userId}`);
+      } catch (error) {
+        console.error(`Error removing role ${roleId}:`, error);
+      }
     }
 
     console.log('Updated roles for user', userId + ':', {
