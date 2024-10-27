@@ -192,6 +192,7 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) 
       if (nftCounts.money_monsters3d.length >= parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS3D)) {
         rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
         rolesToRemove.splice(rolesToRemove.indexOf(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D), 1);
+        console.log(`Adding Money Monsters 3D Whale role. NFT count: ${nftCounts.money_monsters3d.length}`);
       }
     }
     if (nftCounts.ai_bitbots.length > 0) {
