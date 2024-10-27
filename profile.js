@@ -77,7 +77,6 @@ async function aggregateWalletData(wallets) {
   for (const wallet of wallets) {
     console.log(`Aggregating data for wallet: ${wallet}`);
     try {
-      await ensureWalletData(wallet);
       const nftCounts = await checkNFTOwnership(wallet);
       const buxBalance = await getBUXBalance(wallet);
 
