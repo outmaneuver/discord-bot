@@ -198,3 +198,5 @@ export async function checkNFTOwnership(walletAddress) {
   console.log('NFT counts:', JSON.stringify(nftCounts, null, 2));
   return nftCounts;
 }
+
+export { addWallet, removeWallet, getWalletData, updateUserProfile, sendProfileMessage };

@@ -176,4 +176,4 @@ export function sendVerificationMessage(channel) {
     return channel.send({ embeds: [embed], components: [row] });
 }
 
-// No need for a separate export statement at the end of the file
+export { verifyHolder, sendVerificationMessage, updateDiscordRoles, checkNFTOwnership, getBUXBalance };
