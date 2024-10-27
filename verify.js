@@ -157,33 +157,46 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
       await new Promise(resolve => client.once('ready', resolve));
     }
 
-    // Get guild using client.guilds.fetch directly
-    let guild;
-    try {
-      guild = await client.guilds.fetch(GUILD_ID);
-    } catch (error) {
-      console.error('Error fetching guild:', error);
-      // Don't throw error, just return since role updates are optional
-      return;
+    // Get guild from cache first
+    let guild = client.guilds.cache.get(GUILD_ID);
+    
+    // If not in cache, try to fetch with force option
+    if (!guild) {
+      try {
+        guild = await client.guilds.fetch({
+          guild: GUILD_ID,
+          force: true
+        });
+      } catch (error) {
+        console.error('Error fetching guild:', error);
+        return false;
+      }
     }
 
     if (!guild) {
       console.error('Guild not found');
-      return;
+      return false;
     }
 
-    // Get member using guild.members.fetch directly
-    let member;
-    try {
-      member = await guild.members.fetch(userId);
-    } catch (error) {
-      console.error('Error fetching member:', error);
-      return;
+    // Get member from cache first
+    let member = guild.members.cache.get(userId);
+    
+    // If not in cache, try to fetch
+    if (!member) {
+      try {
+        member = await guild.members.fetch({
+          user: userId,
+          force: true
+        });
+      } catch (error) {
+        console.error('Error fetching member:', error);
+        return false;
+      }
     }
 
     if (!member) {
       console.error('Member not found');
-      return;
+      return false;
     }
 
     console.log('Updating Discord roles based on all connected wallets');
@@ -216,7 +229,6 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
     return true;
   } catch (error) {
     console.error('Error updating Discord roles:', error);
-    // Don't throw error, just return false
     return false;
   }
 }
