@@ -43,15 +43,33 @@ console.log('Discord client created');
 const app = express();
 console.log('Express app created');
 
-// Move these to the top, right after the middleware setup
-app.use(express.static(path.join(__dirname, 'public')));
+// Move these to the top, right after the middleware setup but before routes
 app.use(express.json());
 app.use(cors({
   origin: process.env.CLIENT_URL || 'https://buxdao-verify-d1faffc83da7.herokuapp.com',
   credentials: true
 }));
 
-// Add routes right after the middleware
+// Session middleware setup
+app.use(session({
+  store: redisStore,
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Static file serving - after auth middleware but before routes
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Add routes after static file serving
 app.get('/holder-verify', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -76,19 +94,6 @@ const redisStore = new RedisStore({
   prefix: "session:",
 });
 
-// Session middleware setup
-app.use(session({
-  store: redisStore,
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
-
 // Passport setup
 passport.use(new DiscordStrategy({
   clientID: process.env.DISCORD_CLIENT_ID,
@@ -106,9 +111,6 @@ passport.serializeUser((user, done) => {
 passport.deserializeUser((user, done) => {
   done(null, user);
 });
-
-app.use(passport.initialize());
-app.use(passport.session());
 
 // Auth routes
 app.get('/auth/discord', passport.authenticate('discord'));
