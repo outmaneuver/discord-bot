@@ -247,6 +247,11 @@
         console.log('Page loaded, checking auth status...');
         checkAuthStatus();
 
+        function formatResponse(response) {
+            return response.replace(/<yellow>(.*?)<\/yellow>/g, '<span class="yellow-text">$1</span>')
+                           .replace(/\n/g, '<br>');
+        }
+
         connectButton.addEventListener('click', async () => {
             if (!window.solana || !window.solana.isPhantom) {
                 statusElement.textContent = 'Phantom wallet is not installed!';
@@ -269,25 +274,11 @@
                     },
                     body: JSON.stringify({ walletAddress: walletAddress }),
                 })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.text(); // Get the raw text first
-                })
-                .then(text => {
-                    try {
-                        return JSON.parse(text); // Try to parse it as JSON
-                    } catch (e) {
-                        console.error('Error parsing JSON:', e);
-                        console.log('Raw response:', text);
-                        throw new Error('Invalid JSON response');
-                    }
-                })
+                .then(response => response.json())
                 .then(data => {
                     console.log('Full verification response:', data);
                     if (data.success) {
-                        document.getElementById('verificationResult').innerHTML = data.formattedResponse.replace(/\n/g, '<br>');
+                        document.getElementById('verificationResult').innerHTML = formatResponse(data.formattedResponse);
                         statusElement.textContent = 'Verification complete!';
                         closeMessageElement.style.display = 'block';
                         storeWalletAddress(walletAddress);
