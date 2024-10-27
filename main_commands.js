@@ -1,4 +1,4 @@
-import { updateUserProfile, removeWallet, getWalletData } from './profile.js';
+import { updateUserProfile, removeWallet, getWalletData, addWallet } from './profile.js';
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 
 export async function handleMainCommands(message, client) {
@@ -115,6 +115,37 @@ export async function handleMainCommands(message, client) {
         console.error('Error removing wallet:', error);
         await message.reply('An error occurred while removing the wallet. Please try again later.');
       }
+    }
+  } else if (message.content.toLowerCase().startsWith('!add')) {
+    // Check if the user has administrator permissions
+    if (!message.member.permissions.has('ADMINISTRATOR')) {
+      await message.reply("You don't have permission to use this command.");
+      return;
+    }
+
+    const args = message.content.split(' ');
+    if (args.length !== 3) {
+      await message.reply('Usage: !add @user <wallet_address>');
+      return;
+    }
+
+    const mentionedUser = message.mentions.users.first();
+    if (!mentionedUser) {
+      await message.reply('Please mention a user to add a wallet to their profile.');
+      return;
+    }
+
+    const walletToAdd = args[2];
+    try {
+      const result = await addWallet(mentionedUser.id, walletToAdd);
+      if (result) {
+        await message.reply(`Wallet ${walletToAdd} has been added to ${mentionedUser.username}'s profile.`);
+      } else {
+        await message.reply(`Failed to add wallet ${walletToAdd} to ${mentionedUser.username}'s profile.`);
+      }
+    } catch (error) {
+      console.error('Error adding wallet:', error);
+      await message.reply('An error occurred while adding the wallet. Please try again later.');
     }
   }
   // Add other main commands here
