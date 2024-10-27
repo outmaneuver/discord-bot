@@ -31,33 +31,8 @@ const initializeHashlists = async () => {
 // Call this function when your bot starts up
 initializeHashlists();
 
-export async function addWallet(userId, walletAddress) {
-  const key = `wallets:${userId}`;
-  try {
-    // Remove angle brackets if present
-    const cleanWalletAddress = walletAddress.replace(/[<>]/g, '');
-    const result = await redis.sadd(key, cleanWalletAddress);
-    console.log(`Added wallet ${cleanWalletAddress} for user ${userId}. Result: ${result}`);
-    return result === 1; // Returns true if the wallet was successfully added
-  } catch (error) {
-    console.error(`Error adding wallet ${walletAddress} for user ${userId}:`, error);
-    throw error;
-  }
-}
-
-export async function removeWallet(userId, walletAddress) {
-  const key = `wallets:${userId}`;
-  try {
-    const result = await redis.srem(key, walletAddress);
-    console.log(`Removed wallet ${walletAddress} for user ${userId}. Result: ${result}`);
-    return result === 1; // Returns true if the wallet was successfully removed
-  } catch (error) {
-    console.error(`Error removing wallet ${walletAddress} for user ${userId}:`, error);
-    throw error;
-  }
-}
-
-async function getWalletData(userId) {
+// Export getWalletData function
+export async function getWalletData(userId) {
   try {
     const data = await redis.get(`wallets:${userId}`);
     if (!data) {
@@ -67,6 +42,38 @@ async function getWalletData(userId) {
   } catch (error) {
     console.error('Error getting wallet data:', error);
     return { walletAddresses: [] };
+  }
+}
+
+// Add wallet management functions
+export async function addWallet(userId, walletAddress) {
+  try {
+    const data = await getWalletData(userId);
+    if (!data.walletAddresses.includes(walletAddress)) {
+      data.walletAddresses.push(walletAddress);
+      await redis.set(`wallets:${userId}`, JSON.stringify(data));
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error adding wallet:', error);
+    return false;
+  }
+}
+
+export async function removeWallet(userId, walletAddress) {
+  try {
+    const data = await getWalletData(userId);
+    const index = data.walletAddresses.indexOf(walletAddress);
+    if (index > -1) {
+      data.walletAddresses.splice(index, 1);
+      await redis.set(`wallets:${userId}`, JSON.stringify(data));
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error removing wallet:', error);
+    return false;
   }
 }
 
