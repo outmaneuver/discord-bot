@@ -204,14 +204,10 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
     // Get guild from cache first
     let guild = client.guilds.cache.get(GUILD_ID);
     
-    // If not in cache, try to fetch with force option
+    // If not in cache, try to fetch
     if (!guild) {
       try {
-        guild = await client.guilds.fetch({
-          guild: GUILD_ID,
-          force: true,
-          cache: true
-        });
+        guild = await client.guilds.fetch(GUILD_ID);
       } catch (error) {
         console.error('Error fetching guild:', error);
         return false;
@@ -241,7 +237,17 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
       return false;
     }
 
-    console.log('Updating Discord roles based on NFT holdings');
+    console.log('Updating Discord roles based on NFT holdings:', {
+      userId,
+      nftCounts: {
+        fckedCatz: aggregatedData.nftCounts.fcked_catz.length,
+        celebCatz: aggregatedData.nftCounts.celebcatz.length,
+        moneyMonsters: aggregatedData.nftCounts.money_monsters.length,
+        moneyMonsters3d: aggregatedData.nftCounts.money_monsters3d.length,
+        aiBitbots: aggregatedData.nftCounts.ai_bitbots.length
+      },
+      buxBalance: aggregatedData.buxBalance
+    });
 
     const rolesToAdd = [];
     const rolesToRemove = [];
@@ -321,21 +327,25 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
       rolesToRemove.push(ROLE_IDS.BUX_2500);
     }
 
-    // Add roles
+    // Add roles with error handling
     for (const roleId of rolesToAdd) {
       try {
-        await member.roles.add(roleId);
-        console.log(`Added role ${roleId} to user ${userId}`);
+        if (!member.roles.cache.has(roleId)) {
+          await member.roles.add(roleId);
+          console.log(`Added role ${roleId} to user ${userId}`);
+        }
       } catch (error) {
         console.error(`Error adding role ${roleId}:`, error);
       }
     }
 
-    // Remove roles
+    // Remove roles with error handling
     for (const roleId of rolesToRemove) {
       try {
-        await member.roles.remove(roleId);
-        console.log(`Removed role ${roleId} from user ${userId}`);
+        if (member.roles.cache.has(roleId)) {
+          await member.roles.remove(roleId);
+          console.log(`Removed role ${roleId} from user ${userId}`);
+        }
       } catch (error) {
         console.error(`Error removing role ${roleId}:`, error);
       }
