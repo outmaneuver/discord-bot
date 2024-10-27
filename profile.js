@@ -102,5 +102,36 @@ export function generateProfileHtml(walletData, pokerStats, spadesStats) {
     // ... (generate HTML for profile)
 }
 
+async function getAllWallets(userId) {
+  const key = `wallets:${userId}`;
+  return await redis.smembers(key);
+}
 
+async function aggregateWalletData(wallets) {
+  let aggregatedNftCounts = {
+    fcked_catz: [],
+    celebcatz: [],
+    money_monsters: [],
+    money_monsters3d: [],
+    ai_bitbots: []
+  };
+  let totalBuxBalance = 0;
 
+  for (const wallet of wallets) {
+    const nftCounts = await checkNFTOwnership(wallet);
+    const buxBalance = await getBUXBalance(wallet);
+
+    // Aggregate NFT counts
+    for (const [collection, nfts] of Object.entries(nftCounts)) {
+      aggregatedNftCounts[collection] = [...aggregatedNftCounts[collection], ...nfts];
+    }
+
+    // Aggregate BUX balance
+    totalBuxBalance += buxBalance;
+  }
+
+  return {
+    nftCounts: aggregatedNftCounts,
+    buxBalance: totalBuxBalance
+  };
+}

@@ -247,6 +247,11 @@ app.post('/store-wallet', async (req, res) => {
   }
 });
 
+async function storeWalletAddress(userId, walletAddress) {
+  const key = `wallets:${userId}`;
+  await redis.sadd(key, walletAddress);
+}
+
 // Catch-all route for 404 errors
 app.use((req, res) => {
   res.status(404).send('404 - Not Found');
@@ -298,4 +303,3 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 console.log('Application setup complete');
-

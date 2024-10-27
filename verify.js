@@ -75,37 +75,35 @@ export async function verifyHolder(client, userId, walletAddress) {
     const buxBalance = await getBUXBalance(walletAddress);
     console.log('BUX balance:', buxBalance);
 
-    // Store the new wallet address
-    await storeWalletAddress(userId, walletAddress);
+    const rolesUpdated = await updateDiscordRoles(client, userId, nftCounts, buxBalance, walletAddress);
 
-    // Get all wallet addresses for this user
-    const allWallets = await getAllWallets(userId);
-    console.log(`All wallets for user ${userId}:`, allWallets);
+    // Calculate daily reward
+    const dailyReward = calculateDailyReward(nftCounts, buxBalance);
 
-    // Aggregate NFT counts and BUX balance across all wallets
-    const aggregatedData = await aggregateWalletData(allWallets);
-    console.log('Aggregated data:', aggregatedData);
-
-    const rolesUpdated = await updateDiscordRoles(client, userId, aggregatedData.nftCounts, aggregatedData.buxBalance);
-
-    // Calculate daily reward based on aggregated data
-    const dailyReward = calculateDailyReward(aggregatedData.nftCounts, aggregatedData.buxBalance);
-
-    const formattedResponse = `Verification complete!\n\n**VERIFIED ASSETS:**\nFcked Catz - ${aggregatedData.nftCounts.fcked_catz.length}\nCeleb Catz - ${aggregatedData.nftCounts.celebcatz.length}\nMoney Monsters - ${aggregatedData.nftCounts.money_monsters.length}\nMoney Monsters 3D - ${aggregatedData.nftCounts.money_monsters3d.length}\nA.I. BitBots - ${aggregatedData.nftCounts.ai_bitbots.length}\n$BUX - ${aggregatedData.buxBalance}\n\n**Daily reward = ${dailyReward} $BUX**\n\n**Connected Wallets:**\n${allWallets.join('\n')}`;
+    const formattedResponse = `Verification complete!\n\n**VERIFIED ASSETS:**\nFcked Catz - ${nftCounts.fcked_catz.length}\nCeleb Catz - ${nftCounts.celebcatz.length}\nMoney Monsters - ${nftCounts.money_monsters.length}\nMoney Monsters 3D - ${nftCounts.money_monsters3d.length}\nA.I. BitBots - ${nftCounts.ai_bitbots.length}\n$BUX - ${buxBalance}\n\n**Daily reward = ${dailyReward} $BUX**`;
 
     return {
       success: true,
       rolesUpdated,
-      nftCounts: aggregatedData.nftCounts,
-      buxBalance: aggregatedData.buxBalance,
+      nftCounts,
+      buxBalance,
       dailyReward,
-      formattedResponse,
-      wallets: allWallets
+      formattedResponse
     };
   } catch (error) {
     console.error('Error in verifyHolder:', error);
     return { success: false, error: error.message };
   }
+}
+
+function calculateDailyReward(nftCounts, buxBalance) {
+  // Implement your daily reward calculation logic here
+  // This is just a placeholder
+  return (nftCounts.fcked_catz.length * 2) + 
+         (nftCounts.money_monsters.length * 2) + 
+         (nftCounts.ai_bitbots.length * 1) + 
+         (nftCounts.money_monsters3d.length * 4) + 
+         (nftCounts.celebcatz.length * 8);
 }
 
 async function storeWalletAddress(userId, walletAddress) {
