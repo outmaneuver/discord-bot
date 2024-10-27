@@ -20,3 +20,7 @@ export async function handleVerifyCommands(message, client) {
   }
   // Add other verification-related commands here
 }
+
+export async function handleVerifyInteraction(interaction) {
+  // Handle verify commands
+}

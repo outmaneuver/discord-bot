@@ -169,3 +169,7 @@ export async function handleButtonInteraction(interaction) {
     }
   }
 }
+
+export async function handleMainInteraction(interaction) {
+  // Handle main commands
+}

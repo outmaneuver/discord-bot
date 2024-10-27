@@ -10,8 +10,7 @@ export async function handleProfileCommands(message, client) {
 }
 
 export async function handleProfileInteraction(interaction) {
-  const targetUser = interaction.options.getUser('user') || interaction.user;
-  await handleProfileCommand(interaction, targetUser.id, interaction.member.permissions, targetUser !== interaction.user ? targetUser : null);
+  // Handle profile commands
 }
 
 async function handleProfileCommand(channelOrInteraction, userId, permissions, mentionedUser = null) {

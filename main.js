@@ -330,9 +330,23 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
   }
 })();
 
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}!`);
   initializeSalesListings(client);
+
+  // Register slash commands
+  try {
+    console.log('Started refreshing application (/) commands.');
+
+    await rest.put(
+      Routes.applicationCommands(process.env.DISCORD_CLIENT_ID),
+      { body: commands },
+    );
+
+    console.log('Successfully reloaded application (/) commands.');
+  } catch (error) {
+    console.error('Error registering slash commands:', error);
+  }
 });
 
 client.on('messageCreate', async (message) => {
@@ -345,6 +359,7 @@ client.on('messageCreate', async (message) => {
 });
 
 client.on('interactionCreate', async interaction => {
+  console.log('Interaction received:', interaction.commandName);
   if (!interaction.isCommand()) return;
 
   const { commandName } = interaction;
