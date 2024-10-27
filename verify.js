@@ -500,4 +500,4 @@ export function sendVerificationMessage(channel) {
     return channel.send({ embeds: [embed], components: [row] });
 }
 
-export { verifyHolder, sendVerificationMessage, updateDiscordRoles };
+export { verifyHolder, sendVerificationMessage, updateDiscordRoles, checkNFTOwnership, getBUXBalance };

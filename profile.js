@@ -1,9 +1,8 @@
 import { EmbedBuilder } from 'discord.js';
-import { updateDiscordRoles } from './verify.js';
+import { updateDiscordRoles, checkNFTOwnership, getBUXBalance } from './verify.js';
 import Redis from 'ioredis';
 import fs from 'fs/promises';
 import path from 'path';
-import { checkNFTOwnership, getBUXBalance } from './verify.js';
 
 const redis = new Redis(process.env.REDIS_URL, {
   tls: {
