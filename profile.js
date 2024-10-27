@@ -48,6 +48,46 @@ export async function getWalletData(userId) {
   }
 }
 
+async function aggregateWalletData(wallets) {
+  let aggregatedNftCounts = {
+    fcked_catz: [],
+    celebcatz: [],
+    money_monsters: [],
+    money_monsters3d: [],
+    ai_bitbots: []
+  };
+  let totalBuxBalance = 0;
+
+  for (const wallet of wallets) {
+    console.log(`Aggregating data for wallet: ${wallet}`);
+    try {
+      const nftCounts = await checkNFTOwnership(wallet);
+      const buxBalance = await getBUXBalance(wallet);
+
+      console.log(`NFT counts for wallet ${wallet}:`, JSON.stringify(nftCounts, null, 2));
+      console.log(`BUX balance for wallet ${wallet}:`, buxBalance);
+
+      // Aggregate NFT counts
+      for (const [collection, nfts] of Object.entries(nftCounts)) {
+        aggregatedNftCounts[collection] = [...aggregatedNftCounts[collection], ...nfts];
+      }
+
+      // Aggregate BUX balance
+      totalBuxBalance += buxBalance;
+    } catch (error) {
+      console.error(`Error aggregating data for wallet ${wallet}:`, error);
+    }
+  }
+
+  console.log('Aggregated NFT counts:', JSON.stringify(aggregatedNftCounts, null, 2));
+  console.log('Total BUX balance:', totalBuxBalance);
+
+  return {
+    nftCounts: aggregatedNftCounts,
+    buxBalance: totalBuxBalance
+  };
+}
+
 export async function updateUserProfile(channel, userId, client) {
   try {
     console.log('Updating profile for user:', userId);
@@ -100,8 +140,6 @@ export async function updateUserProfile(channel, userId, client) {
   }
 }
 
-// ... (rest of the existing code)
-
 export async function sendProfileMessage(channel, userId) {
   try {
     await updateUserProfile(channel, userId, channel.client);
@@ -111,5 +149,11 @@ export async function sendProfileMessage(channel, userId) {
   }
 }
 
+function formatNFTCounts(nftCounts) {
+  return Object.entries(nftCounts)
+    .map(([collection, count]) => `${collection}: ${count.length}`)
+    .join('\n');
+}
+
 // Make sure to export all necessary functions
-export { checkNFTOwnership, getBUXBalance, aggregateWalletData, formatNFTCounts };
+export { checkNFTOwnership, getBUXBalance };
