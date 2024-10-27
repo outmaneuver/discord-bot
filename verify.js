@@ -30,7 +30,7 @@ async function retryWithBackoff(fn, maxRetries = 5, initialDelay = 1000) {
             if (error.message.includes('429 Too Many Requests')) {
                 const delay = initialDelay * Math.pow(2, retries);
                 console.log(`Rate limited. Retrying in ${delay}ms...`);
-                await sleep(delay);
+                await new Promise(resolve => setTimeout(resolve, delay));
                 retries++;
             } else {
                 throw error;
@@ -159,9 +159,11 @@ export async function checkNFTOwnership(walletAddress) {
         };
 
         console.log('Fetching NFT accounts...');
-        const nftAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
-            programId: TOKEN_PROGRAM_ID
-        });
+        const nftAccounts = await retryWithBackoff(() => 
+            connection.getParsedTokenAccountsByOwner(publicKey, {
+                programId: TOKEN_PROGRAM_ID
+            })
+        );
         console.log(`Found ${nftAccounts.value.length} token accounts`);
 
         for (let account of nftAccounts.value) {
@@ -361,9 +363,11 @@ export async function getBUXBalance(walletAddress) {
         const buxMint = new PublicKey(BUX_TOKEN_MINT);
 
         console.log('Fetching token accounts...');
-        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
-            mint: buxMint
-        });
+        const tokenAccounts = await retryWithBackoff(() => 
+            connection.getParsedTokenAccountsByOwner(publicKey, {
+                mint: buxMint
+            })
+        );
         console.log(`Found ${tokenAccounts.value.length} BUX token accounts`);
 
         if (tokenAccounts.value.length > 0) {

@@ -133,8 +133,8 @@ async function aggregateWalletData(wallets) {
   for (const wallet of wallets) {
     console.log(`Aggregating data for wallet: ${wallet}`);
     try {
-      const nftCounts = await checkNFTOwnership(wallet);
-      const buxBalance = await getBUXBalance(wallet);
+      const nftCounts = await retryWithBackoff(() => checkNFTOwnership(wallet));
+      const buxBalance = await retryWithBackoff(() => getBUXBalance(wallet));
 
       console.log(`NFT counts for wallet ${wallet}:`, JSON.stringify(nftCounts, null, 2));
       console.log(`BUX balance for wallet ${wallet}:`, buxBalance);
@@ -158,6 +158,25 @@ async function aggregateWalletData(wallets) {
     nftCounts: aggregatedNftCounts,
     buxBalance: totalBuxBalance
   };
+}
+
+async function retryWithBackoff(fn, maxRetries = 5, initialDelay = 1000) {
+  let retries = 0;
+  while (retries < maxRetries) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (error.message.includes('429 Too Many Requests')) {
+        const delay = initialDelay * Math.pow(2, retries);
+        console.log(`Rate limited. Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        retries++;
+      } else {
+        throw error;
+      }
+    }
+  }
+  throw new Error('Max retries reached');
 }
 
 export async function updateUserProfile(channel, userId, client) {
