@@ -68,7 +68,9 @@ export async function sendProfileMessage(channel, userId) {
     console.log('Updating Discord roles based on all connected wallets');
     await updateDiscordRoles(channel.client, userId, walletData.nftCounts, walletData.buxBalance);
 
-    const member = await channel.guild.members.fetch(userId);
+    // Fetch updated member data after role update
+    const guild = await channel.client.guilds.fetch(process.env.GUILD_ID);
+    const member = await guild.members.fetch(userId);
     const roles = member.roles.cache
       .filter(role => role.name !== '@everyone')
       .sort((a, b) => b.position - a.position)
