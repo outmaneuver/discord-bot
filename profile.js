@@ -2,8 +2,6 @@ import { EmbedBuilder } from 'discord.js';
 import { updateDiscordRoles, checkNFTOwnership, getBUXBalance } from './verify.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim } from './rewards.js';
 import Redis from 'ioredis';
-import fs from 'fs/promises';
-import path from 'path';
 
 const redis = new Redis(process.env.REDIS_URL, {
   tls: {
@@ -11,50 +9,22 @@ const redis = new Redis(process.env.REDIS_URL, {
   }
 });
 
-// Load hashlists
-const loadHashlist = async (filename) => {
-  const filePath = path.join(process.cwd(), 'hashlists', filename);
-  const data = await fs.readFile(filePath, 'utf8');
-  return new Set(JSON.parse(data));
-};
-
-let fckedCatzHashlist, celebcatzHashlist, moneyMonstersHashlist, moneyMonsters3dHashlist, aiBitbotsHashlist;
-
-const initializeHashlists = async () => {
-  fckedCatzHashlist = await loadHashlist('fcked_catz.json');
-  celebcatzHashlist = await loadHashlist('celebcatz.json');
-  moneyMonstersHashlist = await loadHashlist('money_monsters.json');
-  moneyMonsters3dHashlist = await loadHashlist('money_monsters3d.json');
-  aiBitbotsHashlist = await loadHashlist('ai_bitbots.json');
-};
-
-// Call this function when your bot starts up
-initializeHashlists();
-
-// Export getWalletData function
-export async function getWalletData(userId) {
+async function getWalletData(userId) {
   try {
-    const data = await redis.get(`wallets:${userId}`);
-    if (!data) {
-      return { walletAddresses: [] };
-    }
-    return JSON.parse(data);
+    // Get wallet addresses as a Set from Redis
+    const wallets = await redis.smembers(`user:${userId}:wallets`);
+    console.log(`Retrieved wallets for user ${userId}:`, wallets);
+    return { walletAddresses: wallets || [] };
   } catch (error) {
     console.error('Error getting wallet data:', error);
     return { walletAddresses: [] };
   }
 }
 
-// Add wallet management functions
 export async function addWallet(userId, walletAddress) {
   try {
-    const data = await getWalletData(userId);
-    if (!data.walletAddresses.includes(walletAddress)) {
-      data.walletAddresses.push(walletAddress);
-      await redis.set(`wallets:${userId}`, JSON.stringify(data));
-      return true;
-    }
-    return false;
+    await redis.sadd(`user:${userId}:wallets`, walletAddress);
+    return true;
   } catch (error) {
     console.error('Error adding wallet:', error);
     return false;
@@ -63,14 +33,8 @@ export async function addWallet(userId, walletAddress) {
 
 export async function removeWallet(userId, walletAddress) {
   try {
-    const data = await getWalletData(userId);
-    const index = data.walletAddresses.indexOf(walletAddress);
-    if (index > -1) {
-      data.walletAddresses.splice(index, 1);
-      await redis.set(`wallets:${userId}`, JSON.stringify(data));
-      return true;
-    }
-    return false;
+    await redis.srem(`user:${userId}:wallets`, walletAddress);
+    return true;
   } catch (error) {
     console.error('Error removing wallet:', error);
     return false;
@@ -124,8 +88,7 @@ export async function updateUserProfile(channel, userId, client) {
   try {
     const walletData = await getWalletData(userId);
     const aggregatedData = await aggregateWalletData(walletData);
-    await updateDiscordRoles(userId, aggregatedData, client);
-
+    
     const user = await client.users.fetch(userId);
     const username = user.username;
 
@@ -147,18 +110,10 @@ export async function updateUserProfile(channel, userId, client) {
       );
 
     await channel.send({ embeds: [embed] });
+    await updateDiscordRoles(userId, aggregatedData, client);
   } catch (error) {
     console.error('Error updating user profile:', error);
     throw error;
-  }
-}
-
-export async function sendProfileMessage(channel, userId) {
-  try {
-    await updateUserProfile(channel, userId, channel.client);
-  } catch (error) {
-    console.error('Error sending profile message:', error);
-    await channel.send('An error occurred while fetching your profile. Please try again later.');
   }
 }
 
