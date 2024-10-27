@@ -1,4 +1,5 @@
-import { updateUserProfile, removeWallet } from './profile.js';
+import { updateUserProfile, removeWallet, getWalletData } from './profile.js';
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 
 export async function handleMainCommands(message, client) {
   console.log('Received message:', message.content);
@@ -47,21 +48,69 @@ export async function handleMainCommands(message, client) {
     }
   } else if (message.content.toLowerCase().startsWith('!remove')) {
     const args = message.content.split(' ');
-    if (args.length !== 2) {
-      await message.reply('Please provide a wallet address to remove. Usage: !remove <wallet_address>');
-      return;
-    }
-    const walletToRemove = args[1];
-    try {
-      const result = await removeWallet(message.author.id, walletToRemove);
-      if (result) {
-        await message.reply(`Wallet ${walletToRemove} has been removed from your profile.`);
-      } else {
-        await message.reply(`Wallet ${walletToRemove} was not found in your profile.`);
+    if (args.length === 1) {
+      // No wallet address provided, show options
+      const walletData = await getWalletData(message.author.id);
+      if (!walletData || walletData.walletAddresses.length === 0) {
+        await message.reply('You have no connected wallets to remove.');
+        return;
       }
-    } catch (error) {
-      console.error('Error removing wallet:', error);
-      await message.reply('An error occurred while removing the wallet. Please try again later.');
+
+      const embed = new EmbedBuilder()
+        .setColor('#0099ff')
+        .setTitle('Remove Wallet')
+        .setDescription('Choose a wallet to remove:');
+
+      const row = new ActionRowBuilder();
+
+      walletData.walletAddresses.forEach((address, index) => {
+        row.addComponents(
+          new ButtonBuilder()
+            .setCustomId(`remove_wallet_${index}`)
+            .setLabel(`Wallet ${index + 1}`)
+            .setStyle(ButtonStyle.Primary)
+        );
+      });
+
+      const reply = await message.reply({ embeds: [embed], components: [row] });
+
+      const filter = i => i.customId.startsWith('remove_wallet_') && i.user.id === message.author.id;
+      const collector = reply.createMessageComponentCollector({ filter, time: 60000 });
+
+      collector.on('collect', async i => {
+        const index = parseInt(i.customId.split('_')[2]);
+        const walletToRemove = walletData.walletAddresses[index];
+        try {
+          const result = await removeWallet(message.author.id, walletToRemove);
+          if (result) {
+            await i.update({ content: `Wallet ${walletToRemove} has been removed from your profile.`, components: [] });
+          } else {
+            await i.update({ content: `Failed to remove wallet ${walletToRemove} from your profile.`, components: [] });
+          }
+        } catch (error) {
+          console.error('Error removing wallet:', error);
+          await i.update({ content: 'An error occurred while removing the wallet. Please try again later.', components: [] });
+        }
+      });
+
+      collector.on('end', collected => {
+        if (collected.size === 0) {
+          reply.edit({ content: 'Wallet removal timed out.', components: [] });
+        }
+      });
+    } else {
+      const walletToRemove = args[1];
+      try {
+        const result = await removeWallet(message.author.id, walletToRemove);
+        if (result) {
+          await message.reply(`Wallet ${walletToRemove} has been removed from your profile.`);
+        } else {
+          await message.reply(`Wallet ${walletToRemove} was not found in your profile.`);
+        }
+      } catch (error) {
+        console.error('Error removing wallet:', error);
+        await message.reply('An error occurred while removing the wallet. Please try again later.');
+      }
     }
   }
   // Add other main commands here
