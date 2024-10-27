@@ -135,35 +135,24 @@ app.get('/auth/status', (req, res) => {
 
 // Verification route
 app.post('/holder-verify/verify', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ success: false, error: 'Not authenticated' });
+  }
+
   try {
-    console.log('Verifying wallet:', req.body.walletAddress);
-    
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Not authenticated' 
-      });
+    const walletData = req.body;
+    if (!walletData || !walletData.walletAddress) {
+      return res.status(400).json({ success: false, error: 'No wallet address provided' });
     }
 
-    const verificationResult = await verifyHolder({
-      walletAddress: req.body.walletAddress,
-      userId: req.user.id,
-      client: req.app.get('discord-client') // Get the Discord client from app settings
-    });
-
-    if (verificationResult.success) {
-      console.log('Verification successful:', verificationResult);
-      res.json(verificationResult);
-    } else {
-      console.error('Verification failed:', verificationResult.error);
-      res.status(400).json(verificationResult);
-    }
+    const result = await verifyHolder(walletData, req.session.userId, client);
+    res.json(result);
   } catch (error) {
     console.error('Error during wallet verification:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Internal server error',
-      details: error.message 
+      details: error.message
     });
   }
 });

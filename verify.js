@@ -245,8 +245,9 @@ function formatNFTCounts(nftCounts) {
     .join('\n');
 }
 
-export async function verifyHolder(walletAddress, userId, client) {
+export async function verifyHolder(walletData, userId, client) {
   try {
+    const walletAddress = walletData.walletAddress;
     console.log(`Verifying wallet: ${walletAddress}`);
     
     // Validate wallet address format
