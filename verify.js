@@ -19,7 +19,7 @@ const GUILD_ID = process.env.DISCORD_GUILD_ID;
 const loadHashlist = async (filename) => {
   const filePath = path.join(process.cwd(), 'hashlists', filename);
   const data = await fs.readFile(filePath, 'utf8');
-  return new Set(JSON.parse(data));
+  return JSON.parse(data);
 };
 
 let fckedCatzHashlist, celebcatzHashlist, moneyMonstersHashlist, moneyMonsters3dHashlist, aiBitbotsHashlist, MM_TOP10_HASHLIST, MM3D_TOP10_HASHLIST;
@@ -170,6 +170,28 @@ export async function getBUXBalance(walletAddress) {
   return balance;
 }
 
+// Migrate old Redis keys to new format
+async function migrateWalletData(userId) {
+  try {
+    const oldKey = `wallets:${userId}`;
+    const newKey = `user:${userId}:wallets`;
+    
+    // Check if old data exists
+    const oldData = await redis.get(oldKey);
+    if (oldData) {
+      const wallets = JSON.parse(oldData).walletAddresses;
+      // Delete old key
+      await redis.del(oldKey);
+      // Add wallets to new set
+      if (wallets && wallets.length > 0) {
+        await redis.sadd(newKey, ...wallets);
+      }
+    }
+  } catch (error) {
+    console.error('Error migrating wallet data:', error);
+  }
+}
+
 export async function updateDiscordRoles(userId, aggregatedData, client) {
   try {
     const guild = await client.guilds.fetch(GUILD_ID);
@@ -184,7 +206,6 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
       return;
     }
 
-    // Rest of your role update logic...
     console.log('Updating Discord roles based on all connected wallets');
 
     // Money Monsters 3D Whale Check
@@ -197,10 +218,7 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
     const mmWhaleThreshold = 25;
 
     // Remove Top 10 roles first
-    console.log('Removing Money Monsters Top 10 role for user', userId);
     await member.roles.remove('1095033759612547133').catch(console.error);
-    
-    console.log('Removing Money Monsters 3D Top 10 role for user', userId);
     await member.roles.remove('1095033566070583457').catch(console.error);
 
     // Update roles based on NFT counts
@@ -208,7 +226,6 @@ export async function updateDiscordRoles(userId, aggregatedData, client) {
     const rolesToRemove = [];
 
     // Add your role update logic here...
-    // Example:
     if (aggregatedData.nftCounts.fcked_catz.length > 0) {
       rolesToAdd.push('1093607187454111825'); // CAT role
     } else {
