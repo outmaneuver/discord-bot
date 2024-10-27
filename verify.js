@@ -116,6 +116,18 @@ export async function updateDiscordRoles(client, userId, nftCounts, buxBalance) 
     const guild = await client.guilds.fetch(process.env.GUILD_ID);
     const member = await guild.members.fetch(userId);
 
+    const allRoles = [
+      process.env.ROLE_ID_FCKED_CATZ,
+      process.env.ROLE_ID_CELEBCATZ,
+      process.env.ROLE_ID_MONEY_MONSTERS,
+      process.env.ROLE_ID_MONEY_MONSTERS_3D,
+      process.env.ROLE_ID_AI_BITBOTS,
+      process.env.ROLE_ID_50000_BUX,
+      process.env.ROLE_ID_25000_BUX,
+      process.env.ROLE_ID_10000_BUX,
+      process.env.ROLE_ID_2500_BUX
+    ];
+
     const rolesToAdd = [];
 
     // Add NFT roles
