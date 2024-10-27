@@ -1,5 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
-import { updateDiscordRoles, checkNFTOwnership, getBUXBalance } from './verify.js';
+import { updateDiscordRoles, checkNFTOwnership, getBUXBalance, startOrUpdateDailyTimer, getTimeUntilNextClaim } from './verify.js';
 import Redis from 'ioredis';
 import fs from 'fs/promises';
 import path from 'path';
@@ -111,31 +111,9 @@ async function aggregateWalletData(wallets) {
 
 export async function updateUserProfile(channel, userId, client) {
   try {
-    console.log('Updating profile for user:', userId);
     const walletData = await getWalletData(userId);
-
-    if (!walletData || walletData.walletAddresses.length === 0) {
-      console.log('No wallet data found for user:', userId);
-      await channel.send('No connected wallets found. Please verify your wallet first using the `=verify` command.');
-      return;
-    }
-
-    console.log('Wallet data:', JSON.stringify(walletData, null, 2));
-
-    const aggregatedData = await aggregateWalletData(walletData.walletAddresses);
-
-    // Update Discord roles based on aggregated wallet data
-    console.log('Updating Discord roles based on all connected wallets');
-    await updateDiscordRoles(client, userId, aggregatedData.nftCounts, aggregatedData.buxBalance);
-
-    // Fetch updated member data after role update
-    const guild = await client.guilds.fetch(process.env.GUILD_ID);
-    const member = await guild.members.fetch(userId);
-    const roles = member.roles.cache
-      .filter(role => role.name !== '@everyone')
-      .sort((a, b) => b.position - a.position)
-      .map(role => role.name)
-      .join(', ');
+    const aggregatedData = await aggregateWalletData(walletData);
+    await updateDiscordRoles(userId, aggregatedData, client);
 
     const user = await client.users.fetch(userId);
     const username = user.username;
