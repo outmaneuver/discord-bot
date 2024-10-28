@@ -6,8 +6,37 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { config } from '../config/config.js';
 
-// Export the Redis instance using config
-export const redis = new Redis(config.redis.url, config.redis.options);
+// Update Redis configuration
+export const redis = new Redis(config.redis.url, {
+  ...config.redis.options,
+  retryStrategy: function(times) {
+    const delay = Math.min(times * 50, 2000);
+    console.log(`Redis connection attempt ${times}, retrying in ${delay}ms`);
+    return delay;
+  },
+  maxRetriesPerRequest: 3,
+  enableReadyCheck: true,
+  reconnectOnError: function(err) {
+    const targetError = 'READONLY';
+    if (err.message.includes(targetError)) {
+      console.log('Redis connection error:', err.message);
+      return true; // Only reconnect on READONLY error
+    }
+    return false;
+  }
+});
+
+redis.on('error', (err) => {
+  console.error('Redis connection error:', err);
+});
+
+redis.on('connect', () => {
+  console.log('Redis connected successfully');
+});
+
+redis.on('ready', () => {
+  console.log('Redis client ready');
+});
 
 // Use config values
 const BUX_TOKEN_MINT = config.solana.buxMint;
