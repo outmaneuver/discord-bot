@@ -266,6 +266,14 @@ export async function updateDiscordRoles(userId, client) {
         console.log(`User ${userId} already has role ${roleName} (${role.id})`);
       }
     }
+
+    // Return success
+    return {
+      success: true,
+      roles: roleUpdates,
+      message: 'Roles updated successfully'
+    };
+
   } catch (error) {
     console.error('Error updating Discord roles:', {
       userId,
