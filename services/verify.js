@@ -174,18 +174,18 @@ export async function updateDiscordRoles(userId, client) {
     }
 
     // Get guild directly from client
-    let guild = client.guilds.cache.get(process.env.GUILD_ID);
+    let guild = client.guilds.cache.get(GUILD_ID);
     
     if (!guild) {
       console.error('Guild not found in cache:', {
-        guildId: process.env.GUILD_ID,
+        guildId: GUILD_ID,
         availableGuilds: Array.from(client.guilds.cache.keys()),
         clientStatus: client.isReady() ? 'ready' : 'not ready'
       });
       
       // Try to fetch guild
       try {
-        guild = await client.guilds.fetch(process.env.GUILD_ID);
+        guild = await client.guilds.fetch(GUILD_ID);
         if (guild) {
           console.log('Successfully fetched guild:', guild.name);
         } else {
@@ -198,8 +198,8 @@ export async function updateDiscordRoles(userId, client) {
     }
 
     // Ensure roles are cached
-    const roles = await guild.roles.fetch();
-    console.log('Available roles:', Array.from(roles.cache.values()).map(r => r.name));
+    await guild.roles.fetch();
+    console.log('Available roles:', Array.from(guild.roles.cache.values()).map(r => r.name));
 
     // Fetch member with force refresh
     const member = await guild.members.fetch(userId);
@@ -261,7 +261,7 @@ export async function updateDiscordRoles(userId, client) {
       userId,
       error: error.message,
       stack: error.stack,
-      guildId: process.env.GUILD_ID,
+      guildId: GUILD_ID,
       clientReady: client.isReady(),
       availableGuilds: Array.from(client.guilds.cache.keys())
     });
