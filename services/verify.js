@@ -167,17 +167,25 @@ export async function verifyHolder(walletData, userId, client) {
 // Update Discord roles function
 export async function updateDiscordRoles(userId, client) {
   try {
+    // Wait for client to be ready
+    if (!client.isReady()) {
+      await new Promise(resolve => client.once('ready', resolve));
+    }
+
     // Get guild directly from client
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
     
     if (!guild) {
-      console.error('Guild not found:', process.env.GUILD_ID, 'Available guilds:', 
-        Array.from(client.guilds.cache.keys()));
+      console.error('Guild not found:', {
+        guildId: process.env.GUILD_ID,
+        availableGuilds: Array.from(client.guilds.cache.keys()),
+        clientStatus: client.isReady() ? 'ready' : 'not ready'
+      });
       throw new Error('Guild not found');
     }
 
     // Fetch member with force refresh
-    const member = await guild.members.fetch(userId);
+    const member = await guild.members.fetch({ user: userId, force: true });
     if (!member) {
       console.error('Member not found:', userId);
       throw new Error('Member not found');
@@ -212,6 +220,7 @@ export async function updateDiscordRoles(userId, client) {
       const role = guild.roles.cache.find(r => r.name === roleName);
       if (role && !member.roles.cache.has(role.id)) {
         await member.roles.add(role);
+        console.log(`Added role ${roleName} to user ${userId}`);
       }
     }
   } catch (error) {
@@ -220,6 +229,7 @@ export async function updateDiscordRoles(userId, client) {
       error: error.message,
       stack: error.stack,
       guildId: process.env.GUILD_ID,
+      clientReady: client.isReady(),
       availableGuilds: Array.from(client.guilds.cache.keys())
     });
     throw error;
