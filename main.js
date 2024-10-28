@@ -9,7 +9,6 @@ import Redis from 'ioredis';
 import RedisStore from 'connect-redis';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import { WebSocket, WebSocketServer } from 'ws';
 
 import { initializeSalesListings } from './services/sales.js';
 import { verifyHolder, sendVerificationMessage, updateDiscordRoles, validateWalletAddress } from './services/verify.js';
@@ -432,80 +431,6 @@ app.get('/api/games/:id', (req, res) => {
     });
 });
 
-// Add after Express server setup
-const wss = new WebSocketServer({ server });
-
-// Store active game connections
-const gameConnections = new Map();
-
-wss.on('connection', (ws, req) => {
-    const gameId = new URLSearchParams(req.url.slice(1)).get('game');
-    if (!gameId) {
-        ws.close();
-        return;
-    }
-
-    // Store connection
-    if (!gameConnections.has(gameId)) {
-        gameConnections.set(gameId, new Set());
-    }
-    gameConnections.get(gameId).add(ws);
-
-    ws.on('message', async (message) => {
-        try {
-            const data = JSON.parse(message);
-            
-            // Handle different message types
-            switch (data.type) {
-                case 'move':
-                    // Broadcast move to other player
-                    broadcastToGame(gameId, ws, data);
-                    break;
-                case 'roll':
-                    // Broadcast dice roll
-                    broadcastToGame(gameId, ws, data);
-                    break;
-                case 'resign':
-                    // Handle game end
-                    const game = activeGames.get(data.challengerId);
-                    if (game) {
-                        await handleGameEnd(data.winnerId, data.loserId, game.wager);
-                        broadcastToGame(gameId, ws, {
-                            type: 'game_end',
-                            winner: data.winnerId,
-                            wager: game.wager
-                        });
-                    }
-                    break;
-            }
-        } catch (error) {
-            console.error('Error handling WebSocket message:', error);
-        }
-    });
-
-    ws.on('close', () => {
-        // Remove connection when client disconnects
-        const connections = gameConnections.get(gameId);
-        if (connections) {
-            connections.delete(ws);
-            if (connections.size === 0) {
-                gameConnections.delete(gameId);
-            }
-        }
-    });
-});
-
-function broadcastToGame(gameId, sender, data) {
-    const connections = gameConnections.get(gameId);
-    if (connections) {
-        connections.forEach(client => {
-            if (client !== sender && client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify(data));
-            }
-        });
-    }
-}
-
 // Add command handlers
 async function handleProfileCommands(message, client) {
   try {
@@ -593,3 +518,4 @@ async function handleMainInteraction(interaction) {
     throw error;
   }
 }
+
