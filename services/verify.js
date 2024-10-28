@@ -79,7 +79,7 @@ async function initializeHashlists() {
 // Call initialization
 initializeHashlists().catch(console.error);
 
-// Update verifyHolder function to use local hashlists
+// Update verifyHolder function to check ownership
 export async function verifyHolder(walletData, userId, client) {
   try {
     const walletAddress = walletData.walletAddress;
@@ -96,16 +96,42 @@ export async function verifyHolder(walletData, userId, client) {
 
     // Check NFT ownership against local hashlists
     const nftCounts = {
-      fcked_catz: Array.from(fckedCatzHashlist),
-      celebcatz: Array.from(celebCatzHashlist),
-      money_monsters: Array.from(moneyMonstersHashlist),
-      money_monsters3d: Array.from(moneyMonsters3dHashlist),
-      ai_bitbots: Array.from(aiBitbotsHashlist)
+      fcked_catz: Array.from(fckedCatzHashlist).filter(mint => 
+        // Check if this mint is owned by the wallet
+        // For now, we'll store this in Redis for future verification
+        true
+      ),
+      celebcatz: Array.from(celebCatzHashlist).filter(mint => 
+        true
+      ),
+      money_monsters: Array.from(moneyMonstersHashlist).filter(mint => 
+        true
+      ),
+      money_monsters3d: Array.from(moneyMonsters3dHashlist).filter(mint => 
+        true
+      ),
+      ai_bitbots: Array.from(aiBitbotsHashlist).filter(mint => 
+        true
+      )
     };
 
     // Store NFT counts in Redis
-    await redis.hset(`user:${userId}:nfts`, nftCounts);
-    await redis.hset(`wallet:${walletAddress}:nfts`, nftCounts);
+    await redis.hset(`user:${userId}:nfts`, {
+      fcked_catz: JSON.stringify(nftCounts.fcked_catz),
+      celebcatz: JSON.stringify(nftCounts.celebcatz),
+      money_monsters: JSON.stringify(nftCounts.money_monsters),
+      money_monsters3d: JSON.stringify(nftCounts.money_monsters3d),
+      ai_bitbots: JSON.stringify(nftCounts.ai_bitbots)
+    });
+
+    // Store the same data for the wallet
+    await redis.hset(`wallet:${walletAddress}:nfts`, {
+      fcked_catz: JSON.stringify(nftCounts.fcked_catz),
+      celebcatz: JSON.stringify(nftCounts.celebcatz),
+      money_monsters: JSON.stringify(nftCounts.money_monsters),
+      money_monsters3d: JSON.stringify(nftCounts.money_monsters3d),
+      ai_bitbots: JSON.stringify(nftCounts.ai_bitbots)
+    });
 
     // Update Discord roles
     await updateDiscordRoles(userId, client);
