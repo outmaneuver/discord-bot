@@ -505,3 +505,91 @@ function broadcastToGame(gameId, sender, data) {
         });
     }
 }
+
+// Add command handlers
+async function handleProfileCommands(message, client) {
+  try {
+    await updateUserProfile(message.channel, message.author.id, client);
+  } catch (error) {
+    console.error('Error handling profile command:', error);
+    throw error;
+  }
+}
+
+async function handleVerifyCommands(message, client) {
+  try {
+    await sendVerificationMessage(message.channel);
+  } catch (error) {
+    console.error('Error handling verify command:', error);
+    throw error;
+  }
+}
+
+async function handleSalesListingsCommands(message) {
+  try {
+    await testSale(client, message.content.split(' ')[1]);
+  } catch (error) {
+    console.error('Error handling sales command:', error);
+    throw error;
+  }
+}
+
+async function handleMainCommands(message, client) {
+  try {
+    if (message.content === '=help') {
+      await message.reply('Available commands:\n=profile - View your profile\n=verify - Get wallet verification link');
+    }
+  } catch (error) {
+    console.error('Error handling main command:', error);
+    throw error;
+  }
+}
+
+// Add interaction handlers
+async function handleVerifyInteraction(interaction) {
+  try {
+    await interaction.reply({
+      content: 'Please visit https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify/ to verify your wallet',
+      ephemeral: true
+    });
+  } catch (error) {
+    console.error('Error handling verify interaction:', error);
+    throw error;
+  }
+}
+
+async function handleProfileInteraction(interaction) {
+  try {
+    const user = interaction.options.getUser('user') || interaction.user;
+    await updateUserProfile(interaction.channel, user.id, client);
+  } catch (error) {
+    console.error('Error handling profile interaction:', error);
+    throw error;
+  }
+}
+
+async function handleButtonInteraction(interaction) {
+  try {
+    await interaction.reply({
+      content: 'This button does nothing yet!',
+      ephemeral: true
+    });
+  } catch (error) {
+    console.error('Error handling button interaction:', error);
+    throw error;
+  }
+}
+
+async function handleMainInteraction(interaction) {
+  try {
+    if (interaction.commandName === 'help') {
+      await interaction.reply({
+        content: 'Available commands:\n/profile - View your profile\n/verify - Get wallet verification link',
+        ephemeral: true
+      });
+    }
+  } catch (error) {
+    console.error('Error handling main interaction:', error);
+    throw error;
+  }
+}
