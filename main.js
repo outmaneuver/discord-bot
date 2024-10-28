@@ -141,13 +141,10 @@ console.log('Discord client created');
 const app = express();
 console.log('Express app created');
 
-// Redis setup
-const redisClient = new Redis(process.env.REDIS_URL, {
-  tls: {
-    rejectUnauthorized: false
-  }
-});
+// Instead, import Redis instance from verify.js
+import { redis as redisClient } from './services/verify.js';
 
+// Update Redis store to use imported client
 const redisStore = new RedisStore({
   client: redisClient,
   prefix: "session:",
