@@ -387,50 +387,6 @@ try {
   throw error;
 }
 
-// Add near other route handlers
-app.get('/backgammon', (req, res) => {
-    if (!req.isAuthenticated()) {
-        return res.redirect('/auth/discord');
-    }
-    res.sendFile(path.join(__dirname, 'public', 'backgammon.html'));
-});
-
-app.get('/api/users/:id', async (req, res) => {
-    if (!req.isAuthenticated()) {
-        return res.status(401).json({ error: 'Not authenticated' });
-    }
-
-    try {
-        const user = await client.users.fetch(req.params.id);
-        res.json({
-            username: user.username,
-            avatar: user.displayAvatarURL({ dynamic: true })
-        });
-    } catch (error) {
-        res.status(404).json({ error: 'User not found' });
-    }
-});
-
-app.get('/api/games/:id', (req, res) => {
-    if (!req.isAuthenticated()) {
-        return res.status(401).json({ error: 'Not authenticated' });
-    }
-
-    // Get game data from activeGames map in backgammon_commands.js
-    const game = Array.from(activeGames.values())
-        .find(g => g.messageId === req.params.id);
-
-    if (!game) {
-        return res.status(404).json({ error: 'Game not found' });
-    }
-
-    res.json({
-        wager: game.wager,
-        challenger: game.challenger,
-        timestamp: game.timestamp
-    });
-});
-
 // Add command handlers
 async function handleProfileCommands(message, client) {
   try {
