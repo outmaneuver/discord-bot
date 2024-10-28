@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, REST } from 'discord.js';
+import { Client, GatewayIntentBits, REST, PermissionsBitField } from 'discord.js';
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
@@ -29,6 +29,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Fix the client initialization with proper intents
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -36,9 +37,10 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildPresences,
-    // Add these intents
-    GatewayIntentBits.GuildRoles,
-    GatewayIntentBits.GuildModeration
+    // Remove undefined intents and use proper ones
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.DirectMessageReactions
   ],
   partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
 });
@@ -122,12 +124,12 @@ client.on('ready', async () => {
   console.log('Bot permissions:', permissions);
   
   const requiredPermissions = [
-    'ManageRoles',
-    'ViewChannel',
-    'SendMessages'
+    PermissionsBitField.Flags.ManageRoles,
+    PermissionsBitField.Flags.ViewChannel,
+    PermissionsBitField.Flags.SendMessages
   ];
   
-  const missingPermissions = requiredPermissions.filter(perm => !permissions.includes(perm));
+  const missingPermissions = requiredPermissions.filter(perm => !botMember.permissions.has(perm));
   if (missingPermissions.length > 0) {
     console.error('Missing required permissions:', missingPermissions);
     console.error('Please add these permissions to the bot role in Discord');
