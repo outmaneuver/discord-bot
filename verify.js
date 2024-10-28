@@ -12,7 +12,6 @@ const redis = new Redis(process.env.REDIS_URL, {
   }
 });
 
-const connection = new Connection(config.solana.rpcUrl);
 const BUX_TOKEN_MINT = process.env.BUX_TOKEN_MINT;
 const GUILD_ID = process.env.GUILD_ID;
 
@@ -76,15 +75,29 @@ async function initializeHashlists() {
 // Call initialization
 initializeHashlists().catch(console.error);
 
+// Add rate limiting utility function
+const rateLimit = async (fn, delay = 1000) => {
+  await new Promise(resolve => setTimeout(resolve, delay));
+  return fn();
+};
+
+// Move token account fetching into a function
+async function getTokenAccounts(walletAddress) {
+  try {
+    const pubKey = new PublicKey(walletAddress);
+    return await rateLimit(() => 
+      connection.getParsedTokenAccountsByOwner(pubKey, { programId: TOKEN_PROGRAM_ID })
+    );
+  } catch (error) {
+    console.error('Error fetching token accounts:', error);
+    throw error;
+  }
+}
+
+// Use the function in getBUXBalance
 export async function getBUXBalance(walletAddress) {
   try {
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-      new PublicKey(walletAddress),
-      {
-        programId: TOKEN_PROGRAM_ID,
-        mint: new PublicKey(BUX_TOKEN_MINT)
-      }
-    );
+    const tokenAccounts = await getTokenAccounts(walletAddress);
 
     let totalBalance = 0;
     for (const account of tokenAccounts.value) {
@@ -451,17 +464,6 @@ export async function verifyHolder(walletData, userId, client) {
   }
 }
 
-// Add rate limiting for RPC calls
-const rateLimit = async (fn, delay = 1000) => {
-  await new Promise(resolve => setTimeout(resolve, delay));
-  return fn();
-};
-
-// Use for RPC calls
-const tokenAccounts = await rateLimit(() => 
-  connection.getParsedTokenAccountsByOwner(pubKey, { programId: TOKEN_PROGRAM_ID })
-);
-
 // Add input validation middleware
 const validateWalletAddress = (req, res, next) => {
   const { walletAddress } = req.body;
@@ -488,4 +490,3 @@ const validateWalletAddress = (req, res, next) => {
 app.post('/holder-verify/verify', validateWalletAddress, async (req, res) => {
   // ... existing code
 });
-
