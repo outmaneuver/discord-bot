@@ -159,18 +159,29 @@ export async function verifyHolder(walletData, userId, client) {
 export async function updateDiscordRoles(userId, client) {
   try {
     const guild = client.guilds.cache.get(GUILD_ID);
+    if (!guild) {
+      throw new Error('Guild not found');
+    }
+
     const member = await guild.members.fetch(userId);
+    if (!member) {
+      throw new Error('Member not found');
+    }
     
     // Get NFT counts from Redis
     const nftCounts = await redis.hgetall(`user:${userId}:nfts`);
+    if (!nftCounts) {
+      console.log('No NFT data found for user:', userId);
+      return;
+    }
     
     // Update roles based on NFT ownership
     const roles = [];
-    if (nftCounts.fcked_catz > 0) roles.push('FCKED CATZ HOLDER');
-    if (nftCounts.celebcatz > 0) roles.push('CELEBCATZ HOLDER');
-    if (nftCounts.money_monsters > 0) roles.push('MONEY MONSTERS HOLDER');
-    if (nftCounts.money_monsters3d > 0) roles.push('MONEY MONSTERS 3D HOLDER');
-    if (nftCounts.ai_bitbots > 0) roles.push('AI BITBOTS HOLDER');
+    if (nftCounts.fcked_catz?.length > 0) roles.push('FCKED CATZ HOLDER');
+    if (nftCounts.celebcatz?.length > 0) roles.push('CELEBCATZ HOLDER');
+    if (nftCounts.money_monsters?.length > 0) roles.push('MONEY MONSTERS HOLDER');
+    if (nftCounts.money_monsters3d?.length > 0) roles.push('MONEY MONSTERS 3D HOLDER');
+    if (nftCounts.ai_bitbots?.length > 0) roles.push('AI BITBOTS HOLDER');
     
     // Add roles to member
     for (const roleName of roles) {
@@ -180,7 +191,11 @@ export async function updateDiscordRoles(userId, client) {
       }
     }
   } catch (error) {
-    console.error('Error updating Discord roles:', error);
+    console.error('Error updating Discord roles:', {
+      userId,
+      error: error.message,
+      stack: error.stack
+    });
     throw error;
   }
 }
@@ -210,7 +225,7 @@ export function validateWalletAddress(req, res, next) {
 // Update the checkNFTOwnership function to use local hashlists only
 export async function checkNFTOwnership(walletAddress) {
   try {
-    // Get stored NFT data from Redis instead of making RPC calls
+    // Get stored NFT data from Redis
     const nftData = await redis.hgetall(`wallet:${walletAddress}:nfts`);
     
     // If we have cached data, use it
@@ -224,16 +239,20 @@ export async function checkNFTOwnership(walletAddress) {
       };
     }
 
-    // If no cached data, check against hashlists
+    // If no cached data, return empty arrays
     return {
-      fcked_catz: Array.from(fckedCatzHashlist),
-      celebcatz: Array.from(celebCatzHashlist),
-      money_monsters: Array.from(moneyMonstersHashlist),
-      money_monsters3d: Array.from(moneyMonsters3dHashlist),
-      ai_bitbots: Array.from(aiBitbotsHashlist)
+      fcked_catz: [],
+      celebcatz: [],
+      money_monsters: [],
+      money_monsters3d: [],
+      ai_bitbots: []
     };
   } catch (error) {
-    console.error('Error checking NFT ownership:', error);
+    console.error('Error checking NFT ownership:', {
+      walletAddress,
+      error: error.message,
+      stack: error.stack
+    });
     throw error;
   }
 }
