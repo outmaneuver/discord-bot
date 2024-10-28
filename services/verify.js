@@ -189,7 +189,7 @@ export async function updateDiscordRoles(userId, client) {
         if (guild) {
           console.log('Successfully fetched guild:', guild.name);
           // Get the full guild object with roles
-          guild = await guild.fetch({ force: true });
+          guild = await guild.fetch({ force: true, cache: true });
         } else {
           throw new Error('Guild not found after fetch attempt');
         }
@@ -200,11 +200,11 @@ export async function updateDiscordRoles(userId, client) {
     }
 
     // Ensure roles are cached
-    await guild.roles.fetch(undefined, { force: true });
+    await guild.roles.fetch(undefined, { force: true, cache: true });
     console.log('Available roles:', Array.from(guild.roles.cache.values()).map(r => r.name).join(', '));
 
     // Fetch member with force refresh
-    const member = await guild.members.fetch({ user: userId, force: true });
+    const member = await guild.members.fetch({ user: userId, force: true, cache: true });
     if (!member) {
       console.error('Member not found:', userId);
       throw new Error('Member not found');
