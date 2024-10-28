@@ -6,36 +6,56 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { config } from '../config/config.js';
 
-// Update Redis configuration
+// Update Redis configuration with better error handling and logging
 export const redis = new Redis(config.redis.url, {
   ...config.redis.options,
   retryStrategy: function(times) {
     const delay = Math.min(times * 50, 2000);
-    console.log(`Redis connection attempt ${times}, retrying in ${delay}ms`);
+    console.log(`Redis connection attempt ${times}, retrying in ${delay}ms`, {
+      attempt: times,
+      delay,
+      url: config.redis.url.replace(/redis:\/\/.*@/, 'redis://***@') // Hide credentials in logs
+    });
     return delay;
   },
   maxRetriesPerRequest: 3,
   enableReadyCheck: true,
   reconnectOnError: function(err) {
-    const targetError = 'READONLY';
-    if (err.message.includes(targetError)) {
-      console.log('Redis connection error:', err.message);
-      return true; // Only reconnect on READONLY error
-    }
-    return false;
-  }
+    console.error('Redis reconnect error:', {
+      error: err.message,
+      code: err.code,
+      command: err.command,
+      timestamp: new Date().toISOString()
+    });
+    return true; // Always try to reconnect
+  },
+  showFriendlyErrorStack: true
 });
 
 redis.on('error', (err) => {
-  console.error('Redis connection error:', err);
+  console.error('Redis connection error:', {
+    error: err.message,
+    code: err.code,
+    stack: err.stack,
+    timestamp: new Date().toISOString()
+  });
 });
 
 redis.on('connect', () => {
-  console.log('Redis connected successfully');
+  console.log('Redis connected successfully', {
+    timestamp: new Date().toISOString(),
+    url: config.redis.url.replace(/redis:\/\/.*@/, 'redis://***@')
+  });
 });
 
 redis.on('ready', () => {
-  console.log('Redis client ready');
+  console.log('Redis client ready', {
+    timestamp: new Date().toISOString(),
+    options: {
+      ...config.redis.options,
+      password: '***' // Hide password in logs
+    }
+  });
 });
 
 // Use config values
