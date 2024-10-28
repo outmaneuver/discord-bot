@@ -36,6 +36,9 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildPresences,
+    // Add these intents
+    GatewayIntentBits.GuildRoles,
+    GatewayIntentBits.GuildModeration
   ],
   partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
 });
@@ -101,35 +104,37 @@ client.on('interactionCreate', async (interaction) => {
 client.on('ready', async () => {
   console.log(`Logged in as ${client.user.tag}!`);
   
-  // Verify guild access and permissions
   const guild = client.guilds.cache.get(process.env.GUILD_ID);
-  if (guild) {
-    console.log(`Connected to guild: ${guild.name}`);
-    
-    // Check bot's permissions
-    const botMember = guild.members.cache.get(client.user.id);
-    if (botMember) {
-      const permissions = botMember.permissions.toArray();
-      console.log('Bot permissions:', permissions);
-      
-      const requiredPermissions = [
-        'MANAGE_ROLES',
-        'VIEW_CHANNEL',
-        'SEND_MESSAGES'
-      ];
-      
-      const missingPermissions = requiredPermissions.filter(perm => !permissions.includes(perm));
-      if (missingPermissions.length > 0) {
-        console.error('Missing required permissions:', missingPermissions);
-      } else {
-        console.log('Bot has all required permissions');
-      }
-    } else {
-      console.error('Bot member not found in guild');
-    }
-  } else {
+  if (!guild) {
     console.error(`Could not find guild with ID: ${process.env.GUILD_ID}`);
+    process.exit(1);
   }
+
+  console.log(`Connected to guild: ${guild.name}`);
+  
+  const botMember = guild.members.cache.get(client.user.id);
+  if (!botMember) {
+    console.error('Bot member not found in guild');
+    process.exit(1);
+  }
+
+  const permissions = botMember.permissions.toArray();
+  console.log('Bot permissions:', permissions);
+  
+  const requiredPermissions = [
+    'ManageRoles',
+    'ViewChannel',
+    'SendMessages'
+  ];
+  
+  const missingPermissions = requiredPermissions.filter(perm => !permissions.includes(perm));
+  if (missingPermissions.length > 0) {
+    console.error('Missing required permissions:', missingPermissions);
+    console.error('Please add these permissions to the bot role in Discord');
+    process.exit(1);
+  }
+
+  console.log('Bot has all required permissions');
 });
 
 console.log('Discord client created');
