@@ -222,7 +222,10 @@ export async function updateDiscordRoles(userId, client) {
     const nftCounts = await redis.hgetall(`user:${userId}:nfts`);
     if (!nftCounts) {
       console.log('No NFT data found for user:', userId);
-      return;
+      return {
+        success: false,
+        error: 'No NFT data found'
+      };
     }
     
     // Parse NFT data
@@ -246,12 +249,19 @@ export async function updateDiscordRoles(userId, client) {
     
     console.log('Role updates needed for user:', userId, roleUpdates);
     
+    // Track successful and failed role updates
+    const results = {
+      success: [],
+      failed: []
+    };
+
     // Add roles to member
     for (const roleName of roleUpdates) {
       const role = guild.roles.cache.find(r => r.name === roleName);
       if (!role) {
         console.error(`Role not found: ${roleName}, available roles:`, 
           Array.from(guild.roles.cache.values()).map(r => `${r.name} (${r.id})`).join(', '));
+        results.failed.push({ role: roleName, reason: 'Role not found' });
         continue;
       }
       
@@ -259,19 +269,27 @@ export async function updateDiscordRoles(userId, client) {
         try {
           await member.roles.add(role);
           console.log(`Added role ${roleName} (${role.id}) to user ${userId}`);
+          results.success.push(roleName);
         } catch (error) {
           console.error(`Error adding role ${roleName} (${role.id}) to user ${userId}:`, error);
+          results.failed.push({ role: roleName, reason: error.message });
         }
       } else {
         console.log(`User ${userId} already has role ${roleName} (${role.id})`);
+        results.success.push(roleName);
       }
     }
 
-    // Return success
+    // Return detailed results
     return {
-      success: true,
-      roles: roleUpdates,
-      message: 'Roles updated successfully'
+      success: results.success.length > 0 || results.failed.length === 0,
+      roles: {
+        added: results.success,
+        failed: results.failed
+      },
+      message: results.failed.length === 0 ? 
+        'All roles updated successfully' : 
+        'Some roles failed to update'
     };
 
   } catch (error) {
