@@ -174,10 +174,10 @@ export async function updateDiscordRoles(userId, client) {
     }
 
     // Get guild directly from client
-    const guild = client.guilds.cache.get(process.env.GUILD_ID);
+    let guild = client.guilds.cache.get(process.env.GUILD_ID);
     
     if (!guild) {
-      console.error('Guild not found:', {
+      console.error('Guild not found in cache:', {
         guildId: process.env.GUILD_ID,
         availableGuilds: Array.from(client.guilds.cache.keys()),
         clientStatus: client.isReady() ? 'ready' : 'not ready'
@@ -185,10 +185,9 @@ export async function updateDiscordRoles(userId, client) {
       
       // Try to fetch guild
       try {
-        const fetchedGuild = await client.guilds.fetch(process.env.GUILD_ID);
-        if (fetchedGuild) {
-          console.log('Successfully fetched guild');
-          guild = fetchedGuild;
+        guild = await client.guilds.fetch(process.env.GUILD_ID);
+        if (guild) {
+          console.log('Successfully fetched guild:', guild.name);
         } else {
           throw new Error('Guild not found after fetch attempt');
         }
@@ -200,10 +199,10 @@ export async function updateDiscordRoles(userId, client) {
 
     // Ensure roles are cached
     const roles = await guild.roles.fetch();
-    console.log('Fetched roles:', Array.from(roles.cache.values()).map(r => r.name));
+    console.log('Available roles:', Array.from(roles.cache.values()).map(r => r.name));
 
     // Fetch member with force refresh
-    const member = await guild.members.fetch({ user: userId, force: true });
+    const member = await guild.members.fetch(userId);
     if (!member) {
       console.error('Member not found:', userId);
       throw new Error('Member not found');
@@ -225,7 +224,7 @@ export async function updateDiscordRoles(userId, client) {
       ai_bitbots: nftCounts.ai_bitbots ? JSON.parse(nftCounts.ai_bitbots).length : 0
     };
     
-    console.log('Parsed NFT counts:', parsedCounts);
+    console.log('Parsed NFT counts for user:', userId, parsedCounts);
     
     // Update roles based on NFT ownership
     const roleUpdates = [];
@@ -235,7 +234,7 @@ export async function updateDiscordRoles(userId, client) {
     if (parsedCounts.money_monsters3d > 0) roleUpdates.push('MONSTER 3D');
     if (parsedCounts.ai_bitbots > 0) roleUpdates.push('BITBOT');
     
-    console.log('Role updates needed:', roleUpdates);
+    console.log('Role updates needed for user:', userId, roleUpdates);
     
     // Add roles to member
     for (const roleName of roleUpdates) {
@@ -253,6 +252,8 @@ export async function updateDiscordRoles(userId, client) {
         } catch (error) {
           console.error(`Error adding role ${roleName} to user ${userId}:`, error);
         }
+      } else {
+        console.log(`User ${userId} already has role ${roleName}`);
       }
     }
   } catch (error) {
