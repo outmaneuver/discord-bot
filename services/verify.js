@@ -190,6 +190,7 @@ export async function updateDiscordRoles(userId, client) {
           console.log('Successfully fetched guild:', guild.name);
           // Get the full guild object with roles
           guild = await guild.fetch({ force: true, cache: true });
+          await guild.members.fetch(); // Fetch all members
         } else {
           throw new Error('Guild not found after fetch attempt');
         }
@@ -201,7 +202,7 @@ export async function updateDiscordRoles(userId, client) {
 
     // Ensure roles are cached
     await guild.roles.fetch(undefined, { force: true, cache: true });
-    console.log('Available roles:', Array.from(guild.roles.cache.values()).map(r => r.name).join(', '));
+    console.log('Available roles:', Array.from(guild.roles.cache.values()).map(r => `${r.name} (${r.id})`).join(', '));
 
     // Fetch member with force refresh
     const member = await guild.members.fetch({ user: userId, force: true, cache: true });
@@ -209,6 +210,13 @@ export async function updateDiscordRoles(userId, client) {
       console.error('Member not found:', userId);
       throw new Error('Member not found');
     }
+
+    // Log member details
+    console.log('Member found:', {
+      id: member.id,
+      displayName: member.displayName,
+      roles: Array.from(member.roles.cache.values()).map(r => r.name)
+    });
     
     // Get NFT counts from Redis
     const nftCounts = await redis.hgetall(`user:${userId}:nfts`);
@@ -243,19 +251,19 @@ export async function updateDiscordRoles(userId, client) {
       const role = guild.roles.cache.find(r => r.name === roleName);
       if (!role) {
         console.error(`Role not found: ${roleName}, available roles:`, 
-          Array.from(guild.roles.cache.values()).map(r => r.name).join(', '));
+          Array.from(guild.roles.cache.values()).map(r => `${r.name} (${r.id})`).join(', '));
         continue;
       }
       
       if (!member.roles.cache.has(role.id)) {
         try {
           await member.roles.add(role);
-          console.log(`Added role ${roleName} to user ${userId}`);
+          console.log(`Added role ${roleName} (${role.id}) to user ${userId}`);
         } catch (error) {
-          console.error(`Error adding role ${roleName} to user ${userId}:`, error);
+          console.error(`Error adding role ${roleName} (${role.id}) to user ${userId}:`, error);
         }
       } else {
-        console.log(`User ${userId} already has role ${roleName}`);
+        console.log(`User ${userId} already has role ${roleName} (${role.id})`);
       }
     }
   } catch (error) {
