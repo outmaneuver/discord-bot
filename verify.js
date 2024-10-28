@@ -4,6 +4,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { config } from './config.js';
 
 const redis = new Redis(process.env.REDIS_URL, {
   tls: {
@@ -11,7 +12,7 @@ const redis = new Redis(process.env.REDIS_URL, {
   }
 });
 
-const connection = new Connection(process.env.SOLANA_RPC_URL);
+const connection = new Connection(config.solana.rpcUrl);
 const BUX_TOKEN_MINT = process.env.BUX_TOKEN_MINT;
 const GUILD_ID = process.env.GUILD_ID;
 
@@ -487,3 +488,4 @@ const validateWalletAddress = (req, res, next) => {
 app.post('/holder-verify/verify', validateWalletAddress, async (req, res) => {
   // ... existing code
 });
+
