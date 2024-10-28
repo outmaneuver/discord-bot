@@ -204,7 +204,9 @@ app.get('/auth/status', (req, res) => {
 });
 
 // Verify endpoint
-app.post('/holder-verify/verify', async (req, res) => {
+import { validateWalletAddress } from './verify.js';
+
+app.post('/holder-verify/verify', validateWalletAddress, async (req, res) => {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ success: false, error: 'Not authenticated' });
   }
@@ -234,7 +236,7 @@ app.post('/holder-verify/verify', async (req, res) => {
       success: false,
       error: 'Internal server error',
       details: error.message,
-      requestBody: req.body // Add this for debugging
+      requestBody: req.body
     });
   }
 });

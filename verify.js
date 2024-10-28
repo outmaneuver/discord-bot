@@ -464,8 +464,8 @@ export async function verifyHolder(walletData, userId, client) {
   }
 }
 
-// Add input validation middleware
-const validateWalletAddress = (req, res, next) => {
+// Instead, export the middleware
+export const validateWalletAddress = (req, res, next) => {
   const { walletAddress } = req.body;
   
   if (!walletAddress || typeof walletAddress !== 'string' || walletAddress.length !== 44) {
@@ -485,8 +485,3 @@ const validateWalletAddress = (req, res, next) => {
     });
   }
 };
-
-// Use middleware
-app.post('/holder-verify/verify', validateWalletAddress, async (req, res) => {
-  // ... existing code
-});
