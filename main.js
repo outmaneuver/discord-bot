@@ -12,8 +12,9 @@ import path from 'path';
 import { WebSocket, WebSocketServer } from 'ws';
 
 import { initializeSalesListings } from './services/sales.js';
-import { verifyHolder, sendVerificationMessage, updateDiscordRoles } from './services/verify.js';
+import { verifyHolder, sendVerificationMessage, updateDiscordRoles, validateWalletAddress } from './services/verify.js';
 import { updateUserProfile } from './services/profile.js';
+import { config } from './config/config.js';
 
 // Add this near the top of the file, after the imports
 global.userWallets = new Map();
