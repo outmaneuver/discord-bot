@@ -9,16 +9,16 @@ import Redis from 'ioredis';
 import RedisStore from 'connect-redis';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import { WebSocket, WebSocketServer } from 'ws';
 
-import { initializeSalesListings } from './services/sales.js';
-import { verifyHolder, sendVerificationMessage, updateDiscordRoles } from './services/verify.js';
-import { updateUserProfile } from './services/profile.js';
+import { initializeSalesListings } from './sales_listings.js';
+import { verifyHolder, sendVerificationMessage, updateDiscordRoles } from './verify.js';
+import { updateUserProfile } from './profile.js';
 
-import { handleMainCommands, handleButtonInteraction, handleMainInteraction } from './commands/main.js';
-import { handleVerifyCommands, handleVerifyInteraction } from './commands/verify.js';
-import { handleProfileCommands, handleProfileInteraction } from './commands/profile.js';
-import { handleSalesListingsCommands } from './commands/sales.js';
-import { config } from './config/config.js';
+import { handleMainCommands, handleButtonInteraction, handleMainInteraction } from './main_commands.js';
+import { handleVerifyCommands, handleVerifyInteraction } from './verify_commands.js';
+import { handleProfileCommands, handleProfileInteraction } from './profile_commands.js';
+import { handleSalesListingsCommands } from './sales_listings_commands.js';
 
 // Add this near the top of the file, after the imports
 global.userWallets = new Map();
@@ -38,6 +38,7 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildPresences,
+    // Remove undefined intents and use proper ones
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.DirectMessageReactions
@@ -463,3 +464,77 @@ app.get('/api/games/:id', (req, res) => {
         timestamp: game.timestamp
     });
 });
+
+// Add after Express server setup
+const wss = new WebSocketServer({ server });
+
+// Store active game connections
+const gameConnections = new Map();
+
+wss.on('connection', (ws, req) => {
+    const gameId = new URLSearchParams(req.url.slice(1)).get('game');
+    if (!gameId) {
+        ws.close();
+        return;
+    }
+
+    // Store connection
+    if (!gameConnections.has(gameId)) {
+        gameConnections.set(gameId, new Set());
+    }
+    gameConnections.get(gameId).add(ws);
+
+    ws.on('message', async (message) => {
+        try {
+            const data = JSON.parse(message);
+            
+            // Handle different message types
+            switch (data.type) {
+                case 'move':
+                    // Broadcast move to other player
+                    broadcastToGame(gameId, ws, data);
+                    break;
+                case 'roll':
+                    // Broadcast dice roll
+                    broadcastToGame(gameId, ws, data);
+                    break;
+                case 'resign':
+                    // Handle game end
+                    const game = activeGames.get(data.challengerId);
+                    if (game) {
+                        await handleGameEnd(data.winnerId, data.loserId, game.wager);
+                        broadcastToGame(gameId, ws, {
+                            type: 'game_end',
+                            winner: data.winnerId,
+                            wager: game.wager
+                        });
+                    }
+                    break;
+            }
+        } catch (error) {
+            console.error('Error handling WebSocket message:', error);
+        }
+    });
+
+    ws.on('close', () => {
+        // Remove connection when client disconnects
+        const connections = gameConnections.get(gameId);
+        if (connections) {
+            connections.delete(ws);
+            if (connections.size === 0) {
+                gameConnections.delete(gameId);
+            }
+        }
+    });
+});
+
+function broadcastToGame(gameId, sender, data) {
+    const connections = gameConnections.get(gameId);
+    if (connections) {
+        connections.forEach(client => {
+            if (client !== sender && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify(data));
+            }
+        });
+    }
+}
