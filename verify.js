@@ -15,6 +15,9 @@ const redis = new Redis(process.env.REDIS_URL, {
 const BUX_TOKEN_MINT = process.env.BUX_TOKEN_MINT;
 const GUILD_ID = process.env.GUILD_ID;
 
+// Initialize Solana connection
+const connection = new Connection(config.solana.rpcUrl);
+
 // Add verification message function
 export async function sendVerificationMessage(channel) {
   const embed = new EmbedBuilder()
@@ -98,11 +101,13 @@ async function getTokenAccounts(walletAddress) {
 export async function getBUXBalance(walletAddress) {
   try {
     const tokenAccounts = await getTokenAccounts(walletAddress);
-
     let totalBalance = 0;
+    
     for (const account of tokenAccounts.value) {
-      const amount = account.account.data.parsed.info.tokenAmount.uiAmount;
-      totalBalance += amount;
+      if (account.account.data.parsed.info.mint === BUX_TOKEN_MINT) {
+        const amount = account.account.data.parsed.info.tokenAmount.uiAmount;
+        totalBalance += amount;
+      }
     }
 
     console.log(`Fetched BUX balance for ${walletAddress}: ${totalBalance}`);
