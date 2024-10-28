@@ -449,3 +449,41 @@ export async function verifyHolder(walletData, userId, client) {
     throw error;
   }
 }
+
+// Add rate limiting for RPC calls
+const rateLimit = async (fn, delay = 1000) => {
+  await new Promise(resolve => setTimeout(resolve, delay));
+  return fn();
+};
+
+// Use for RPC calls
+const tokenAccounts = await rateLimit(() => 
+  connection.getParsedTokenAccountsByOwner(pubKey, { programId: TOKEN_PROGRAM_ID })
+);
+
+// Add input validation middleware
+const validateWalletAddress = (req, res, next) => {
+  const { walletAddress } = req.body;
+  
+  if (!walletAddress || typeof walletAddress !== 'string' || walletAddress.length !== 44) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid wallet address format'
+    });
+  }
+  
+  try {
+    new PublicKey(walletAddress);
+    next();
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      error: 'Invalid Solana wallet address'
+    });
+  }
+};
+
+// Use middleware
+app.post('/holder-verify/verify', validateWalletAddress, async (req, res) => {
+  // ... existing code
+});

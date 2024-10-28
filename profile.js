@@ -10,6 +10,18 @@ const redis = new Redis(process.env.REDIS_URL, {
   }
 });
 
+// Add caching for NFT data
+const NFT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+const getCachedNFTData = async (walletAddress) => {
+  const cached = await redis.get(`nft:${walletAddress}`);
+  if (cached) return JSON.parse(cached);
+  
+  const data = await checkNFTOwnership(walletAddress);
+  await redis.setex(`nft:${walletAddress}`, NFT_CACHE_TTL / 1000, JSON.stringify(data));
+  return data;
+};
+
 // Export getWalletData function
 export async function getWalletData(userId) {
   try {
@@ -69,7 +81,7 @@ async function aggregateWalletData(walletData) {
       let retries = 3;
       while (retries > 0) {
         try {
-          nftCounts = await checkNFTOwnership(walletAddress);
+          nftCounts = await getCachedNFTData(walletAddress);
           break;
         } catch (error) {
           if (error.message.includes('429') && retries > 1) {

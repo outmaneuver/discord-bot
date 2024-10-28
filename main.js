@@ -368,3 +368,21 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 console.log('Application setup complete');
+
+// Add structured error logging
+const logError = (context, error) => {
+  console.error({
+    timestamp: new Date().toISOString(),
+    context,
+    error: error.message,
+    stack: error.stack
+  });
+};
+
+// Example usage in a try-catch block
+try {
+  // Your code here
+} catch (error) {
+  logError('verifyHolder', error);
+  throw error;
+}
