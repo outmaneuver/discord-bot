@@ -453,61 +453,99 @@ function formatNFTCounts(nftCounts) {
     .join('\n');
 }
 
+// Verify holder function
 export async function verifyHolder(walletData, userId, client) {
   try {
     const walletAddress = walletData.walletAddress;
-    console.log(`Verifying wallet: ${walletAddress}`);
+    const publicKey = new PublicKey(walletAddress);
     
-    // Validate wallet address format
-    if (typeof walletAddress !== 'string' || walletAddress.length !== 44) {
-      throw new Error('Invalid wallet address format');
-    }
+    // Get token accounts
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+      programId: TOKEN_PROGRAM_ID
+    });
 
-    try {
-      new PublicKey(walletAddress);
-    } catch (err) {
-      throw new Error('Invalid Solana wallet address');
-    }
+    // Check NFT ownership
+    const nftCounts = {
+      fcked_catz: Array.from(fckedCatzHashlist).filter(mint => 
+        tokenAccounts.value.some(acc => acc.account.data.parsed.info.mint === mint)),
+      celebcatz: Array.from(celebCatzHashlist).filter(mint => 
+        tokenAccounts.value.some(acc => acc.account.data.parsed.info.mint === mint)),
+      money_monsters: Array.from(moneyMonstersHashlist).filter(mint => 
+        tokenAccounts.value.some(acc => acc.account.data.parsed.info.mint === mint)),
+      money_monsters3d: Array.from(moneyMonsters3dHashlist).filter(mint => 
+        tokenAccounts.value.some(acc => acc.account.data.parsed.info.mint === mint)),
+      ai_bitbots: Array.from(aiBitbotsHashlist).filter(mint => 
+        tokenAccounts.value.some(acc => acc.account.data.parsed.info.mint === mint))
+    };
 
-    const nftCounts = await checkNFTOwnership(walletAddress);
-    console.log('NFT counts:', nftCounts);
-    
-    const buxBalance = await getBUXBalance(walletAddress);
-    console.log('BUX balance:', buxBalance);
-    
-    const rolesUpdated = await updateDiscordRoles(userId, { nftCounts, buxBalance }, client);
-    
+    // Store NFT counts in Redis
+    await redis.hset(`user:${userId}:nfts`, nftCounts);
+
+    // Update Discord roles
+    await updateDiscordRoles(userId, client);
+
     return {
       success: true,
-      rolesUpdated,
       nftCounts,
-      buxBalance,
-      formattedResponse: `Successfully verified wallet!\n\n**NFT Holdings**:\n${formatNFTCounts(nftCounts)}\n\n**BUX Balance**: ${buxBalance} BUX`
+      message: 'Wallet verified and roles updated successfully'
     };
   } catch (error) {
-    console.error('Error in verifyHolder:', error);
+    console.error('Error verifying holder:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+// Update Discord roles function
+export async function updateDiscordRoles(userId, client) {
+  try {
+    const guild = client.guilds.cache.get(GUILD_ID);
+    const member = await guild.members.fetch(userId);
+    
+    // Get NFT counts from Redis
+    const nftCounts = await redis.hgetall(`user:${userId}:nfts`);
+    
+    // Update roles based on NFT ownership
+    const roles = [];
+    if (nftCounts.fcked_catz > 0) roles.push('FCKED CATZ HOLDER');
+    if (nftCounts.celebcatz > 0) roles.push('CELEBCATZ HOLDER');
+    if (nftCounts.money_monsters > 0) roles.push('MONEY MONSTERS HOLDER');
+    if (nftCounts.money_monsters3d > 0) roles.push('MONEY MONSTERS 3D HOLDER');
+    if (nftCounts.ai_bitbots > 0) roles.push('AI BITBOTS HOLDER');
+    
+    // Add roles to member
+    for (const roleName of roles) {
+      const role = guild.roles.cache.find(r => r.name === roleName);
+      if (role && !member.roles.cache.has(role.id)) {
+        await member.roles.add(role);
+      }
+    }
+  } catch (error) {
+    console.error('Error updating Discord roles:', error);
     throw error;
   }
 }
 
-// Instead, export the middleware
-export const validateWalletAddress = (req, res, next) => {
+// Validate wallet address middleware
+export function validateWalletAddress(req, res, next) {
   const { walletAddress } = req.body;
   
-  if (!walletAddress || typeof walletAddress !== 'string' || walletAddress.length !== 44) {
+  if (!walletAddress) {
     return res.status(400).json({
       success: false,
-      error: 'Invalid wallet address format'
+      error: 'No wallet address provided'
     });
   }
-  
+
   try {
     new PublicKey(walletAddress);
     next();
-  } catch (err) {
-    res.status(400).json({
+  } catch (error) {
+    return res.status(400).json({
       success: false,
-      error: 'Invalid Solana wallet address'
+      error: 'Invalid wallet address'
     });
   }
-};
+}
