@@ -61,19 +61,24 @@ let aiBitbotsHashlist;
 
 // Initialize hashlists
 async function initializeHashlists() {
-  fckedCatzHashlist = await loadHashlist('fcked_catz.json');
-  celebCatzHashlist = await loadHashlist('celebcatz.json');
-  moneyMonstersHashlist = await loadHashlist('money_monsters.json');
-  moneyMonsters3dHashlist = await loadHashlist('money_monsters3d.json');
-  aiBitbotsHashlist = await loadHashlist('ai_bitbots.json');
-  
-  console.log('Hashlists loaded:', {
-    fckedCatz: fckedCatzHashlist.size,
-    celebCatz: celebCatzHashlist.size,
-    moneyMonsters: moneyMonstersHashlist.size,
-    moneyMonsters3d: moneyMonsters3dHashlist.size,
-    aiBitbots: aiBitbotsHashlist.size
-  });
+  try {
+    fckedCatzHashlist = await loadHashlist('fcked_catz.json');
+    celebCatzHashlist = await loadHashlist('celebcatz.json');
+    moneyMonstersHashlist = await loadHashlist('money_monsters.json');
+    moneyMonsters3dHashlist = await loadHashlist('money_monsters3d.json');
+    aiBitbotsHashlist = await loadHashlist('ai_bitbots.json');
+    
+    console.log('Hashlists loaded:', {
+      fckedCatz: fckedCatzHashlist.size,
+      celebCatz: celebCatzHashlist.size,
+      moneyMonsters: moneyMonstersHashlist.size,
+      moneyMonsters3d: moneyMonsters3dHashlist.size,
+      aiBitbots: aiBitbotsHashlist.size
+    });
+  } catch (error) {
+    console.error('Error initializing hashlists:', error);
+    throw error;
+  }
 }
 
 // Call initialization
