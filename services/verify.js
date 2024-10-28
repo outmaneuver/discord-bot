@@ -6,7 +6,8 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { config } from '../config/config.js';  // Changed from './config.js' to '../config/config.js'
 
-const redis = new Redis(process.env.REDIS_URL, {
+// Export the Redis instance
+export const redis = new Redis(process.env.REDIS_URL, {
   tls: {
     rejectUnauthorized: false
   }

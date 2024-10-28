@@ -273,30 +273,6 @@ app.use((req, res, next) => {
   next();
 });
 
-let redis;
-try {
-  redis = new Redis(process.env.REDIS_URL, {
-    tls: {
-      rejectUnauthorized: false
-    }
-  });
-  console.log('Connected to Redis');
-} catch (error) {
-  console.warn('Failed to connect to Redis. Using in-memory storage instead.');
-  console.warn('Warning: Data will be lost on server restarts.');
-  redis = {
-    set: (key, value) => {
-      if (!global.inMemoryStorage) global.inMemoryStorage = new Map();
-      global.inMemoryStorage.set(key, value);
-      return Promise.resolve('OK');
-    },
-    get: (key) => {
-      if (!global.inMemoryStorage) return Promise.resolve(null);
-      return Promise.resolve(global.inMemoryStorage.get(key));
-    }
-  };
-}
-
 app.post('/store-wallet', async (req, res) => {
   if (!req.isAuthenticated()) {
     console.log('User not authenticated when trying to store wallet');
@@ -318,7 +294,7 @@ app.post('/store-wallet', async (req, res) => {
 
 async function storeWalletAddress(userId, walletAddress) {
   const key = `wallets:${userId}`;
-  await redis.sadd(key, walletAddress);
+  await redisClient.sadd(key, walletAddress);
 }
 
 // Catch-all route for 404 errors
