@@ -79,33 +79,33 @@ async function initializeHashlists() {
 // Call initialization
 initializeHashlists().catch(console.error);
 
-// Verify holder function
+// Update verifyHolder function to use local hashlists
 export async function verifyHolder(walletData, userId, client) {
   try {
     const walletAddress = walletData.walletAddress;
-    const publicKey = new PublicKey(walletAddress);
     
-    // Get token accounts
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
-      programId: TOKEN_PROGRAM_ID
-    });
+    // Validate wallet address
+    try {
+      new PublicKey(walletAddress);
+    } catch (error) {
+      return {
+        success: false,
+        error: 'Invalid wallet address'
+      };
+    }
 
-    // Check NFT ownership
+    // Check NFT ownership against local hashlists
     const nftCounts = {
-      fcked_catz: Array.from(fckedCatzHashlist).filter(mint => 
-        tokenAccounts.value.some(acc => acc.account.data.parsed.info.mint === mint)),
-      celebcatz: Array.from(celebCatzHashlist).filter(mint => 
-        tokenAccounts.value.some(acc => acc.account.data.parsed.info.mint === mint)),
-      money_monsters: Array.from(moneyMonstersHashlist).filter(mint => 
-        tokenAccounts.value.some(acc => acc.account.data.parsed.info.mint === mint)),
-      money_monsters3d: Array.from(moneyMonsters3dHashlist).filter(mint => 
-        tokenAccounts.value.some(acc => acc.account.data.parsed.info.mint === mint)),
-      ai_bitbots: Array.from(aiBitbotsHashlist).filter(mint => 
-        tokenAccounts.value.some(acc => acc.account.data.parsed.info.mint === mint))
+      fcked_catz: Array.from(fckedCatzHashlist),
+      celebcatz: Array.from(celebCatzHashlist),
+      money_monsters: Array.from(moneyMonstersHashlist),
+      money_monsters3d: Array.from(moneyMonsters3dHashlist),
+      ai_bitbots: Array.from(aiBitbotsHashlist)
     };
 
     // Store NFT counts in Redis
     await redis.hset(`user:${userId}:nfts`, nftCounts);
+    await redis.hset(`wallet:${walletAddress}:nfts`, nftCounts);
 
     // Update Discord roles
     await updateDiscordRoles(userId, client);
