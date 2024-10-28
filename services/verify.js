@@ -175,3 +175,32 @@ export function validateWalletAddress(req, res, next) {
     });
   }
 }
+
+// Add this function after the existing functions
+export async function checkNFTOwnership(walletAddress) {
+  try {
+    const publicKey = new PublicKey(walletAddress);
+    
+    // Get token accounts
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+      programId: TOKEN_PROGRAM_ID
+    });
+
+    // Check NFT ownership
+    return {
+      fcked_catz: Array.from(fckedCatzHashlist).filter(mint => 
+        tokenAccounts.value.some(acc => acc.account.data.parsed.info.mint === mint)),
+      celebcatz: Array.from(celebCatzHashlist).filter(mint => 
+        tokenAccounts.value.some(acc => acc.account.data.parsed.info.mint === mint)),
+      money_monsters: Array.from(moneyMonstersHashlist).filter(mint => 
+        tokenAccounts.value.some(acc => acc.account.data.parsed.info.mint === mint)),
+      money_monsters3d: Array.from(moneyMonsters3dHashlist).filter(mint => 
+        tokenAccounts.value.some(acc => acc.account.data.parsed.info.mint === mint)),
+      ai_bitbots: Array.from(aiBitbotsHashlist).filter(mint => 
+        tokenAccounts.value.some(acc => acc.account.data.parsed.info.mint === mint))
+    };
+  } catch (error) {
+    console.error('Error checking NFT ownership:', error);
+    throw error;
+  }
+}
