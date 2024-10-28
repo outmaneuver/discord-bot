@@ -190,7 +190,7 @@ export async function updateDiscordRoles(userId, client) {
           console.log('Successfully fetched guild:', guild.name);
           // Get the full guild object with roles
           guild = await guild.fetch({ force: true, cache: true });
-          await guild.members.fetch(); // Fetch all members
+          await guild.members.fetch({ force: true }); // Fetch all members
         } else {
           throw new Error('Guild not found after fetch attempt');
         }
@@ -201,7 +201,7 @@ export async function updateDiscordRoles(userId, client) {
     }
 
     // Ensure roles are cached
-    await guild.roles.fetch(undefined, { force: true, cache: true });
+    await guild.roles.fetch({ force: true, cache: true });
     console.log('Available roles:', Array.from(guild.roles.cache.values()).map(r => `${r.name} (${r.id})`).join(', '));
 
     // Fetch member with force refresh
@@ -215,7 +215,7 @@ export async function updateDiscordRoles(userId, client) {
     console.log('Member found:', {
       id: member.id,
       displayName: member.displayName,
-      roles: Array.from(member.roles.cache.values()).map(r => r.name)
+      roles: Array.from(member.roles.cache.values()).map(r => `${r.name} (${r.id})`)
     });
     
     // Get NFT counts from Redis
