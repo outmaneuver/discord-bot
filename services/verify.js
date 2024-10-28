@@ -84,7 +84,7 @@ async function initializeHashlists() {
 // Call initialization
 initializeHashlists().catch(console.error);
 
-// Update verifyHolder function to handle NFT counts correctly
+// Update verifyHolder function to properly check NFT ownership
 export async function verifyHolder(walletData, userId, client) {
   try {
     const walletAddress = walletData.walletAddress;
@@ -99,31 +99,52 @@ export async function verifyHolder(walletData, userId, client) {
       };
     }
 
+    // Get token accounts
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      new PublicKey(walletAddress),
+      { programId: TOKEN_PROGRAM_ID }
+    );
+
+    // Get owned token mints
+    const ownedMints = tokenAccounts.value.map(acc => 
+      acc.account.data.parsed.info.mint
+    );
+
     // Check NFT ownership against local hashlists
     const nftCounts = {
-      fcked_catz: Array.from(fckedCatzHashlist).filter(mint => true).length,
-      celebcatz: Array.from(celebCatzHashlist).filter(mint => true).length,
-      money_monsters: Array.from(moneyMonstersHashlist).filter(mint => true).length,
-      money_monsters3d: Array.from(moneyMonsters3dHashlist).filter(mint => true).length,
-      ai_bitbots: Array.from(aiBitbotsHashlist).filter(mint => true).length
+      fcked_catz: Array.from(fckedCatzHashlist).filter(mint => 
+        ownedMints.includes(mint)
+      ),
+      celebcatz: Array.from(celebCatzHashlist).filter(mint => 
+        ownedMints.includes(mint)
+      ),
+      money_monsters: Array.from(moneyMonstersHashlist).filter(mint => 
+        ownedMints.includes(mint)
+      ),
+      money_monsters3d: Array.from(moneyMonsters3dHashlist).filter(mint => 
+        ownedMints.includes(mint)
+      ),
+      ai_bitbots: Array.from(aiBitbotsHashlist).filter(mint => 
+        ownedMints.includes(mint)
+      )
     };
 
     // Store NFT counts in Redis
     await redis.hset(`user:${userId}:nfts`, {
-      fcked_catz: nftCounts.fcked_catz,
-      celebcatz: nftCounts.celebcatz,
-      money_monsters: nftCounts.money_monsters,
-      money_monsters3d: nftCounts.money_monsters3d,
-      ai_bitbots: nftCounts.ai_bitbots
+      fcked_catz: JSON.stringify(nftCounts.fcked_catz),
+      celebcatz: JSON.stringify(nftCounts.celebcatz),
+      money_monsters: JSON.stringify(nftCounts.money_monsters),
+      money_monsters3d: JSON.stringify(nftCounts.money_monsters3d),
+      ai_bitbots: JSON.stringify(nftCounts.ai_bitbots)
     });
 
     // Store the same data for the wallet
     await redis.hset(`wallet:${walletAddress}:nfts`, {
-      fcked_catz: nftCounts.fcked_catz,
-      celebcatz: nftCounts.celebcatz,
-      money_monsters: nftCounts.money_monsters,
-      money_monsters3d: nftCounts.money_monsters3d,
-      ai_bitbots: nftCounts.ai_bitbots
+      fcked_catz: JSON.stringify(nftCounts.fcked_catz),
+      celebcatz: JSON.stringify(nftCounts.celebcatz),
+      money_monsters: JSON.stringify(nftCounts.money_monsters),
+      money_monsters3d: JSON.stringify(nftCounts.money_monsters3d),
+      ai_bitbots: JSON.stringify(nftCounts.ai_bitbots)
     });
 
     // Update Discord roles
