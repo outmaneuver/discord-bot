@@ -40,14 +40,20 @@ const client = new Client({
   partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
 });
 
-// Add message event handler
+// Update the message event handler
 client.on('messageCreate', async (message) => {
   // Ignore messages from bots
   if (message.author.bot) return;
 
   try {
-    // Handle main commands
-    if (message.content.startsWith('=')) {
+    // Handle different command types based on prefix
+    if (message.content.startsWith('=profile')) {
+      await handleProfileCommands(message, client);
+    } else if (message.content.startsWith('=verify')) {
+      await handleVerifyCommands(message, client);
+    } else if (message.content.startsWith('=test')) {
+      await handleSalesListingsCommands(message);
+    } else if (message.content.startsWith('=')) {
       await handleMainCommands(message, client);
     }
   } catch (error) {
@@ -56,20 +62,38 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-// Add interaction event handler
+// Update the interaction event handler
 client.on('interactionCreate', async (interaction) => {
   try {
     if (interaction.isButton()) {
-      await handleButtonInteraction(interaction);
+      if (interaction.customId === 'verify_wallet') {
+        await handleVerifyInteraction(interaction);
+      } else if (interaction.customId === 'claim_bux') {
+        await handleProfileInteraction(interaction);
+      } else {
+        await handleButtonInteraction(interaction);
+      }
     } else if (interaction.isCommand()) {
-      await handleMainInteraction(interaction);
+      const commandName = interaction.commandName;
+      if (commandName === 'profile') {
+        await handleProfileInteraction(interaction);
+      } else if (commandName === 'verify') {
+        await handleVerifyInteraction(interaction);
+      } else {
+        await handleMainInteraction(interaction);
+      }
     }
   } catch (error) {
     console.error('Error handling interaction:', error);
-    await interaction.reply({
+    const reply = {
       content: 'An error occurred while processing your interaction. Please try again later.',
       ephemeral: true
-    });
+    };
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply(reply);
+    } else {
+      await interaction.reply(reply);
+    }
   }
 });
 
