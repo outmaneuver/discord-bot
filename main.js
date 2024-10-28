@@ -11,14 +11,14 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import { WebSocket, WebSocketServer } from 'ws';
 
-import { initializeSalesListings } from './sales_listings.js';
-import { verifyHolder, sendVerificationMessage, updateDiscordRoles } from './verify.js';
-import { updateUserProfile } from './profile.js';
+import { initializeSalesListings } from './services/sales.js';  // Changed from './sales_listings.js'
+import { verifyHolder, sendVerificationMessage, updateDiscordRoles } from './services/verify.js';
+import { updateUserProfile } from './services/profile.js';
 
-import { handleMainCommands, handleButtonInteraction, handleMainInteraction } from './main_commands.js';
-import { handleVerifyCommands, handleVerifyInteraction } from './verify_commands.js';
-import { handleProfileCommands, handleProfileInteraction } from './profile_commands.js';
-import { handleSalesListingsCommands } from './sales_listings_commands.js';
+import { handleMainCommands, handleButtonInteraction, handleMainInteraction } from './commands/main.js';
+import { handleVerifyCommands, handleVerifyInteraction } from './commands/verify.js';
+import { handleProfileCommands, handleProfileInteraction } from './commands/profile.js';
+import { handleSalesListingsCommands } from './commands/sales.js';
 
 // Add this near the top of the file, after the imports
 global.userWallets = new Map();
