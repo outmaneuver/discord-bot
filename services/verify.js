@@ -167,13 +167,19 @@ export async function verifyHolder(walletData, userId, client) {
 // Update Discord roles function
 export async function updateDiscordRoles(userId, client) {
   try {
-    const guild = client.guilds.cache.get(GUILD_ID);
+    // Get guild directly from client
+    const guilds = Array.from(client.guilds.cache.values());
+    const guild = guilds.find(g => g.id === process.env.GUILD_ID);
+    
     if (!guild) {
+      console.error('Guild not found:', process.env.GUILD_ID);
       throw new Error('Guild not found');
     }
 
-    const member = await guild.members.fetch(userId);
+    // Fetch member with force refresh
+    const member = await guild.members.fetch({ user: userId, force: true });
     if (!member) {
+      console.error('Member not found:', userId);
       throw new Error('Member not found');
     }
     
@@ -184,13 +190,22 @@ export async function updateDiscordRoles(userId, client) {
       return;
     }
     
+    // Parse NFT data
+    const parsedCounts = {
+      fcked_catz: nftCounts.fcked_catz ? JSON.parse(nftCounts.fcked_catz).length : 0,
+      celebcatz: nftCounts.celebcatz ? JSON.parse(nftCounts.celebcatz).length : 0,
+      money_monsters: nftCounts.money_monsters ? JSON.parse(nftCounts.money_monsters).length : 0,
+      money_monsters3d: nftCounts.money_monsters3d ? JSON.parse(nftCounts.money_monsters3d).length : 0,
+      ai_bitbots: nftCounts.ai_bitbots ? JSON.parse(nftCounts.ai_bitbots).length : 0
+    };
+    
     // Update roles based on NFT ownership
     const roles = [];
-    if (nftCounts.fcked_catz?.length > 0) roles.push('FCKED CATZ HOLDER');
-    if (nftCounts.celebcatz?.length > 0) roles.push('CELEBCATZ HOLDER');
-    if (nftCounts.money_monsters?.length > 0) roles.push('MONEY MONSTERS HOLDER');
-    if (nftCounts.money_monsters3d?.length > 0) roles.push('MONEY MONSTERS 3D HOLDER');
-    if (nftCounts.ai_bitbots?.length > 0) roles.push('AI BITBOTS HOLDER');
+    if (parsedCounts.fcked_catz > 0) roles.push('FCKED CATZ HOLDER');
+    if (parsedCounts.celebcatz > 0) roles.push('CELEBCATZ HOLDER');
+    if (parsedCounts.money_monsters > 0) roles.push('MONEY MONSTERS HOLDER');
+    if (parsedCounts.money_monsters3d > 0) roles.push('MONEY MONSTERS 3D HOLDER');
+    if (parsedCounts.ai_bitbots > 0) roles.push('AI BITBOTS HOLDER');
     
     // Add roles to member
     for (const roleName of roles) {
