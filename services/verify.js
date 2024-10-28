@@ -265,18 +265,18 @@ export async function updateDiscordRoles(userId, client) {
         continue;
       }
       
-      if (!member.roles.cache.has(role.id)) {
-        try {
+      try {
+        if (!member.roles.cache.has(role.id)) {
           await member.roles.add(role);
           console.log(`Added role ${roleName} (${role.id}) to user ${userId}`);
           results.success.push(roleName);
-        } catch (error) {
-          console.error(`Error adding role ${roleName} (${role.id}) to user ${userId}:`, error);
-          results.failed.push({ role: roleName, reason: error.message });
+        } else {
+          console.log(`User ${userId} already has role ${roleName} (${role.id})`);
+          results.success.push(roleName);
         }
-      } else {
-        console.log(`User ${userId} already has role ${roleName} (${role.id})`);
-        results.success.push(roleName);
+      } catch (error) {
+        console.error(`Error adding role ${roleName} (${role.id}) to user ${userId}:`, error);
+        results.failed.push({ role: roleName, reason: error.message });
       }
     }
 
