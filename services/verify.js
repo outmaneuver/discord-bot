@@ -6,17 +6,14 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { config } from '../config/config.js';
 
-// Export the Redis instance
-export const redis = new Redis(process.env.REDIS_URL, {
-  tls: {
-    rejectUnauthorized: false
-  }
-});
+// Export the Redis instance using config
+export const redis = new Redis(config.redis.url, config.redis.options);
 
-const BUX_TOKEN_MINT = process.env.BUX_TOKEN_MINT;
-const GUILD_ID = process.env.GUILD_ID;
+// Use config values
+const BUX_TOKEN_MINT = config.solana.buxMint;
+const GUILD_ID = config.discord.guildId;
 
-// Initialize Solana connection
+// Initialize Solana connection from config
 const connection = new Connection(config.solana.rpcUrl);
 
 // Add verification message function
