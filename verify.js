@@ -123,10 +123,23 @@ export async function checkNFTOwnership(walletAddress) {
     // Validate wallet address
     const pubKey = new PublicKey(walletAddress);
     
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-      pubKey,
-      { programId: TOKEN_PROGRAM_ID }
-    );
+    // Get token accounts with rate limiting
+    let tokenAccounts;
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        tokenAccounts = await getTokenAccounts(walletAddress);
+        break;
+      } catch (error) {
+        if (error.message.includes('429') && retries > 1) {
+          console.log(`Rate limited, retrying in ${(4-retries)*2}s...`);
+          await new Promise(resolve => setTimeout(resolve, (4-retries) * 2000));
+          retries--;
+          continue;
+        }
+        throw error;
+      }
+    }
 
     console.log(`Found ${tokenAccounts.value.length} tokens for wallet ${walletAddress}`);
 
@@ -138,6 +151,7 @@ export async function checkNFTOwnership(walletAddress) {
       ai_bitbots: []
     };
 
+    // Use local hashlists to check NFT ownership
     for (const account of tokenAccounts.value) {
       const mint = account.account.data.parsed.info.mint;
       const amount = account.account.data.parsed.info.tokenAmount.uiAmount;
@@ -145,20 +159,20 @@ export async function checkNFTOwnership(walletAddress) {
       // Only count tokens with amount of 1 (NFTs)
       if (amount !== 1) continue;
       
-      // Check against hashlists
-      if (fckedCatzHashlist && fckedCatzHashlist.has(mint)) {
+      // Check against local hashlists
+      if (fckedCatzHashlist.has(mint)) {
         nftCounts.fcked_catz.push(mint);
       }
-      if (celebCatzHashlist && celebCatzHashlist.has(mint)) {
+      if (celebCatzHashlist.has(mint)) {
         nftCounts.celebcatz.push(mint);
       }
-      if (moneyMonstersHashlist && moneyMonstersHashlist.has(mint)) {
+      if (moneyMonstersHashlist.has(mint)) {
         nftCounts.money_monsters.push(mint);
       }
-      if (moneyMonsters3dHashlist && moneyMonsters3dHashlist.has(mint)) {
+      if (moneyMonsters3dHashlist.has(mint)) {
         nftCounts.money_monsters3d.push(mint);
       }
-      if (aiBitbotsHashlist && aiBitbotsHashlist.has(mint)) {
+      if (aiBitbotsHashlist.has(mint)) {
         nftCounts.ai_bitbots.push(mint);
       }
     }
@@ -172,11 +186,6 @@ export async function checkNFTOwnership(walletAddress) {
 
     return nftCounts;
   } catch (error) {
-    if (error.message.includes('429')) {
-      console.log('Server responded with 429 Too Many Requests.  Retrying after 500ms delay...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return checkNFTOwnership(walletAddress);
-    }
     console.error('Error checking NFT ownership:', error);
     throw error;
   }
