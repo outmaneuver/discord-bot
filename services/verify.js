@@ -204,3 +204,29 @@ export async function checkNFTOwnership(walletAddress) {
     throw error;
   }
 }
+
+// Add this function after checkNFTOwnership
+export async function getBUXBalance(walletAddress) {
+  try {
+    const publicKey = new PublicKey(walletAddress);
+    
+    // Get token accounts
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+      programId: TOKEN_PROGRAM_ID
+    });
+
+    // Find BUX token account
+    const buxAccount = tokenAccounts.value.find(acc => 
+      acc.account.data.parsed.info.mint === BUX_TOKEN_MINT
+    );
+
+    if (!buxAccount) {
+      return 0;
+    }
+
+    return parseInt(buxAccount.account.data.parsed.info.tokenAmount.amount) / 1e9;
+  } catch (error) {
+    console.error('Error getting BUX balance:', error);
+    throw error;
+  }
+}
