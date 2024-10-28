@@ -4,7 +4,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { config } from './config.js';
+import { config } from '../config/config.js';  // Changed from './config.js' to '../config/config.js'
 
 const redis = new Redis(process.env.REDIS_URL, {
   tls: {
