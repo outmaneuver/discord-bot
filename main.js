@@ -12,7 +12,7 @@ import path from 'path';
 import { WebSocket, WebSocketServer } from 'ws';
 
 import { initializeSalesListings } from './services/sales.js';
-import { verifyHolder, sendVerificationMessage, updateDiscordRoles } from './services/verify.js';
+import { verifyHolder, sendVerificationMessage, updateDiscordRoles, validateWalletAddress } from './services/verify.js';
 import { updateUserProfile } from './services/profile.js';
 import { config } from './config/config.js';
 
@@ -232,8 +232,6 @@ app.get('/auth/status', (req, res) => {
 });
 
 // Verify endpoint
-import { validateWalletAddress } from './verify.js';
-
 app.post('/holder-verify/verify', validateWalletAddress, async (req, res) => {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ success: false, error: 'Not authenticated' });
