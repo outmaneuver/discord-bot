@@ -43,7 +43,7 @@ export async function sendVerificationMessage(channel) {
 // Load hashlists and convert to Sets
 const loadHashlist = async (filename) => {
   try {
-    const filePath = path.join(process.cwd(), 'hashlists', filename);
+    const filePath = path.join(process.cwd(), 'config', 'hashlists', filename);
     const data = await fs.readFile(filePath, 'utf8');
     return new Set(JSON.parse(data));
   } catch (error) {
