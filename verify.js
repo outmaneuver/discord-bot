@@ -118,6 +118,7 @@ export async function getBUXBalance(walletAddress) {
   }
 }
 
+// Update the checkNFTOwnership function to use Sets for unique NFTs
 export async function checkNFTOwnership(walletAddress) {
   try {
     // Validate wallet address
@@ -143,12 +144,13 @@ export async function checkNFTOwnership(walletAddress) {
 
     console.log(`Found ${tokenAccounts.value.length} tokens for wallet ${walletAddress}`);
 
+    // Use Sets to ensure unique NFTs
     const nftCounts = {
-      fcked_catz: [],
-      celebcatz: [],
-      money_monsters: [],
-      money_monsters3d: [],
-      ai_bitbots: []
+      fcked_catz: new Set(),
+      celebcatz: new Set(),
+      money_monsters: new Set(),
+      money_monsters3d: new Set(),
+      ai_bitbots: new Set()
     };
 
     // Use local hashlists to check NFT ownership
@@ -159,32 +161,41 @@ export async function checkNFTOwnership(walletAddress) {
       // Only count tokens with amount of 1 (NFTs)
       if (amount !== 1) continue;
       
-      // Check against local hashlists
+      // Check against local hashlists and add to Sets
       if (fckedCatzHashlist.has(mint)) {
-        nftCounts.fcked_catz.push(mint);
+        nftCounts.fcked_catz.add(mint);
       }
       if (celebCatzHashlist.has(mint)) {
-        nftCounts.celebcatz.push(mint);
+        nftCounts.celebcatz.add(mint);
       }
       if (moneyMonstersHashlist.has(mint)) {
-        nftCounts.money_monsters.push(mint);
+        nftCounts.money_monsters.add(mint);
       }
       if (moneyMonsters3dHashlist.has(mint)) {
-        nftCounts.money_monsters3d.push(mint);
+        nftCounts.money_monsters3d.add(mint);
       }
       if (aiBitbotsHashlist.has(mint)) {
-        nftCounts.ai_bitbots.push(mint);
+        nftCounts.ai_bitbots.add(mint);
       }
     }
 
+    // Convert Sets to Arrays for the response
+    const result = {
+      fcked_catz: Array.from(nftCounts.fcked_catz),
+      celebcatz: Array.from(nftCounts.celebcatz),
+      money_monsters: Array.from(nftCounts.money_monsters),
+      money_monsters3d: Array.from(nftCounts.money_monsters3d),
+      ai_bitbots: Array.from(nftCounts.ai_bitbots)
+    };
+
     // Log the results
-    Object.entries(nftCounts).forEach(([collection, mints]) => {
+    Object.entries(result).forEach(([collection, mints]) => {
       if (mints.length > 0) {
         console.log(`Found ${mints.length} ${collection} NFTs:`, mints);
       }
     });
 
-    return nftCounts;
+    return result;
   } catch (error) {
     console.error('Error checking NFT ownership:', error);
     throw error;
