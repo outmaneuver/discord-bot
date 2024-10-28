@@ -146,6 +146,15 @@ export async function updateUserProfile(channel, userId, client) {
     const user = await client.users.fetch(userId);
     const username = user.username;
 
+    // Get user's roles
+    const guild = client.guilds.cache.get(process.env.GUILD_ID);
+    const member = await guild.members.fetch(userId);
+    const roles = member.roles.cache
+      .filter(role => role.name !== '@everyone')
+      .sort((a, b) => b.position - a.position)
+      .map(role => role.name)
+      .join('\n');
+
     const timerData = await startOrUpdateDailyTimer(userId, aggregatedData.nftCounts, aggregatedData.buxBalance);
     const timeUntilNext = await getTimeUntilNextClaim(userId);
 
@@ -167,6 +176,11 @@ export async function updateUserProfile(channel, userId, client) {
         { 
           name: 'NFTs', 
           value: formatNFTCounts(aggregatedData.nftCounts) || 'No NFTs' 
+        },
+        { name: '\u200B', value: '─'.repeat(40) },
+        {
+          name: 'Server Roles',
+          value: roles || 'No roles'
         },
         { name: '\u200B', value: '─'.repeat(40) },
         { 
