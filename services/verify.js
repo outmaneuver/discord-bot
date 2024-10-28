@@ -168,16 +168,16 @@ export async function verifyHolder(walletData, userId, client) {
 export async function updateDiscordRoles(userId, client) {
   try {
     // Get guild directly from client
-    const guilds = Array.from(client.guilds.cache.values());
-    const guild = guilds.find(g => g.id === process.env.GUILD_ID);
+    const guild = client.guilds.cache.get(process.env.GUILD_ID);
     
     if (!guild) {
-      console.error('Guild not found:', process.env.GUILD_ID);
+      console.error('Guild not found:', process.env.GUILD_ID, 'Available guilds:', 
+        Array.from(client.guilds.cache.keys()));
       throw new Error('Guild not found');
     }
 
     // Fetch member with force refresh
-    const member = await guild.members.fetch({ user: userId, force: true });
+    const member = await guild.members.fetch(userId);
     if (!member) {
       console.error('Member not found:', userId);
       throw new Error('Member not found');
@@ -201,11 +201,11 @@ export async function updateDiscordRoles(userId, client) {
     
     // Update roles based on NFT ownership
     const roles = [];
-    if (parsedCounts.fcked_catz > 0) roles.push('FCKED CATZ HOLDER');
-    if (parsedCounts.celebcatz > 0) roles.push('CELEBCATZ HOLDER');
-    if (parsedCounts.money_monsters > 0) roles.push('MONEY MONSTERS HOLDER');
-    if (parsedCounts.money_monsters3d > 0) roles.push('MONEY MONSTERS 3D HOLDER');
-    if (parsedCounts.ai_bitbots > 0) roles.push('AI BITBOTS HOLDER');
+    if (parsedCounts.fcked_catz > 0) roles.push('CAT');
+    if (parsedCounts.celebcatz > 0) roles.push('CELEB');
+    if (parsedCounts.money_monsters > 0) roles.push('MONSTER');
+    if (parsedCounts.money_monsters3d > 0) roles.push('MONSTER 3D');
+    if (parsedCounts.ai_bitbots > 0) roles.push('BITBOT');
     
     // Add roles to member
     for (const roleName of roles) {
@@ -218,7 +218,9 @@ export async function updateDiscordRoles(userId, client) {
     console.error('Error updating Discord roles:', {
       userId,
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      guildId: process.env.GUILD_ID,
+      availableGuilds: Array.from(client.guilds.cache.keys())
     });
     throw error;
   }
