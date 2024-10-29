@@ -56,9 +56,10 @@ client.on('messageCreate', async (message) => {
   // Ignore messages from bots
   if (message.author.bot) return;
 
-  // Check for both =my.profile and =profile
-  if (message.content.toLowerCase().trim() === '=my.profile' || 
-      message.content.toLowerCase().trim() === '=profile') {
+  const command = message.content.toLowerCase().trim();
+
+  // Handle profile command aliases
+  if (command === '=my.profile' || command === '=profile') {
     try {
       await updateUserProfile(message.channel, message.author.id, client);
     } catch (error) {
@@ -69,8 +70,8 @@ client.on('messageCreate', async (message) => {
   }
 
   // Handle other commands
-  const command = message.content.toLowerCase().trim().substring(1); // Remove the = prefix
-  const handler = commandHandlers[command];
+  const commandName = command.substring(1); // Remove the = prefix
+  const handler = commandHandlers[commandName];
   if (handler) {
     try {
       await handler(message);
