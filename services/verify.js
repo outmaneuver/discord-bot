@@ -395,7 +395,7 @@ export function validateWalletAddress(req, res, next) {
   }
 }
 
-// Update checkNFTOwnership function to properly handle hashlist checking
+// Update checkNFTOwnership function to properly check hashlists
 export async function checkNFTOwnership(walletAddress) {
   try {
     // Get cached NFT data first
@@ -428,7 +428,6 @@ export async function checkNFTOwnership(walletAddress) {
 
     // Log owned tokens for debugging
     console.log(`Found ${ownedTokens.size} tokens for wallet ${walletAddress}`);
-    console.log('Owned token mints:', Array.from(ownedTokens.keys()));
 
     // Check against hashlists and only include NFTs with balance > 0
     const nftCounts = {
@@ -441,23 +440,19 @@ export async function checkNFTOwnership(walletAddress) {
 
     // Helper function to check and add NFTs with detailed logging
     const checkAndAddNFTs = (collection, hashlist) => {
-      console.log(`\nChecking ${collection} hashlist...`);
-      console.log(`Hashlist size: ${hashlist.size}`);
-      console.log(`First few hashlist entries:`, Array.from(hashlist).slice(0, 5));
+      console.log(`Checking ${collection} hashlist (size: ${hashlist.size})`);
       
-      let count = 0;
       hashlist.forEach(mint => {
         if (ownedTokens.has(mint)) {
           const amount = ownedTokens.get(mint);
           if (amount > 0) {
             nftCounts[collection].push(mint);
-            count++;
-            console.log(`Found ${collection} NFT: ${mint} (amount: ${amount})`);
+            console.log(`Found ${collection} NFT: ${mint}`);
           }
         }
       });
       
-      console.log(`Found ${count} ${collection} NFTs total`);
+      console.log(`Found ${nftCounts[collection].length} ${collection} NFTs`);
     };
 
     // Check each collection
@@ -467,7 +462,7 @@ export async function checkNFTOwnership(walletAddress) {
     checkAndAddNFTs('money_monsters3d', moneyMonsters3dHashlist);
     checkAndAddNFTs('ai_bitbots', aiBitbotsHashlist);
 
-    // Cache results
+    // Cache results with 1 hour TTL
     const pipeline = redis.pipeline();
     pipeline.hset(`wallet:${walletAddress}:nfts`, {
       fcked_catz: JSON.stringify(nftCounts.fcked_catz),
