@@ -30,11 +30,12 @@ router.get('/discord', (req, res) => {
     const protocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
     const redirectUri = `${protocol}://${req.get('host')}/auth/callback`;
     
+    // Fix scope format - use space-separated string instead of space in URL
     const params = new URLSearchParams({
       client_id: config.discord.clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'identify guilds'
+      scope: 'identify guilds'.split(' ').join('%20')
     });
 
     const url = `https://discord.com/api/oauth2/authorize?${params}`;
@@ -55,7 +56,6 @@ router.get('/callback', async (req, res) => {
 
   try {
     console.log('Processing OAuth callback with code');
-    // Force https for production
     const protocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
     const redirectUri = `${protocol}://${req.get('host')}/auth/callback`;
 
@@ -74,8 +74,9 @@ router.get('/callback', async (req, res) => {
     });
 
     if (!tokenResponse.ok) {
-      console.error('Token response not ok:', await tokenResponse.text());
-      throw new Error('Failed to get access token');
+      const errorText = await tokenResponse.text();
+      console.error('Token response error:', errorText);
+      throw new Error(`Failed to get access token: ${errorText}`);
     }
 
     const tokenData = await tokenResponse.json();
@@ -88,8 +89,9 @@ router.get('/callback', async (req, res) => {
     });
 
     if (!userResponse.ok) {
-      console.error('User response not ok:', await userResponse.text());
-      throw new Error('Failed to get user data');
+      const errorText = await userResponse.text();
+      console.error('User response error:', errorText);
+      throw new Error(`Failed to get user data: ${errorText}`);
     }
 
     const userData = await userResponse.json();
