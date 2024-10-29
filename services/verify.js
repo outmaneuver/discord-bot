@@ -325,7 +325,7 @@ export async function updateDiscordRoles(userId, client) {
       ai_bitbots: allNFTs.ai_bitbots.size
     };
 
-    console.log('Total NFT counts across all wallets:', nftCounts);
+    console.log('NFT counts for role assignment:', nftCounts);
 
     // Get guild and member
     const guild = client.guilds.cache.get(GUILD_ID);
@@ -368,7 +368,7 @@ export async function updateDiscordRoles(userId, client) {
       }
     }
 
-    // Store updated NFT counts in Redis
+    // Store the actual NFT data in Redis
     await redis.hset(`user:${userId}:nfts`, {
       fcked_catz: JSON.stringify(Array.from(allNFTs.fcked_catz)),
       celebcatz: JSON.stringify(Array.from(allNFTs.celebcatz)),
@@ -376,6 +376,9 @@ export async function updateDiscordRoles(userId, client) {
       money_monsters3d: JSON.stringify(Array.from(allNFTs.money_monsters3d)),
       ai_bitbots: JSON.stringify(Array.from(allNFTs.ai_bitbots))
     });
+
+    // Clear any cached data
+    await redis.del(`wallet:${userId}:nfts`);
 
     console.log('Updated roles and stored NFT data for user:', userId);
     return nftCounts;
