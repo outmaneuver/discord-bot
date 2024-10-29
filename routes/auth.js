@@ -26,13 +26,14 @@ router.get('/discord', (req, res) => {
     const scope = encodeURIComponent('identify guilds');
     
     // Manually construct the URL to ensure exact format
-    const url = `https://discord.com/oauth2/authorize` +
+    const url = `${DISCORD_API_URL}/oauth2/authorize` +
       `?client_id=${config.discord.clientId}` +
       `&redirect_uri=${redirectUri}` +
       `&response_type=code` +
       `&scope=${scope}` +
       `&state=${state}` +
-      `&prompt=consent`;
+      `&prompt=consent` +
+      `&permissions=0`;
 
     console.log('Redirecting to Discord OAuth:', url);
     res.redirect(url);
