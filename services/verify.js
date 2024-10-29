@@ -6,7 +6,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { config } from '../config/config.js';
 
-// Update Redis configuration with better connection pooling
+// Create a single Redis instance to be shared across the application
 export const redis = new Redis(config.redis.url, {
   ...config.redis.options,
   retryStrategy: function(times) {
@@ -52,8 +52,12 @@ export const redis = new Redis(config.redis.url, {
   db: 0,
   dropBufferSupport: true,
   enableOfflineQueue: true,
+  retryDelayOnFailover: 100,
+  enableAutoPipelining: true,
   maxRetriesPerRequest: 3,
-  retryDelayOnFailover: 100
+  autoResendUnfulfilledCommands: true,
+  enableTLSForSentinelMode: false,
+  sentinelRetryStrategy: null
 });
 
 // Add more detailed connection event handlers
