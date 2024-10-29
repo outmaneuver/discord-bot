@@ -118,7 +118,10 @@ app.post('/holder-verify/verify', async (req, res) => {
       client
     );
 
-    // Clean, simple formatting
+    // Calculate daily reward based on NFT holdings
+    const dailyReward = calculateDailyReward(result.nftCounts);
+
+    // Clean, simple formatting with daily reward
     const formattedResponse = `
 **Wallet Verification Complete!** ✅
 
@@ -127,7 +130,11 @@ ${Object.entries(result.nftCounts)
   .map(([collection, nfts]) => `${collection}: ${nfts.length}`)
   .join('\n')}
 
-Your roles have been updated! 🎉`;
+Daily reward - ${dailyReward} $BUX
+
+Your roles have been updated! 🎉
+✓ VERIFIED
+You can now close this window`;
 
     res.json({
       success: true,
@@ -144,6 +151,17 @@ Your roles have been updated! 🎉`;
     });
   }
 });
+
+// Add helper function to calculate daily reward
+function calculateDailyReward(nftCounts) {
+  let reward = 0;
+  reward += nftCounts.fcked_catz.length * 2;      // 2 BUX per FCatz
+  reward += nftCounts.celebcatz.length * 8;       // 8 BUX per CelebCatz
+  reward += nftCounts.money_monsters.length * 2;   // 2 BUX per MM
+  reward += nftCounts.money_monsters3d.length * 4; // 4 BUX per MM3D
+  reward += nftCounts.ai_bitbots.length * 1;      // 1 BUX per AI Bitbot
+  return reward;
+}
 
 // Route handler for verification page
 app.get(['/holder-verify', '/holder-verify/'], (req, res) => {
