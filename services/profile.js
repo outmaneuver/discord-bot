@@ -81,77 +81,77 @@ export async function removeWallet(userId, walletAddress) {
 
 export async function updateUserProfile(channel, userId, client) {
   try {
-    // Get wallet data with error handling
+    // Get wallet data
     const walletData = await getWalletData(userId);
     if (!walletData || !walletData.walletAddresses) {
       throw new Error('Failed to get wallet data');
     }
     console.log(`Processing profile for user ${userId} with wallets:`, walletData.walletAddresses);
 
-    // Get aggregated data with error handling
-    const aggregatedData = await aggregateWalletData(walletData);
-    if (!aggregatedData) {
-      throw new Error('Failed to aggregate wallet data');
+    // Clear any cached NFT data
+    await redis.del(`user:${userId}:nfts`);
+    for (const wallet of walletData.walletAddresses) {
+      await redis.del(`wallet:${wallet}:nfts`);
     }
 
-    // Fetch user with error handling
-    const user = await client.users.fetch(userId).catch(error => {
-      console.error('Error fetching user:', error);
-      throw new Error('Failed to fetch user data');
-    });
+    // Force a fresh check of NFTs and roles
+    await updateDiscordRoles(userId, client);
 
-    // Get guild with error handling
+    // Get fresh NFT data after role update
+    const nftData = await redis.hgetall(`user:${userId}:nfts`);
+    const nftCounts = {
+      fcked_catz: JSON.parse(nftData.fcked_catz || '[]').length,
+      celebcatz: JSON.parse(nftData.celebcatz || '[]').length,
+      money_monsters: JSON.parse(nftData.money_monsters || '[]').length,
+      money_monsters3d: JSON.parse(nftData.money_monsters3d || '[]').length,
+      ai_bitbots: JSON.parse(nftData.ai_bitbots || '[]').length
+    };
+
+    // Get guild and member
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
-    if (!guild) {
-      throw new Error('Guild not found');
-    }
+    if (!guild) throw new Error('Guild not found');
 
-    // Get member with error handling
-    const member = await guild.members.fetch({ user: userId, force: true }).catch(error => {
-      console.error('Error fetching member:', error);
-      throw new Error('Failed to fetch member data');
-    });
+    const member = await guild.members.fetch(userId);
+    if (!member) throw new Error('Member not found');
 
-    // Get roles with proper filtering and sorting
+    // Get roles
     const roles = member.roles.cache
       .filter(role => role.name !== '@everyone')
       .sort((a, b) => b.position - a.position)
       .map(role => role.name)
       .join('\n');
 
-    // Get timer data with error handling
+    // Get BUX balance
+    let buxBalance = 0;
+    for (const wallet of walletData.walletAddresses) {
+      const balance = await getBUXBalance(wallet);
+      buxBalance += balance;
+    }
+
+    // Get timer data
     const [timerData, timeUntilNext] = await Promise.all([
-      startOrUpdateDailyTimer(userId, aggregatedData.nftCounts, aggregatedData.buxBalance)
-        .catch(error => {
-          console.error('Error getting timer data:', error);
-          return { claimAmount: 0 };
-        }),
+      startOrUpdateDailyTimer(userId, nftCounts, buxBalance),
       getTimeUntilNextClaim(userId)
-        .catch(error => {
-          console.error('Error getting claim time:', error);
-          return 'Error getting time';
-        })
     ]);
 
     // Calculate daily reward
-    const dailyReward = calculateDailyReward(aggregatedData.nftCounts);
+    const dailyReward = calculateDailyReward(nftCounts);
 
     // Create embed
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
-      .setTitle(`${user.username}'s BUX DAO Profile`)
-      .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 128 }))
+      .setTitle(`${member.user.username}'s BUX DAO Profile`)
       .addFields(
         { 
           name: 'Connected Wallets', 
-          value: walletData.walletAddresses.length > 0 ? 
-            walletData.walletAddresses.join('\n') : 
-            'No wallets connected' 
+          value: walletData.walletAddresses.join('\n') || 'No wallets connected' 
         },
         { name: '\u200B', value: '─'.repeat(40) },
         { 
           name: 'NFTs', 
-          value: formatNFTCounts(aggregatedData.nftCounts) || 'No NFTs' 
+          value: Object.entries(nftCounts)
+            .map(([collection, count]) => `${collection}: ${count}`)
+            .join('\n') || 'No NFTs' 
         },
         { name: '\u200B', value: '─'.repeat(40) },
         {
@@ -161,7 +161,7 @@ export async function updateUserProfile(channel, userId, client) {
         { name: '\u200B', value: '─'.repeat(40) },
         { 
           name: 'BUX Balance', 
-          value: `${aggregatedData.buxBalance.toLocaleString()} BUX` 
+          value: `${buxBalance.toLocaleString()} BUX` 
         },
         { 
           name: 'Daily Reward', 
@@ -173,39 +173,16 @@ export async function updateUserProfile(channel, userId, client) {
         },
         { 
           name: 'Claim updates in', 
-          value: timeUntilNext || 'Start timer by verifying wallet',
-          inline: true 
+          value: timeUntilNext || 'Start timer by verifying wallet'
         }
       );
 
-    // Create claim button
-    const claimButton = new ButtonBuilder()
-      .setCustomId('claim_bux')
-      .setLabel('CLAIM')
-      .setStyle(ButtonStyle.Primary)
-      .setDisabled(true);
-
-    const row = new ActionRowBuilder()
-      .addComponents(claimButton);
-
-    // Send message with error handling
-    await channel.send({ 
-      embeds: [embed],
-      components: [row]
-    }).catch(error => {
-      console.error('Error sending profile message:', error);
-      throw new Error('Failed to send profile message');
-    });
-
-    // Update roles in background
-    updateDiscordRoles(userId, client).catch(error => {
-      console.error('Error updating roles:', error);
-    });
+    // Send message
+    await channel.send({ embeds: [embed] });
 
   } catch (error) {
     console.error('Error updating user profile:', error);
-    await channel.send('An error occurred while processing your command. Please try again later.')
-      .catch(sendError => console.error('Error sending error message:', sendError));
+    await channel.send('An error occurred while processing your command. Please try again later.');
   }
 }
 
