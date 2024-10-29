@@ -312,15 +312,6 @@ export async function updateDiscordRoles(userId, client) {
     const member = await guild.members.fetch(userId);
     if (!member) throw new Error('Member not found');
 
-    // Define role mappings
-    const roleMap = {
-      'CAT': 'fcked_catz',
-      'CELEB': 'celebcatz', 
-      'MONSTER': 'money_monsters',
-      'MONSTER 3D': 'money_monsters3d',
-      'BITBOT': 'ai_bitbots'
-    };
-
     // Get NFT data
     const nftData = await redis.hgetall(`user:${userId}:nfts`);
     if (!nftData) {
@@ -337,20 +328,37 @@ export async function updateDiscordRoles(userId, client) {
       ai_bitbots: JSON.parse(nftData.ai_bitbots || '[]').length
     };
 
-    // Update roles
-    for (const [roleName, nftType] of Object.entries(roleMap)) {
-      const role = guild.roles.cache.find(r => r.name === roleName);
-      if (!role) continue;
+    console.log('NFT counts for role assignment:', nftCounts);
 
-      const shouldHaveRole = nftCounts[nftType] > 0;
+    // Define role assignments with thresholds
+    const roleAssignments = [
+      { name: 'CAT', collection: 'fcked_catz', threshold: 1 },
+      { name: 'CELEB', collection: 'celebcatz', threshold: 1 },
+      { name: 'MONSTER', collection: 'money_monsters', threshold: 1 },
+      { name: 'MONSTER 3D', collection: 'money_monsters3d', threshold: 1 },
+      { name: 'BITBOT', collection: 'ai_bitbots', threshold: 1 },
+      { name: 'MONSTER 🐋', collection: 'money_monsters', threshold: 20 },
+      { name: 'MONSTER 3D 🐋', collection: 'money_monsters3d', threshold: 20 },
+      { name: 'MEGA BOT 🐋', collection: 'ai_bitbots', threshold: 5 }
+    ];
+
+    // Update roles
+    for (const assignment of roleAssignments) {
+      const role = guild.roles.cache.find(r => r.name === assignment.name);
+      if (!role) {
+        console.log(`Role ${assignment.name} not found`);
+        continue;
+      }
+
+      const shouldHaveRole = nftCounts[assignment.collection] >= assignment.threshold;
       const hasRole = member.roles.cache.has(role.id);
 
       if (shouldHaveRole && !hasRole) {
         await member.roles.add(role.id);
-        console.log(`Added role ${roleName} to user ${userId}`);
+        console.log(`Added role ${assignment.name} to user ${userId}`);
       } else if (!shouldHaveRole && hasRole) {
         await member.roles.remove(role.id);
-        console.log(`Removed role ${roleName} from user ${userId}`);
+        console.log(`Removed role ${assignment.name} from user ${userId}`);
       }
     }
 
@@ -360,14 +368,7 @@ export async function updateDiscordRoles(userId, client) {
     });
 
   } catch (error) {
-    console.error('Error updating Discord roles:', {
-      userId,
-      error: error.message,
-      stack: error.stack,
-      guildId: GUILD_ID,
-      clientReady: client.readyAt,
-      availableGuilds: Array.from(client.guilds.cache.keys())
-    });
+    console.error('Error updating Discord roles:', error);
     throw error;
   }
 }
