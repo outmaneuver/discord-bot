@@ -46,20 +46,26 @@ client.on('messageCreate', async (message) => {
   // Ignore messages from bots
   if (message.author.bot) return;
 
-  try {
-    // Handle different command types based on prefix
-    if (message.content.startsWith('=profile')) {
-      await handleProfileCommands(message, client);
-    } else if (message.content.startsWith('=verify')) {
-      await handleVerifyCommands(message, client);
-    } else if (message.content.startsWith('=test')) {
-      await handleSalesListingsCommands(message);
-    } else if (message.content.startsWith('=')) {
-      await handleMainCommands(message, client);
+  const commands = {
+    'my.profile': handleProfileCommand,
+    'my.wallet': handleWalletSection,
+    'my.nfts': handleNFTSection,
+    'my.roles': handleRolesSection,
+    'my.bux': handleBUXSection,
+    'verify': handleVerifyCommand,
+    'admin': handleAdminCommand
+  };
+
+  const command = message.content.toLowerCase().trim();
+  const handler = commands[command];
+
+  if (handler) {
+    try {
+      await handler(message);
+    } catch (error) {
+      console.error('Error handling message:', error);
+      await message.channel.send('An error occurred while processing your command.');
     }
-  } catch (error) {
-    console.error('Error handling message:', error);
-    await message.reply('An error occurred while processing your command. Please try again later.');
   }
 });
 
@@ -472,6 +478,133 @@ async function handleMainInteraction(interaction) {
   } catch (error) {
     console.error('Error handling main interaction:', error);
     throw error;
+  }
+}
+
+// Add new section handlers
+async function handleWalletSection(message) {
+  try {
+    const walletData = await getWalletData(message.author.id);
+    
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle(`${message.author.username}'s Connected Wallets`)
+      .addFields({
+        name: 'Connected Wallets',
+        value: walletData.walletAddresses.length > 0 ? 
+          walletData.walletAddresses.join('\n') : 
+          'No wallets connected'
+      });
+
+    await message.channel.send({ embeds: [embed] });
+  } catch (error) {
+    console.error('Error displaying wallet section:', error);
+    await message.channel.send('An error occurred while fetching wallet data.');
+  }
+}
+
+async function handleNFTSection(message) {
+  try {
+    const walletData = await getWalletData(message.author.id);
+    const aggregatedData = await aggregateWalletData(walletData);
+    
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle(`${message.author.username}'s NFT Collection`)
+      .addFields({
+        name: 'NFTs',
+        value: formatNFTCounts(aggregatedData.nftCounts) || 'No NFTs'
+      });
+
+    await message.channel.send({ embeds: [embed] });
+  } catch (error) {
+    console.error('Error displaying NFT section:', error);
+    await message.channel.send('An error occurred while fetching NFT data.');
+  }
+}
+
+async function handleRolesSection(message) {
+  try {
+    const member = await message.guild.members.fetch(message.author.id);
+    const roles = member.roles.cache
+      .filter(role => role.name !== '@everyone')
+      .sort((a, b) => b.position - a.position)
+      .map(role => role.name)
+      .join('\n');
+    
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle(`${message.author.username}'s Server Roles`)
+      .addFields({
+        name: 'Server Roles',
+        value: roles || 'No roles'
+      });
+
+    await message.channel.send({ embeds: [embed] });
+  } catch (error) {
+    console.error('Error displaying roles section:', error);
+    await message.channel.send('An error occurred while fetching role data.');
+  }
+}
+
+async function handleBUXSection(message) {
+  try {
+    const walletData = await getWalletData(message.author.id);
+    const aggregatedData = await aggregateWalletData(walletData);
+    const [timerData, timeUntilNext] = await Promise.all([
+      startOrUpdateDailyTimer(message.author.id, aggregatedData.nftCounts, aggregatedData.buxBalance),
+      getTimeUntilNextClaim(message.author.id)
+    ]);
+    const dailyReward = calculateDailyReward(aggregatedData.nftCounts);
+    
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle(`${message.author.username}'s BUX Balance`)
+      .addFields(
+        { 
+          name: 'BUX Balance', 
+          value: `${aggregatedData.buxBalance.toLocaleString()} BUX` 
+        },
+        { 
+          name: 'Daily Reward', 
+          value: `${dailyReward.toLocaleString()} BUX` 
+        },
+        { 
+          name: 'BUX Claim', 
+          value: `${timerData.claimAmount.toLocaleString()} BUX` 
+        },
+        { 
+          name: 'Claim updates in', 
+          value: timeUntilNext || 'Start timer by verifying wallet'
+        }
+      );
+
+    const claimButton = new ButtonBuilder()
+      .setCustomId('claim_bux')
+      .setLabel('CLAIM')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(true);
+
+    const row = new ActionRowBuilder()
+      .addComponents(claimButton);
+
+    await message.channel.send({ 
+      embeds: [embed],
+      components: [row]
+    });
+  } catch (error) {
+    console.error('Error displaying BUX section:', error);
+    await message.channel.send('An error occurred while fetching BUX data.');
+  }
+}
+
+// Rename existing profile handler
+async function handleProfileCommand(message) {
+  try {
+    await updateUserProfile(message.channel, message.author.id, client);
+  } catch (error) {
+    console.error('Error handling profile command:', error);
+    await message.channel.send('An error occurred while processing your command.');
   }
 }
 
