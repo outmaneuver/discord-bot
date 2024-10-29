@@ -1,7 +1,6 @@
 import { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } from 'discord.js';
-import { updateDiscordRoles, checkNFTOwnership, getBUXBalance } from './verify.js';
+import { updateDiscordRoles, checkNFTOwnership, getBUXBalance, redis } from './verify.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim } from './rewards.js';
-import { redis } from './verify.js';
 import ms from 'ms';
 
 // Add caching for NFT data
