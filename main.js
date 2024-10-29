@@ -156,6 +156,40 @@ app.get(['/holder-verify', '/holder-verify/'], (req, res) => {
   }
 });
 
+// Add store-wallet endpoint
+app.post('/store-wallet', async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+    if (!req.session?.user?.id) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authenticated'
+      });
+    }
+
+    // Store wallet address in Redis
+    await redis.sadd(`wallets:${req.session.user.id}`, walletAddress);
+
+    console.log('Stored wallet address:', {
+      userId: req.session.user.id,
+      walletAddress,
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: 'Wallet address stored successfully'
+    });
+
+  } catch (error) {
+    console.error('Error storing wallet address:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Error handler for 404s
 app.use((req, res) => {
   res.status(404).send('Page not found');
