@@ -1,5 +1,4 @@
 import { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, PermissionsBitField } from 'discord.js';
-import Redis from 'ioredis';
 import fs from 'fs/promises';
 import path from 'path';
 import { Connection, PublicKey } from '@solana/web3.js';
@@ -11,126 +10,6 @@ import { readFile } from 'fs/promises';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// Create a single Redis instance to be shared across the application
-export const redis = new Redis(config.redis.url, {
-  ...config.redis.options,
-  // Connection options
-  connectTimeout: 20000,
-  disconnectTimeout: 5000,
-  keepAlive: 30000,
-  connectionName: 'verify-service',
-  db: 0,
-  lazyConnect: true,
-  
-  // Retry and reconnection
-  retryStrategy: function(times) {
-    const delay = Math.min(times * 50, 2000);
-    console.log('Redis connection attempt:', {
-      attempt: times,
-      delay,
-      timestamp: new Date().toISOString(),
-      instance: 'redis-elliptical',
-      maxRetries: 20
-    });
-    if (times > 20) {
-      console.error('Max Redis retries reached, giving up');
-      return null;
-    }
-    return delay;
-  },
-  maxRetriesPerRequest: 3,
-  retryDelayOnFailover: 100,
-  
-  // Error handling
-  reconnectOnError: function(err) {
-    const sanitizedError = {
-      message: '[Redacted Error Message]',
-      code: err.code,
-      command: err.command,
-      timestamp: new Date().toISOString()
-    };
-    console.error('Redis reconnect error:', sanitizedError);
-    return err.message.includes('READONLY') || 
-           err.message.includes('ETIMEDOUT') || 
-           err.message.includes('ECONNRESET');
-  },
-  showFriendlyErrorStack: false,
-  
-  // Performance options
-  enableReadyCheck: true,
-  noDelay: true,
-  dropBufferSupport: true,
-  enableOfflineQueue: true,
-  enableAutoPipelining: true,
-  commandTimeout: 5000,
-  maxLoadingRetryTime: 2000,
-  
-  // Subscription handling
-  autoResubscribe: true,
-  autoResendUnfulfilledCommands: true,
-  
-  // Sentinel options
-  enableTLSForSentinelMode: false,
-  sentinelRetryStrategy: null
-});
-
-// Add more detailed connection event handlers
-redis.on('error', (err) => {
-  const sanitizedError = {
-    message: '[Redacted Error Message]',
-    code: err.code,
-    timestamp: new Date().toISOString(),
-    connectionState: redis.status
-  };
-  console.error('Redis connection error:', sanitizedError);
-});
-
-redis.on('connect', () => {
-  console.log('Redis connected successfully', {
-    timestamp: new Date().toISOString(),
-    instance: 'redis-elliptical',
-    connectionState: redis.status
-  });
-});
-
-redis.on('ready', () => {
-  console.log('Redis client ready', {
-    timestamp: new Date().toISOString(),
-    connectionState: redis.status,
-    options: {
-      tls: { rejectUnauthorized: false },
-      maxRetriesPerRequest: 3,
-      enableReadyCheck: true,
-      lazyConnect: true,
-      autoResubscribe: true,
-      autoResendUnfulfilledCommands: true,
-      connectTimeout: 20000,
-      disconnectTimeout: 5000,
-      keepAlive: 30000,
-      noDelay: true,
-      commandTimeout: 5000
-    }
-  });
-});
-
-redis.on('reconnecting', (delay) => {
-  console.log('Redis reconnecting:', {
-    delay,
-    timestamp: new Date().toISOString(),
-    instance: 'redis-elliptical',
-    connectionState: redis.status,
-    retryAttempt: redis.retryAttempts
-  });
-});
-
-redis.on('end', () => {
-  console.log('Redis connection ended', {
-    timestamp: new Date().toISOString(),
-    instance: 'redis-elliptical',
-    connectionState: redis.status
-  });
-});
 
 // Use config values
 const BUX_TOKEN_MINT = config.solana.buxMint;
@@ -173,6 +52,7 @@ async function loadHashlist(filename) {
   }
 }
 
+// Initialize hashlists
 let fckedCatzHashlist;
 let celebCatzHashlist;
 let moneyMonstersHashlist;
