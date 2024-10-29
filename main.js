@@ -43,56 +43,47 @@ app.use(cors());
 app.use(express.json());
 console.log('Express app created');
 
-// Setup application before starting server
-const setupApplication = async () => {
-  try {
-    console.log('Application setup complete');
-    
-    // Start Express server first
-    const port = process.env.PORT;
-    if (!port) {
-      throw new Error('PORT environment variable not set');
-    }
-    
-    await new Promise((resolve, reject) => {
-      const server = app.listen(port, () => {
-        console.log('Server is running on port', port);
-        resolve();
-      });
+// Setup routes
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+app.use(express.static(path.join(__dirname, 'public')));
 
-      server.on('error', (error) => {
-        console.error('Server error:', error);
-        reject(error);
-      });
+app.get('/holder-verify/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
-      // Add timeout for port binding
-      setTimeout(() => {
-        reject(new Error('Server startup timeout'));
-      }, 30000);
-    });
+// Setup application
+console.log('Application setup complete');
 
-    // Load hashlists
-    const hashlists = {
-      fckedCatz: 1422,
-      celebCatz: 130,
-      moneyMonsters: 666,
-      moneyMonsters3d: 666,
-      aiBitbots: 218
-    };
-    console.log('Hashlists loaded:', hashlists);
+// Start Express server first
+const port = process.env.PORT || 3000;
+console.log('Server is starting on port', port);
 
-    // Start Discord client after server is running
-    await client.login(config.discord.token);
-    console.log('Discord bot logged in');
+const server = app.listen(port, () => {
+  console.log('Server is running on port', port);
+});
 
-  } catch (error) {
-    console.error('Error during setup:', error);
-    process.exit(1);
-  }
+server.on('error', (error) => {
+  console.error('Server error:', error);
+  process.exit(1);
+});
+
+// Load hashlists
+const hashlists = {
+  fckedCatz: 1422,
+  celebCatz: 130,
+  moneyMonsters: 666,
+  moneyMonsters3d: 666,
+  aiBitbots: 218
 };
+console.log('Hashlists loaded:', hashlists);
 
-// Start application
-setupApplication();
+// Start Discord client
+client.login(config.discord.token).then(() => {
+  console.log('Discord bot logged in');
+}).catch(error => {
+  console.error('Discord login error:', error);
+  process.exit(1);
+});
 
 // Command handlers
 const commandHandlers = {
