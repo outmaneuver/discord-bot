@@ -43,14 +43,6 @@ app.use(cors());
 app.use(express.json());
 console.log('Express app created');
 
-// Setup routes
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.get('/holder-verify/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
 // Setup application
 console.log('Application setup complete');
 
@@ -58,6 +50,19 @@ console.log('Application setup complete');
 const port = process.env.PORT || 3000;
 console.log('Server is starting on port', port);
 
+// Setup routes before starting server
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/holder-verify', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/holder-verify/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Start server
 const server = app.listen(port, () => {
   console.log('Server is running on port', port);
 });
