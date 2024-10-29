@@ -15,27 +15,18 @@ router.use(cors({
 
 const DISCORD_API_URL = 'https://discord.com/api/v10';
 
-// Add error handling middleware
-router.use((err, req, res, next) => {
-  console.error('Auth route error:', err);
-  res.status(500).json({
-    error: 'Authentication error',
-    message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
-  });
-});
-
 router.get('/discord', (req, res) => {
   try {
-    // Force https for production
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
-    const redirectUri = `${protocol}://${req.get('host')}/auth/callback`;
-    
-    // Fix scope format - use space-separated string instead of space in URL
+    // Generate and store state parameter for CSRF protection
+    const state = Math.random().toString(36).substring(7);
+    req.session.oauthState = state;
+
     const params = new URLSearchParams({
       client_id: config.discord.clientId,
-      redirect_uri: redirectUri,
+      redirect_uri: 'https://buxdao-verify-d1faffc83da7.herokuapp.com/auth/callback',
       response_type: 'code',
-      scope: 'identify guilds'.split(' ').join('%20')
+      scope: 'identify guilds',
+      state: state
     });
 
     const url = `https://discord.com/api/oauth2/authorize?${params}`;
@@ -48,7 +39,14 @@ router.get('/discord', (req, res) => {
 });
 
 router.get('/callback', async (req, res) => {
-  const { code } = req.query;
+  const { code, state } = req.query;
+
+  // Verify state parameter to prevent CSRF
+  if (!state || state !== req.session.oauthState) {
+    console.error('State mismatch - possible CSRF attack');
+    return res.redirect('/holder-verify?error=state');
+  }
+
   if (!code) {
     console.log('No code provided in callback');
     return res.redirect('/holder-verify?error=nocode');
@@ -56,8 +54,6 @@ router.get('/callback', async (req, res) => {
 
   try {
     console.log('Processing OAuth callback with code');
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
-    const redirectUri = `${protocol}://${req.get('host')}/auth/callback`;
 
     const tokenResponse = await fetch(`${DISCORD_API_URL}/oauth2/token`, {
       method: 'POST',
@@ -66,7 +62,7 @@ router.get('/callback', async (req, res) => {
         client_secret: config.discord.clientSecret,
         code,
         grant_type: 'authorization_code',
-        redirect_uri: redirectUri,
+        redirect_uri: 'https://buxdao-verify-d1faffc83da7.herokuapp.com/auth/callback',
       }),
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -103,6 +99,9 @@ router.get('/callback', async (req, res) => {
       username: userData.username,
       accessToken: tokenData.access_token
     };
+
+    // Clear OAuth state
+    delete req.session.oauthState;
 
     // Save session explicitly
     req.session.save((err) => {
