@@ -164,11 +164,23 @@ const commandHandlers = {
             '`=my.profile` - View your full profile',
             '`=my.wallet` - View your connected wallets',
             '`=my.nfts` - View your NFT holdings',
-            '`=verify` - Get wallet verification link'
+            '`=verify` - Get wallet verification link',
+            '`=gm` - Get a friendly greeting'
           ].join('\n')
         }
       );
     await message.channel.send({ embeds: [embed] });
+  },
+  'gm': async (message) => {
+    const greetings = [
+      "GM! Have an awesome day! 🌞",
+      "Good morning, champion! Ready to conquer the day? 💪",
+      "GM GM! Let's make today amazing! ✨",
+      "Rise and shine! GM fren! 🌅",
+      "GM! Hope your day is as nice as your NFTs! 🎨"
+    ];
+    const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+    await message.reply(randomGreeting);
   }
 };
 

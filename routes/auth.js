@@ -1,29 +1,56 @@
 import express from 'express';
 import fetch from 'node-fetch';
+import cors from 'cors';
 import { config } from '../config/config.js';
 
 const router = express.Router();
 
+// Enable CORS for auth routes
+router.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://buxdao-verify-d1faffc83da7.herokuapp.com'
+    : 'http://localhost:3000',
+  credentials: true
+}));
+
 const DISCORD_API_URL = 'https://discord.com/api/v10';
 
-router.get('/discord', (req, res) => {
-  const params = new URLSearchParams({
-    client_id: config.discord.clientId,
-    redirect_uri: `${req.protocol}://${req.get('host')}/auth/callback`,
-    response_type: 'code',
-    scope: 'identify guilds'
+// Add error handling middleware
+router.use((err, req, res, next) => {
+  console.error('Auth route error:', err);
+  res.status(500).json({
+    error: 'Authentication error',
+    message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
   });
+});
 
-  res.redirect(`https://discord.com/api/oauth2/authorize?${params}`);
+router.get('/discord', (req, res) => {
+  try {
+    const params = new URLSearchParams({
+      client_id: config.discord.clientId,
+      redirect_uri: `${req.protocol}://${req.get('host')}/auth/callback`,
+      response_type: 'code',
+      scope: 'identify guilds'
+    });
+
+    const url = `https://discord.com/api/oauth2/authorize?${params}`;
+    console.log('Redirecting to Discord OAuth:', url);
+    res.redirect(url);
+  } catch (error) {
+    console.error('Discord auth redirect error:', error);
+    res.redirect('/holder-verify?error=redirect');
+  }
 });
 
 router.get('/callback', async (req, res) => {
   const { code } = req.query;
   if (!code) {
+    console.log('No code provided in callback');
     return res.redirect('/holder-verify?error=nocode');
   }
 
   try {
+    console.log('Processing OAuth callback with code');
     const tokenResponse = await fetch(`${DISCORD_API_URL}/oauth2/token`, {
       method: 'POST',
       body: new URLSearchParams({
@@ -38,7 +65,13 @@ router.get('/callback', async (req, res) => {
       },
     });
 
+    if (!tokenResponse.ok) {
+      console.error('Token response not ok:', await tokenResponse.text());
+      throw new Error('Failed to get access token');
+    }
+
     const tokenData = await tokenResponse.json();
+    console.log('Received token data');
 
     const userResponse = await fetch(`${DISCORD_API_URL}/users/@me`, {
       headers: {
@@ -46,7 +79,13 @@ router.get('/callback', async (req, res) => {
       },
     });
 
+    if (!userResponse.ok) {
+      console.error('User response not ok:', await userResponse.text());
+      throw new Error('Failed to get user data');
+    }
+
     const userData = await userResponse.json();
+    console.log('Received user data:', { id: userData.id, username: userData.username });
 
     // Store user data in session
     req.session.user = {
@@ -55,24 +94,32 @@ router.get('/callback', async (req, res) => {
       accessToken: tokenData.access_token
     };
 
-    res.redirect('/holder-verify');
+    // Save session explicitly
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.redirect('/holder-verify?error=session');
+      }
+      res.redirect('/holder-verify');
+    });
+
   } catch (error) {
-    console.error('Auth error:', error);
+    console.error('Auth callback error:', error);
     res.redirect('/holder-verify?error=auth');
   }
 });
 
 router.get('/status', (req, res) => {
-  if (req.session?.user) {
-    res.json({
-      authenticated: true,
-      username: req.session.user.username
-    });
-  } else {
-    res.json({
-      authenticated: false
-    });
-  }
+  console.log('Auth status check:', {
+    hasSession: !!req.session,
+    hasUser: !!req.session?.user,
+    username: req.session?.user?.username
+  });
+
+  res.json({
+    authenticated: !!req.session?.user,
+    username: req.session?.user?.username || null
+  });
 });
 
 export default router; 
