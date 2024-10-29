@@ -255,8 +255,11 @@ const commandHandlers = {
   'my.nfts': async (message) => {
     try {
       const walletData = await getWalletData(message.author.id);
-      const aggregatedData = await aggregateWalletData(walletData);
+      if (!walletData || !walletData.walletAddresses || walletData.walletAddresses.length === 0) {
+        return message.reply('No wallets connected. Please verify your wallet first.');
+      }
       
+      const aggregatedData = await aggregateWalletData(walletData);
       const embed = new EmbedBuilder()
         .setColor('#0099ff')
         .setTitle(`${message.author.username}'s NFT Collection`)
@@ -264,13 +267,13 @@ const commandHandlers = {
           name: 'NFTs',
           value: Object.entries(aggregatedData.nftCounts)
             .map(([collection, nfts]) => `${collection}: ${nfts.length}`)
-            .join('\n')
+            .join('\n') || 'No NFTs found'
         });
       
       await message.channel.send({ embeds: [embed] });
     } catch (error) {
-      console.error('Error handling NFT command:', error);
-      await message.channel.send('An error occurred while fetching your NFTs.');
+      console.error('Error in my.nfts command:', error);
+      await message.reply('Error fetching NFTs. Please try again later.');
     }
   },
   'verify': async (message) => {

@@ -332,14 +332,16 @@ export async function updateDiscordRoles(userId, client) {
 
     // Define role assignments with thresholds
     const roleAssignments = [
-      { name: 'CAT', collection: 'fcked_catz', threshold: 1 },
-      { name: 'CELEB', collection: 'celebcatz', threshold: 1 },
       { name: 'MONSTER', collection: 'money_monsters', threshold: 1 },
       { name: 'MONSTER 3D', collection: 'money_monsters3d', threshold: 1 },
+      { name: 'CAT', collection: 'fcked_catz', threshold: 1 },
+      { name: 'CELEB', collection: 'celebcatz', threshold: 1 },
       { name: 'BITBOT', collection: 'ai_bitbots', threshold: 1 },
       { name: 'MONSTER 🐋', collection: 'money_monsters', threshold: 20 },
       { name: 'MONSTER 3D 🐋', collection: 'money_monsters3d', threshold: 20 },
-      { name: 'MEGA BOT 🐋', collection: 'ai_bitbots', threshold: 5 }
+      { name: 'MEGA BOT 🐋', collection: 'ai_bitbots', threshold: 5 },
+      { name: 'MEGA CAT 🐋', collection: 'fcked_catz', threshold: 20 },
+      { name: 'MEGA CELEB 🐋', collection: 'celebcatz', threshold: 5 }
     ];
 
     // Update roles
