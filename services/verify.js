@@ -292,45 +292,49 @@ export async function verifyHolder(walletData, userId, client) {
 // Update Discord roles function
 export async function updateDiscordRoles(userId, client) {
   try {
-    // Check if client is ready
-    if (!client.isReady()) {
-      console.log('Waiting for client to be ready...');
-      await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Client ready timeout')), 5000);
-        client.once('ready', () => {
-          clearTimeout(timeout);
-          resolve();
-        });
-      });
-    }
-
-    // Get guild
-    const guild = client.guilds.cache.get(GUILD_ID);
-    if (!guild) throw new Error('Guild not found');
-
-    // Get member
-    const member = await guild.members.fetch(userId);
-    if (!member) throw new Error('Member not found');
-
-    // Get NFT data
-    const nftData = await redis.hgetall(`user:${userId}:nfts`);
-    if (!nftData) {
-      console.log('No NFT data found for user:', userId);
+    // Get all wallets for user
+    const wallets = await redis.smembers(`wallets:${userId}`);
+    if (!wallets || wallets.length === 0) {
+      console.log('No wallets found for user:', userId);
       return;
     }
 
-    // Parse NFT counts
-    const nftCounts = {
-      fcked_catz: JSON.parse(nftData.fcked_catz || '[]').length,
-      celebcatz: JSON.parse(nftData.celebcatz || '[]').length,
-      money_monsters: JSON.parse(nftData.money_monsters || '[]').length,
-      money_monsters3d: JSON.parse(nftData.money_monsters3d || '[]').length,
-      ai_bitbots: JSON.parse(nftData.ai_bitbots || '[]').length
+    // Get NFTs from all wallets
+    const allNFTs = {
+      fcked_catz: new Set(),
+      celebcatz: new Set(),
+      money_monsters: new Set(),
+      money_monsters3d: new Set(),
+      ai_bitbots: new Set()
     };
 
-    console.log('NFT counts for role assignment:', nftCounts);
+    // Aggregate NFTs from all wallets
+    for (const wallet of wallets) {
+      const nfts = await checkNFTOwnership(wallet);
+      Object.entries(nfts).forEach(([collection, tokens]) => {
+        tokens.forEach(token => allNFTs[collection].add(token));
+      });
+    }
 
-    // Define role assignments with thresholds
+    // Convert Sets to counts
+    const nftCounts = {
+      fcked_catz: allNFTs.fcked_catz.size,
+      celebcatz: allNFTs.celebcatz.size,
+      money_monsters: allNFTs.money_monsters.size,
+      money_monsters3d: allNFTs.money_monsters3d.size,
+      ai_bitbots: allNFTs.ai_bitbots.size
+    };
+
+    console.log('Total NFT counts across all wallets:', nftCounts);
+
+    // Get guild and member
+    const guild = client.guilds.cache.get(GUILD_ID);
+    if (!guild) throw new Error('Guild not found');
+
+    const member = await guild.members.fetch(userId);
+    if (!member) throw new Error('Member not found');
+
+    // Define role assignments
     const roleAssignments = [
       { name: 'MONSTER', collection: 'money_monsters', threshold: 1 },
       { name: 'MONSTER 3D', collection: 'money_monsters3d', threshold: 1 },
@@ -364,10 +368,17 @@ export async function updateDiscordRoles(userId, client) {
       }
     }
 
-    console.log('Roles updated for user:', userId, {
-      roles: Array.from(member.roles.cache.values()).map(r => r.name),
-      nftCounts
+    // Store updated NFT counts in Redis
+    await redis.hset(`user:${userId}:nfts`, {
+      fcked_catz: JSON.stringify(Array.from(allNFTs.fcked_catz)),
+      celebcatz: JSON.stringify(Array.from(allNFTs.celebcatz)),
+      money_monsters: JSON.stringify(Array.from(allNFTs.money_monsters)),
+      money_monsters3d: JSON.stringify(Array.from(allNFTs.money_monsters3d)),
+      ai_bitbots: JSON.stringify(Array.from(allNFTs.ai_bitbots))
     });
+
+    console.log('Updated roles and stored NFT data for user:', userId);
+    return nftCounts;
 
   } catch (error) {
     console.error('Error updating Discord roles:', error);
@@ -397,16 +408,9 @@ export function validateWalletAddress(req, res, next) {
   }
 }
 
-// Update checkNFTOwnership function to properly handle hashlist loading
+// Update checkNFTOwnership to be more accurate
 export async function checkNFTOwnership(walletAddress) {
   try {
-    // Wait for hashlists to be loaded
-    if (!fckedCatzHashlist || !celebCatzHashlist || !moneyMonstersHashlist || 
-        !moneyMonsters3dHashlist || !aiBitbotsHashlist) {
-      console.log('Waiting for hashlists to load...');
-      await initializeHashlists();
-    }
-
     // Get token accounts
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
       new PublicKey(walletAddress),
@@ -423,44 +427,32 @@ export async function checkNFTOwnership(walletAddress) {
       }
     });
 
-    // Log owned tokens for debugging
-    console.log(`Found ${ownedTokens.size} tokens in wallet ${walletAddress}`);
-
-    // Initialize NFT counts
+    // Initialize NFT counts with Sets to prevent duplicates
     const nftCounts = {
-      fcked_catz: [],
-      celebcatz: [],
-      money_monsters: [],
-      money_monsters3d: [],
-      ai_bitbots: []
-    };
-
-    // Helper function to check and add NFTs with detailed logging
-    const checkAndAddNFTs = (collection, hashlist) => {
-      console.log(`\nChecking ${collection} hashlist (size: ${hashlist.size})`);
-      
-      hashlist.forEach(mint => {
-        if (ownedTokens.has(mint)) {
-          const amount = ownedTokens.get(mint);
-          if (amount > 0) {
-            nftCounts[collection].push(mint);
-            console.log(`Found ${collection} NFT: ${mint} (amount: ${amount})`);
-          }
-        }
-      });
-      
-      console.log(`Found ${nftCounts[collection].length} ${collection} NFTs`);
+      fcked_catz: new Set(),
+      celebcatz: new Set(),
+      money_monsters: new Set(),
+      money_monsters3d: new Set(),
+      ai_bitbots: new Set()
     };
 
     // Check each collection
-    checkAndAddNFTs('fcked_catz', fckedCatzHashlist);
-    checkAndAddNFTs('celebcatz', celebCatzHashlist);
-    checkAndAddNFTs('money_monsters', moneyMonstersHashlist);
-    checkAndAddNFTs('money_monsters3d', moneyMonsters3dHashlist);
-    checkAndAddNFTs('ai_bitbots', aiBitbotsHashlist);
+    for (const [mint] of ownedTokens) {
+      if (fckedCatzHashlist.has(mint)) nftCounts.fcked_catz.add(mint);
+      if (celebCatzHashlist.has(mint)) nftCounts.celebcatz.add(mint);
+      if (moneyMonstersHashlist.has(mint)) nftCounts.money_monsters.add(mint);
+      if (moneyMonsters3dHashlist.has(mint)) nftCounts.money_monsters3d.add(mint);
+      if (aiBitbotsHashlist.has(mint)) nftCounts.ai_bitbots.add(mint);
+    }
 
-    return nftCounts;
-
+    // Convert Sets to arrays
+    return {
+      fcked_catz: Array.from(nftCounts.fcked_catz),
+      celebcatz: Array.from(nftCounts.celebcatz),
+      money_monsters: Array.from(nftCounts.money_monsters),
+      money_monsters3d: Array.from(nftCounts.money_monsters3d),
+      ai_bitbots: Array.from(nftCounts.ai_bitbots)
+    };
   } catch (error) {
     console.error('Error checking NFT ownership:', error);
     throw error;
