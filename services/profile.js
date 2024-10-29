@@ -279,14 +279,3 @@ function calculateDailyReward(nftCounts) {
 
   return reward;
 }
-
-// Remove duplicate exports at the bottom and keep only one export block at the top
-export {
-  updateUserProfile,
-  getWalletData,
-  addWallet,
-  removeWallet,
-  aggregateWalletData,
-  formatNFTCounts,
-  calculateDailyReward
-};
