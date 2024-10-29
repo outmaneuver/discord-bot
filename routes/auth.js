@@ -21,19 +21,13 @@ router.get('/discord', (req, res) => {
     const state = Math.random().toString(36).substring(7);
     req.session.oauthState = state;
 
-    // Build the authorization URL with specific parameters
-    const redirectUri = encodeURIComponent('https://buxdao-verify-d1faffc83da7.herokuapp.com/auth/callback');
-    const scope = encodeURIComponent('identify guilds');
-    
-    // Manually construct the URL to ensure exact format
-    const url = `${DISCORD_API_URL}/oauth2/authorize` +
+    // Simple, direct Discord OAuth URL
+    const url = 'https://discord.com/oauth2/authorize' +
       `?client_id=${config.discord.clientId}` +
-      `&redirect_uri=${redirectUri}` +
-      `&response_type=code` +
-      `&scope=${scope}` +
-      `&state=${state}` +
-      `&prompt=consent` +
-      `&permissions=0`;
+      '&redirect_uri=https%3A%2F%2Fbuxdao-verify-d1faffc83da7.herokuapp.com%2Fauth%2Fcallback' +
+      '&response_type=code' +
+      '&scope=identify%20guilds' +
+      `&state=${state}`;
 
     console.log('Redirecting to Discord OAuth:', url);
     res.redirect(url);
