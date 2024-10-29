@@ -133,30 +133,65 @@ async function aggregateWalletData(walletData) {
 
 export async function updateUserProfile(channel, userId, client) {
   try {
+    // Get wallet data with error handling
     const walletData = await getWalletData(userId);
-    const aggregatedData = await aggregateWalletData(walletData);
-    
-    const user = await client.users.fetch(userId);
-    const username = user.username;
+    if (!walletData || !walletData.walletAddresses) {
+      throw new Error('Failed to get wallet data');
+    }
+    console.log(`Processing profile for user ${userId} with wallets:`, walletData.walletAddresses);
 
-    // Get user's roles
+    // Get aggregated data with error handling
+    const aggregatedData = await aggregateWalletData(walletData);
+    if (!aggregatedData) {
+      throw new Error('Failed to aggregate wallet data');
+    }
+
+    // Fetch user with error handling
+    const user = await client.users.fetch(userId).catch(error => {
+      console.error('Error fetching user:', error);
+      throw new Error('Failed to fetch user data');
+    });
+
+    // Get guild with error handling
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
-    const member = await guild.members.fetch(userId);
+    if (!guild) {
+      throw new Error('Guild not found');
+    }
+
+    // Get member with error handling
+    const member = await guild.members.fetch({ user: userId, force: true }).catch(error => {
+      console.error('Error fetching member:', error);
+      throw new Error('Failed to fetch member data');
+    });
+
+    // Get roles with proper filtering and sorting
     const roles = member.roles.cache
       .filter(role => role.name !== '@everyone')
       .sort((a, b) => b.position - a.position)
       .map(role => role.name)
       .join('\n');
 
-    const timerData = await startOrUpdateDailyTimer(userId, aggregatedData.nftCounts, aggregatedData.buxBalance);
-    const timeUntilNext = await getTimeUntilNextClaim(userId);
+    // Get timer data with error handling
+    const [timerData, timeUntilNext] = await Promise.all([
+      startOrUpdateDailyTimer(userId, aggregatedData.nftCounts, aggregatedData.buxBalance)
+        .catch(error => {
+          console.error('Error getting timer data:', error);
+          return { claimAmount: 0 };
+        }),
+      getTimeUntilNextClaim(userId)
+        .catch(error => {
+          console.error('Error getting claim time:', error);
+          return 'Error getting time';
+        })
+    ]);
 
-    // Calculate daily reward based on NFT holdings
+    // Calculate daily reward
     const dailyReward = calculateDailyReward(aggregatedData.nftCounts);
-    
+
+    // Create embed
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
-      .setTitle(`${username}'s BUX DAO Profile`)
+      .setTitle(`${user.username}'s BUX DAO Profile`)
       .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 128 }))
       .addFields(
         { 
@@ -195,7 +230,7 @@ export async function updateUserProfile(channel, userId, client) {
         }
       );
 
-    // Create claim button (disabled for now)
+    // Create claim button
     const claimButton = new ButtonBuilder()
       .setCustomId('claim_bux')
       .setLabel('CLAIM')
@@ -205,15 +240,24 @@ export async function updateUserProfile(channel, userId, client) {
     const row = new ActionRowBuilder()
       .addComponents(claimButton);
 
+    // Send message with error handling
     await channel.send({ 
       embeds: [embed],
       components: [row]
+    }).catch(error => {
+      console.error('Error sending profile message:', error);
+      throw new Error('Failed to send profile message');
     });
-    
-    await updateDiscordRoles(userId, client);
+
+    // Update roles in background
+    updateDiscordRoles(userId, client).catch(error => {
+      console.error('Error updating roles:', error);
+    });
+
   } catch (error) {
     console.error('Error updating user profile:', error);
-    throw error;
+    await channel.send('An error occurred while processing your command. Please try again later.')
+      .catch(sendError => console.error('Error sending error message:', sendError));
   }
 }
 

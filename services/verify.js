@@ -281,19 +281,26 @@ export async function verifyHolder(walletData, userId, client) {
 // Update Discord roles function
 export async function updateDiscordRoles(userId, client) {
   try {
-    // Check if client is ready by checking client.isReady()
+    // Check if client is ready using client.isReady()
     if (!client.isReady()) {
       console.log('Waiting for client to be ready...', {
         clientStatus: {
           isReady: client.isReady(),
           readyAt: client.readyAt,
           readyTimestamp: client.readyTimestamp,
-          uptime: client.uptime
+          uptime: client.uptime,
+          guildsLoaded: client.guilds.cache.size
         }
       });
-      await new Promise(resolve => {
-        if (client.isReady()) resolve();
-        else client.once('ready', resolve);
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Client ready timeout'));
+        }, 5000);
+        
+        client.once('ready', () => {
+          clearTimeout(timeout);
+          resolve();
+        });
       });
     }
 
@@ -308,23 +315,28 @@ export async function updateDiscordRoles(userId, client) {
           isReady: client.isReady(),
           readyAt: client.readyAt,
           readyTimestamp: client.readyTimestamp,
-          uptime: client.uptime
+          uptime: client.uptime,
+          guildsLoaded: client.guilds.cache.size
         }
       });
       
-      // Try to fetch guild
-      try {
-        guild = await client.guilds.fetch(GUILD_ID);
-        if (guild) {
-          console.log('Successfully fetched guild:', guild.name);
-          guild = await guild.fetch({ force: true, cache: true });
-          await guild.members.fetch({ force: true });
-        } else {
+      // Try to fetch guild with retries
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          guild = await client.guilds.fetch(GUILD_ID);
+          if (guild) {
+            console.log('Successfully fetched guild:', guild.name);
+            guild = await guild.fetch({ force: true, cache: true });
+            await guild.members.fetch({ force: true });
+            break;
+          }
           throw new Error('Guild not found after fetch attempt');
+        } catch (error) {
+          retries--;
+          if (retries === 0) throw error;
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
-      } catch (fetchError) {
-        console.error('Error fetching guild:', fetchError);
-        throw new Error('Guild not found and fetch failed');
       }
     }
 
