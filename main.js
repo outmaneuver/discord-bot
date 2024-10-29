@@ -49,16 +49,26 @@ const setupApplication = async () => {
     console.log('Application setup complete');
     
     // Start Express server first
-    const port = process.env.PORT || 3000;
-    console.log('Server is starting on port', port);
+    const port = process.env.PORT;
+    if (!port) {
+      throw new Error('PORT environment variable not set');
+    }
     
-    const server = app.listen(port, () => {
-      console.log('Server is running on port', port);
-    });
+    await new Promise((resolve, reject) => {
+      const server = app.listen(port, () => {
+        console.log('Server is running on port', port);
+        resolve();
+      });
 
-    server.on('error', (error) => {
-      console.error('Server error:', error);
-      process.exit(1);
+      server.on('error', (error) => {
+        console.error('Server error:', error);
+        reject(error);
+      });
+
+      // Add timeout for port binding
+      setTimeout(() => {
+        reject(new Error('Server startup timeout'));
+      }, 30000);
     });
 
     // Load hashlists
