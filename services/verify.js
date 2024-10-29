@@ -395,21 +395,9 @@ export function validateWalletAddress(req, res, next) {
   }
 }
 
-// Update checkNFTOwnership function to properly check hashlists
+// Update checkNFTOwnership function to fix NFT counting
 export async function checkNFTOwnership(walletAddress) {
   try {
-    // Get cached NFT data first
-    const cachedData = await redis.hgetall(`wallet:${walletAddress}:nfts`);
-    if (cachedData) {
-      return {
-        fcked_catz: JSON.parse(cachedData.fcked_catz || '[]'),
-        celebcatz: JSON.parse(cachedData.celebcatz || '[]'),
-        money_monsters: JSON.parse(cachedData.money_monsters || '[]'),
-        money_monsters3d: JSON.parse(cachedData.money_monsters3d || '[]'),
-        ai_bitbots: JSON.parse(cachedData.ai_bitbots || '[]')
-      };
-    }
-
     // Get token accounts
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
       new PublicKey(walletAddress),
@@ -427,9 +415,10 @@ export async function checkNFTOwnership(walletAddress) {
     });
 
     // Log owned tokens for debugging
-    console.log(`Found ${ownedTokens.size} tokens for wallet ${walletAddress}`);
+    console.log(`Found ${ownedTokens.size} tokens in wallet ${walletAddress}`);
+    console.log('Owned token mints:', Array.from(ownedTokens.keys()));
 
-    // Check against hashlists and only include NFTs with balance > 0
+    // Initialize NFT counts
     const nftCounts = {
       fcked_catz: [],
       celebcatz: [],
@@ -440,19 +429,23 @@ export async function checkNFTOwnership(walletAddress) {
 
     // Helper function to check and add NFTs with detailed logging
     const checkAndAddNFTs = (collection, hashlist) => {
-      console.log(`Checking ${collection} hashlist (size: ${hashlist.size})`);
+      console.log(`\nChecking ${collection}...`);
+      console.log(`Hashlist size: ${hashlist.size}`);
+      console.log('First few hashlist entries:', Array.from(hashlist).slice(0, 5));
       
+      let found = 0;
       hashlist.forEach(mint => {
         if (ownedTokens.has(mint)) {
           const amount = ownedTokens.get(mint);
           if (amount > 0) {
             nftCounts[collection].push(mint);
-            console.log(`Found ${collection} NFT: ${mint}`);
+            found++;
+            console.log(`Found ${collection} NFT: ${mint} (amount: ${amount})`);
           }
         }
       });
       
-      console.log(`Found ${nftCounts[collection].length} ${collection} NFTs`);
+      console.log(`Total ${collection} NFTs found: ${found}`);
     };
 
     // Check each collection
@@ -462,17 +455,14 @@ export async function checkNFTOwnership(walletAddress) {
     checkAndAddNFTs('money_monsters3d', moneyMonsters3dHashlist);
     checkAndAddNFTs('ai_bitbots', aiBitbotsHashlist);
 
-    // Cache results with 1 hour TTL
-    const pipeline = redis.pipeline();
-    pipeline.hset(`wallet:${walletAddress}:nfts`, {
-      fcked_catz: JSON.stringify(nftCounts.fcked_catz),
-      celebcatz: JSON.stringify(nftCounts.celebcatz),
-      money_monsters: JSON.stringify(nftCounts.money_monsters),
-      money_monsters3d: JSON.stringify(nftCounts.money_monsters3d),
-      ai_bitbots: JSON.stringify(nftCounts.ai_bitbots)
+    // Log final counts
+    console.log('\nFinal NFT counts:', {
+      fcked_catz: nftCounts.fcked_catz.length,
+      celebcatz: nftCounts.celebcatz.length,
+      money_monsters: nftCounts.money_monsters.length,
+      money_monsters3d: nftCounts.money_monsters3d.length,
+      ai_bitbots: nftCounts.ai_bitbots.length
     });
-    pipeline.expire(`wallet:${walletAddress}:nfts`, 3600);
-    await pipeline.exec();
 
     return nftCounts;
 
