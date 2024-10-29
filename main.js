@@ -14,6 +14,7 @@ import session from 'express-session';
 import authRouter from './routes/auth.js';
 import RedisStore from 'connect-redis';
 import { redis } from './config/redis.js';
+import fs from 'fs/promises';
 
 import { verifyHolder, sendVerificationMessage, updateDiscordRoles } from './services/verify.js';
 import { updateUserProfile, getWalletData } from './services/profile.js';
@@ -22,6 +23,43 @@ import {
   startOrUpdateDailyTimer,
   getTimeUntilNextClaim
 } from './services/rewards.js';
+
+// Initialize hashlists
+let hashlists = null;
+
+// Load hashlists function
+async function loadHashlists() {
+  try {
+    const [fckedCatz, celebCatz, moneyMonsters, moneyMonsters3d, aiBitbots] = await Promise.all([
+      fs.readFile(path.join(__dirname, 'config', 'hashlists', 'fcked_catz.json'), 'utf8'),
+      fs.readFile(path.join(__dirname, 'config', 'hashlists', 'celebcatz.json'), 'utf8'),
+      fs.readFile(path.join(__dirname, 'config', 'hashlists', 'money_monsters.json'), 'utf8'),
+      fs.readFile(path.join(__dirname, 'config', 'hashlists', 'money_monsters3d.json'), 'utf8'),
+      fs.readFile(path.join(__dirname, 'config', 'hashlists', 'ai_bitbots.json'), 'utf8')
+    ]);
+
+    hashlists = {
+      fckedCatz: new Set(JSON.parse(fckedCatz)),
+      celebCatz: new Set(JSON.parse(celebCatz)),
+      moneyMonsters: new Set(JSON.parse(moneyMonsters)),
+      moneyMonsters3d: new Set(JSON.parse(moneyMonsters3d)),
+      aiBitbots: new Set(JSON.parse(aiBitbots))
+    };
+
+    console.log('Hashlists loaded:', {
+      fckedCatz: hashlists.fckedCatz.size,
+      celebCatz: hashlists.celebCatz.size,
+      moneyMonsters: hashlists.moneyMonsters.size,
+      moneyMonsters3d: hashlists.moneyMonsters3d.size,
+      aiBitbots: hashlists.aiBitbots.size
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Error loading hashlists:', error);
+    throw error;
+  }
+}
 
 // Initialize application
 console.log('Starting application...');
@@ -32,9 +70,15 @@ redis.on('error', (err) => {
   process.exit(1);
 });
 
-redis.on('ready', () => {
+redis.on('ready', async () => {
   console.log('Redis connected and ready');
-  startApp();
+  try {
+    await loadHashlists();
+    startApp();
+  } catch (error) {
+    console.error('Failed to load hashlists:', error);
+    process.exit(1);
+  }
 });
 
 // Main application startup function
