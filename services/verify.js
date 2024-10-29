@@ -281,22 +281,11 @@ export async function verifyHolder(walletData, userId, client) {
 // Update Discord roles function
 export async function updateDiscordRoles(userId, client) {
   try {
-    // Check if client is ready using client.isReady()
+    // Check if client is ready
     if (!client.isReady()) {
-      console.log('Waiting for client to be ready...', {
-        clientStatus: {
-          isReady: client.isReady(),
-          readyAt: client.readyAt,
-          readyTimestamp: client.readyTimestamp,
-          uptime: client.uptime,
-          guildsLoaded: client.guilds.cache.size
-        }
-      });
+      console.log('Waiting for client to be ready...');
       await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('Client ready timeout'));
-        }, 5000);
-        
+        const timeout = setTimeout(() => reject(new Error('Client ready timeout')), 5000);
         client.once('ready', () => {
           clearTimeout(timeout);
           resolve();
@@ -304,142 +293,85 @@ export async function updateDiscordRoles(userId, client) {
       });
     }
 
-    // Get guild directly from client
-    let guild = client.guilds.cache.get(GUILD_ID);
+    // Get guild
+    const guild = client.guilds.cache.get(GUILD_ID) || await client.guilds.fetch(GUILD_ID);
+    if (!guild) throw new Error('Guild not found');
+
+    // Get member
+    const member = await guild.members.fetch({ user: userId, force: true });
+    if (!member) throw new Error('Member not found');
+
+    // Define all NFT roles
+    const NFT_ROLES = ['CAT', 'CELEB', 'MONSTER', 'MONSTER 3D', 'BITBOT'];
     
-    if (!guild) {
-      console.error('Guild not found in cache:', {
-        guildId: GUILD_ID,
-        availableGuilds: Array.from(client.guilds.cache.keys()),
-        clientStatus: {
-          isReady: client.isReady(),
-          readyAt: client.readyAt,
-          readyTimestamp: client.readyTimestamp,
-          uptime: client.uptime,
-          guildsLoaded: client.guilds.cache.size
-        }
-      });
-      
-      // Try to fetch guild with retries
-      let retries = 3;
-      while (retries > 0) {
-        try {
-          guild = await client.guilds.fetch(GUILD_ID);
-          if (guild) {
-            console.log('Successfully fetched guild:', guild.name);
-            guild = await guild.fetch({ force: true, cache: true });
-            await guild.members.fetch({ force: true });
-            break;
-          }
-          throw new Error('Guild not found after fetch attempt');
-        } catch (error) {
-          retries--;
-          if (retries === 0) throw error;
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-    }
-
-    // Ensure roles are cached
-    await guild.roles.fetch({ force: true, cache: true });
-    console.log('Available roles:', Array.from(guild.roles.cache.values()).map(r => `${r.name} (${r.id})`).join(', '));
-
-    // Fetch member with force refresh
-    const member = await guild.members.fetch({ user: userId, force: true, cache: true });
-    if (!member) {
-      console.error('Member not found:', userId);
-      throw new Error('Member not found');
-    }
-
-    // Log member details
-    console.log('Member found:', {
-      id: member.id,
-      displayName: member.displayName,
-      roles: Array.from(member.roles.cache.values()).map(r => `${r.name} (${r.id})`)
-    });
-    
-    // Get NFT counts from Redis
-    const nftCounts = await redis.hgetall(`user:${userId}:nfts`);
-    if (!nftCounts) {
+    // Get current NFT data
+    const nftData = await redis.hgetall(`user:${userId}:nfts`);
+    if (!nftData) {
       console.log('No NFT data found for user:', userId);
-      return {
-        success: false,
-        error: 'No NFT data found'
-      };
-    }
-    
-    // Parse NFT data
-    const parsedCounts = {
-      fcked_catz: nftCounts.fcked_catz ? JSON.parse(nftCounts.fcked_catz).length : 0,
-      celebcatz: nftCounts.celebcatz ? JSON.parse(nftCounts.celebcatz).length : 0,
-      money_monsters: nftCounts.money_monsters ? JSON.parse(nftCounts.money_monsters).length : 0,
-      money_monsters3d: nftCounts.money_monsters3d ? JSON.parse(nftCounts.money_monsters3d).length : 0,
-      ai_bitbots: nftCounts.ai_bitbots ? JSON.parse(nftCounts.ai_bitbots).length : 0
-    };
-    
-    console.log('Parsed NFT counts for user:', userId, parsedCounts);
-    
-    // Update roles based on NFT ownership
-    const roleUpdates = [];
-    if (parsedCounts.fcked_catz > 0) roleUpdates.push('CAT');
-    if (parsedCounts.celebcatz > 0) roleUpdates.push('CELEB');
-    if (parsedCounts.money_monsters > 0) roleUpdates.push('MONSTER');
-    if (parsedCounts.money_monsters3d > 0) roleUpdates.push('MONSTER 3D');
-    if (parsedCounts.ai_bitbots > 0) roleUpdates.push('BITBOT');
-    
-    console.log('Role updates needed for user:', userId, roleUpdates);
-    
-    // Track successful and failed role updates
-    const results = {
-      success: [],
-      failed: []
-    };
-
-    // Add roles to member
-    for (const roleName of roleUpdates) {
-      const role = guild.roles.cache.find(r => r.name === roleName);
-      if (!role) {
-        console.error(`Role not found: ${roleName}, available roles:`, 
-          Array.from(guild.roles.cache.values()).map(r => `${r.name} (${r.id})`).join(', '));
-        results.failed.push({ role: roleName, reason: 'Role not found' });
-        continue;
-      }
-      
-      try {
-        if (!member.roles.cache.has(role.id)) {
-          await member.roles.add(role);
-          console.log(`Added role ${roleName} (${role.id}) to user ${userId}`);
-          results.success.push(roleName);
-        } else {
-          console.log(`User ${userId} already has role ${roleName} (${role.id})`);
-          results.success.push(roleName);
+      // Remove all NFT roles if no NFT data
+      for (const roleName of NFT_ROLES) {
+        const role = guild.roles.cache.find(r => r.name === roleName);
+        if (role && member.roles.cache.has(role.id)) {
+          await member.roles.remove(role);
+          console.log(`Removed role ${roleName} from user ${userId}`);
         }
-      } catch (error) {
-        console.error(`Error adding role ${roleName} (${role.id}) to user ${userId}:`, error);
-        results.failed.push({ role: roleName, reason: error.message });
+      }
+      return;
+    }
+
+    // Parse NFT counts
+    const nftCounts = {
+      fcked_catz: JSON.parse(nftData.fcked_catz || '[]').length,
+      celebcatz: JSON.parse(nftData.celebcatz || '[]').length,
+      money_monsters: JSON.parse(nftData.money_monsters || '[]').length,
+      money_monsters3d: JSON.parse(nftData.money_monsters3d || '[]').length,
+      ai_bitbots: JSON.parse(nftData.ai_bitbots || '[]').length
+    };
+
+    console.log('NFT counts for role assignment:', nftCounts);
+
+    // Determine which roles user should have
+    const shouldHaveRoles = new Set();
+    if (nftCounts.fcked_catz > 0) shouldHaveRoles.add('CAT');
+    if (nftCounts.celebcatz > 0) shouldHaveRoles.add('CELEB');
+    if (nftCounts.money_monsters > 0) shouldHaveRoles.add('MONSTER');
+    if (nftCounts.money_monsters3d > 0) shouldHaveRoles.add('MONSTER 3D');
+    if (nftCounts.ai_bitbots > 0) shouldHaveRoles.add('BITBOT');
+
+    // Get all role objects
+    const roleObjects = NFT_ROLES.map(name => ({
+      name,
+      role: guild.roles.cache.find(r => r.name === name),
+      shouldHave: shouldHaveRoles.has(name)
+    }));
+
+    // Remove roles user shouldn't have
+    for (const {name, role, shouldHave} of roleObjects) {
+      if (!shouldHave && role && member.roles.cache.has(role.id)) {
+        await member.roles.remove(role);
+        console.log(`Removed role ${name} from user ${userId}`);
       }
     }
 
-    // Return detailed results
-    return {
-      success: results.success.length > 0 || results.failed.length === 0,
-      roles: {
-        added: results.success,
-        failed: results.failed
-      },
-      message: results.failed.length === 0 ? 
-        'All roles updated successfully' : 
-        'Some roles failed to update'
-    };
+    // Add roles user should have
+    for (const {name, role, shouldHave} of roleObjects) {
+      if (shouldHave && role && !member.roles.cache.has(role.id)) {
+        await member.roles.add(role);
+        console.log(`Added role ${name} to user ${userId}`);
+      }
+    }
+
+    // Log final role state
+    console.log('Final roles for user:', userId, {
+      roles: Array.from(member.roles.cache.values()).map(r => r.name),
+      nftCounts
+    });
 
   } catch (error) {
     console.error('Error updating Discord roles:', {
       userId,
       error: error.message,
-      stack: error.stack,
-      guildId: GUILD_ID,
-      clientReady: client.readyAt,
-      availableGuilds: Array.from(client.guilds.cache.keys())
+      stack: error.stack
     });
     throw error;
   }

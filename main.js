@@ -46,12 +46,71 @@ client.on('messageCreate', async (message) => {
   // Ignore messages from bots
   if (message.author.bot) return;
 
+  // Map commands to handlers
   const commands = {
-    'my.profile': handleProfileCommand,
-    'my.wallet': handleWalletSection,
-    'my.nfts': handleNFTSection,
-    'my.roles': handleRolesSection,
-    'my.bux': handleBUXSection,
+    'my.profile': async () => {
+      await updateUserProfile(message.channel, message.author.id, client);
+    },
+    'my.wallet': async () => {
+      const walletData = await getWalletData(message.author.id);
+      const embed = new EmbedBuilder()
+        .setColor('#0099ff')
+        .setTitle(`${message.author.username}'s Connected Wallets`)
+        .addFields({
+          name: 'Connected Wallets',
+          value: walletData.walletAddresses.length > 0 ? 
+            walletData.walletAddresses.join('\n') : 
+            'No wallets connected'
+        });
+      await message.channel.send({ embeds: [embed] });
+    },
+    'my.nfts': async () => {
+      const walletData = await getWalletData(message.author.id);
+      const aggregatedData = await aggregateWalletData(walletData);
+      const embed = new EmbedBuilder()
+        .setColor('#0099ff')
+        .setTitle(`${message.author.username}'s NFT Collection`)
+        .addFields({
+          name: 'NFTs',
+          value: formatNFTCounts(aggregatedData.nftCounts) || 'No NFTs'
+        });
+      await message.channel.send({ embeds: [embed] });
+    },
+    'my.roles': async () => {
+      const member = await message.guild.members.fetch(message.author.id);
+      const roles = member.roles.cache
+        .filter(role => role.name !== '@everyone')
+        .sort((a, b) => b.position - a.position)
+        .map(role => role.name)
+        .join('\n');
+      const embed = new EmbedBuilder()
+        .setColor('#0099ff')
+        .setTitle(`${message.author.username}'s Server Roles`)
+        .addFields({
+          name: 'Server Roles',
+          value: roles || 'No roles'
+        });
+      await message.channel.send({ embeds: [embed] });
+    },
+    'my.bux': async () => {
+      const walletData = await getWalletData(message.author.id);
+      const aggregatedData = await aggregateWalletData(walletData);
+      const [timerData, timeUntilNext] = await Promise.all([
+        startOrUpdateDailyTimer(message.author.id, aggregatedData.nftCounts, aggregatedData.buxBalance),
+        getTimeUntilNextClaim(message.author.id)
+      ]);
+      const dailyReward = calculateDailyReward(aggregatedData.nftCounts);
+      const embed = new EmbedBuilder()
+        .setColor('#0099ff')
+        .setTitle(`${message.author.username}'s BUX Balance`)
+        .addFields(
+          { name: 'BUX Balance', value: `${aggregatedData.buxBalance.toLocaleString()} BUX` },
+          { name: 'Daily Reward', value: `${dailyReward.toLocaleString()} BUX` },
+          { name: 'BUX Claim', value: `${timerData.claimAmount.toLocaleString()} BUX` },
+          { name: 'Claim updates in', value: timeUntilNext || 'Start timer by verifying wallet' }
+        );
+      await message.channel.send({ embeds: [embed] });
+    },
     'verify': handleVerifyCommand,
     'admin': handleAdminCommand
   };
@@ -61,7 +120,7 @@ client.on('messageCreate', async (message) => {
 
   if (handler) {
     try {
-      await handler(message);
+      await handler();
     } catch (error) {
       console.error('Error handling message:', error);
       await message.channel.send('An error occurred while processing your command.');
