@@ -6,45 +6,49 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { config } from '../config/config.js';
 
-// Update Redis configuration with better error handling and logging
+// Update Redis configuration with complete security
 export const redis = new Redis(config.redis.url, {
   ...config.redis.options,
   retryStrategy: function(times) {
     const delay = Math.min(times * 50, 2000);
-    console.log(`Redis connection attempt ${times}, retrying in ${delay}ms`, {
+    console.log('Redis connection attempt:', {
       attempt: times,
       delay,
-      url: config.redis.url.replace(/redis:\/\/.*@/, 'redis://***@') // Hide credentials in logs
+      timestamp: new Date().toISOString(),
+      instance: 'redis-elliptical'
     });
     return delay;
   },
   maxRetriesPerRequest: 3,
   enableReadyCheck: true,
   reconnectOnError: function(err) {
-    console.error('Redis reconnect error:', {
-      error: err.message,
+    const sanitizedError = {
+      message: err.message.replace(/redis[s]?:\/\/[^@]*@([^:]*:[0-9]+)/, 'redis[s]://****@$1'),
       code: err.code,
       command: err.command,
       timestamp: new Date().toISOString()
-    });
-    return true; // Always try to reconnect
+    };
+    console.error('Redis reconnect error:', sanitizedError);
+    return true;
   },
-  showFriendlyErrorStack: true
+  showFriendlyErrorStack: true,
+  lazyConnect: true // Only connect when needed
 });
 
 redis.on('error', (err) => {
-  console.error('Redis connection error:', {
-    error: err.message,
+  const sanitizedError = {
+    message: err.message.replace(/redis[s]?:\/\/[^@]*@([^:]*:[0-9]+)/, 'redis[s]://****@$1'),
     code: err.code,
-    stack: err.stack,
+    stack: err.stack?.replace(/redis[s]?:\/\/[^@]*@([^:]*:[0-9]+)/g, 'redis[s]://****@$1'),
     timestamp: new Date().toISOString()
-  });
+  };
+  console.error('Redis connection error:', sanitizedError);
 });
 
 redis.on('connect', () => {
   console.log('Redis connected successfully', {
     timestamp: new Date().toISOString(),
-    url: config.redis.url.replace(/redis:\/\/.*@/, 'redis://***@')
+    instance: 'redis-elliptical'
   });
 });
 
@@ -52,8 +56,10 @@ redis.on('ready', () => {
   console.log('Redis client ready', {
     timestamp: new Date().toISOString(),
     options: {
-      ...config.redis.options,
-      password: '***' // Hide password in logs
+      tls: { rejectUnauthorized: false },
+      maxRetriesPerRequest: 3,
+      enableReadyCheck: true,
+      lazyConnect: true
     }
   });
 });
