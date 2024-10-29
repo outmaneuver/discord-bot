@@ -110,6 +110,27 @@ const commandHandlers = {
       .setDescription(walletData.walletAddresses.join('\n') || 'No wallets connected');
     await message.channel.send({ embeds: [embed] });
   },
+  'my.nfts': async (message) => {
+    try {
+      const walletData = await getWalletData(message.author.id);
+      const aggregatedData = await aggregateWalletData(walletData);
+      
+      const embed = new EmbedBuilder()
+        .setColor('#0099ff')
+        .setTitle(`${message.author.username}'s NFT Collection`)
+        .addFields({
+          name: 'NFTs',
+          value: Object.entries(aggregatedData.nftCounts)
+            .map(([collection, nfts]) => `${collection}: ${nfts.length}`)
+            .join('\n')
+        });
+      
+      await message.channel.send({ embeds: [embed] });
+    } catch (error) {
+      console.error('Error handling NFT command:', error);
+      await message.channel.send('An error occurred while fetching your NFTs.');
+    }
+  },
   'verify': async (message) => {
     await message.reply({
       content: 'Please visit https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify/ to verify your wallet',
@@ -126,6 +147,7 @@ const commandHandlers = {
           value: [
             '`=my.profile` - View your full profile',
             '`=my.wallet` - View your connected wallets',
+            '`=my.nfts` - View your NFT holdings',
             '`=verify` - Get wallet verification link'
           ].join('\n')
         }
