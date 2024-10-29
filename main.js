@@ -99,6 +99,34 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/holder-verify', express.static(path.join(__dirname, 'public')));
+
+// Add verify endpoint
+app.post('/holder-verify/verify', async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+    if (!req.session?.user?.id) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authenticated'
+      });
+    }
+
+    const result = await verifyHolder(
+      { walletAddress }, 
+      req.session.user.id,
+      client
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error('Verification error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 
 // Route handler for verification page
 app.get(['/holder-verify', '/holder-verify/'], (req, res) => {
