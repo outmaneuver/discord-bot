@@ -13,7 +13,7 @@ import {
 import session from 'express-session';
 import authRouter from './routes/auth.js';
 import RedisStore from 'connect-redis';
-import { redis } from './services/verify.js';
+import { redis } from './config/redis.js';
 
 import { verifyHolder, sendVerificationMessage, updateDiscordRoles } from './services/verify.js';
 import { updateUserProfile, getWalletData } from './services/profile.js';
