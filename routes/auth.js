@@ -21,12 +21,12 @@ router.get('/discord', (req, res) => {
     const state = Math.random().toString(36).substring(7);
     req.session.oauthState = state;
 
-    // Properly encode the scope parameter
+    // URLSearchParams will handle the encoding for us
     const params = new URLSearchParams({
       client_id: config.discord.clientId,
       redirect_uri: 'https://buxdao-verify-d1faffc83da7.herokuapp.com/auth/callback',
       response_type: 'code',
-      scope: encodeURIComponent('identify guilds'),
+      scope: 'identify guilds',
       state: state
     });
 
