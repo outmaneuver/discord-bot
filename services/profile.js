@@ -239,9 +239,9 @@ export async function aggregateWalletData(walletData) {
 
       if (!nftData) continue;
 
-      // Add NFTs to Sets
+      // Add NFTs to Sets only if they exist in the data
       Object.entries(nftData).forEach(([collection, nfts]) => {
-        if (Array.isArray(nfts)) {
+        if (Array.isArray(nfts) && nfts.length > 0) {
           nfts.forEach(nft => {
             if (typeof nft === 'string' && nft.length > 0) {
               nftSets[collection].add(nft);
@@ -264,13 +264,13 @@ export async function aggregateWalletData(walletData) {
     }
   }
 
-  // Convert Sets to arrays
+  // Convert Sets to arrays and filter out empty arrays
   const nftCounts = {
-    fcked_catz: Array.from(nftSets.fcked_catz),
-    celebcatz: Array.from(nftSets.celebcatz),
-    money_monsters: Array.from(nftSets.money_monsters),
-    money_monsters3d: Array.from(nftSets.money_monsters3d),
-    ai_bitbots: Array.from(nftSets.ai_bitbots)
+    fcked_catz: Array.from(nftSets.fcked_catz).filter(Boolean),
+    celebcatz: Array.from(nftSets.celebcatz).filter(Boolean),
+    money_monsters: Array.from(nftSets.money_monsters).filter(Boolean),
+    money_monsters3d: Array.from(nftSets.money_monsters3d).filter(Boolean),
+    ai_bitbots: Array.from(nftSets.ai_bitbots).filter(Boolean)
   };
 
   // Log counts for debugging
