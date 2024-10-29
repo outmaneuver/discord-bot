@@ -15,7 +15,7 @@ const getCachedNFTData = async (walletAddress) => {
   return data;
 };
 
-// Export getWalletData function
+// Export functions individually
 export async function getWalletData(userId) {
   try {
     // Get wallet addresses from Redis - use the correct key format
@@ -48,87 +48,6 @@ export async function removeWallet(userId, walletAddress) {
     console.error('Error removing wallet:', error);
     return false;
   }
-}
-
-async function aggregateWalletData(walletData) {
-  const aggregatedData = {
-    nftCounts: {
-      fcked_catz: [],
-      celebcatz: [],
-      money_monsters: [],
-      money_monsters3d: [],
-      ai_bitbots: []
-    },
-    buxBalance: 0
-  };
-
-  // Add delay between RPC calls to avoid rate limiting
-  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-  
-  for (const walletAddress of walletData.walletAddresses) {
-    try {
-      console.log('Aggregating data for wallet:', walletAddress);
-      
-      // Get NFT data with retries
-      let nftCounts;
-      let retries = 3;
-      while (retries > 0) {
-        try {
-          nftCounts = await getCachedNFTData(walletAddress);
-          break;
-        } catch (error) {
-          if (error.message.includes('429') && retries > 1) {
-            console.log(`Rate limited, retrying in ${(4-retries)*2}s...`);
-            await delay((4-retries) * 2000);
-            retries--;
-            continue;
-          }
-          throw error;
-        }
-      }
-      
-      console.log('NFT counts for wallet', walletAddress + ':', nftCounts);
-      
-      // Merge NFT arrays
-      Object.keys(nftCounts).forEach(collection => {
-        aggregatedData.nftCounts[collection] = [
-          ...aggregatedData.nftCounts[collection],
-          ...nftCounts[collection]
-        ];
-      });
-
-      // Get BUX balance with retries
-      let balance;
-      retries = 3;
-      while (retries > 0) {
-        try {
-          balance = await getBUXBalance(walletAddress);
-          break;
-        } catch (error) {
-          if (error.message.includes('429') && retries > 1) {
-            console.log(`Rate limited, retrying in ${(4-retries)*2}s...`);
-            await delay((4-retries) * 2000);
-            retries--;
-            continue;
-          }
-          throw error;
-        }
-      }
-      
-      console.log('BUX balance for wallet', walletAddress + ':', balance);
-      aggregatedData.buxBalance += balance;
-
-      // Add delay between wallets
-      await delay(1000);
-
-    } catch (error) {
-      console.error('Error aggregating data for wallet', walletAddress + ':', error);
-    }
-  }
-
-  console.log('Aggregated NFT counts:', aggregatedData.nftCounts);
-  console.log('Total BUX balance:', aggregatedData.buxBalance);
-  return aggregatedData;
 }
 
 export async function updateUserProfile(channel, userId, client) {
@@ -261,13 +180,13 @@ export async function updateUserProfile(channel, userId, client) {
   }
 }
 
-function formatNFTCounts(nftCounts) {
+export function formatNFTCounts(nftCounts) {
   return Object.entries(nftCounts)
     .map(([collection, nfts]) => `${collection}: ${nfts.length}`)
     .join('\n');
 }
 
-function calculateDailyReward(nftCounts) {
+export function calculateDailyReward(nftCounts) {
   let reward = 0;
   
   // Updated reward multipliers
@@ -278,4 +197,85 @@ function calculateDailyReward(nftCounts) {
   reward += nftCounts.ai_bitbots.length * 1;      // 1 BUX per AI Bitbot
 
   return reward;
+}
+
+export async function aggregateWalletData(walletData) {
+  const aggregatedData = {
+    nftCounts: {
+      fcked_catz: [],
+      celebcatz: [],
+      money_monsters: [],
+      money_monsters3d: [],
+      ai_bitbots: []
+    },
+    buxBalance: 0
+  };
+
+  // Add delay between RPC calls to avoid rate limiting
+  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+  
+  for (const walletAddress of walletData.walletAddresses) {
+    try {
+      console.log('Aggregating data for wallet:', walletAddress);
+      
+      // Get NFT data with retries
+      let nftCounts;
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          nftCounts = await getCachedNFTData(walletAddress);
+          break;
+        } catch (error) {
+          if (error.message.includes('429') && retries > 1) {
+            console.log(`Rate limited, retrying in ${(4-retries)*2}s...`);
+            await delay((4-retries) * 2000);
+            retries--;
+            continue;
+          }
+          throw error;
+        }
+      }
+      
+      console.log('NFT counts for wallet', walletAddress + ':', nftCounts);
+      
+      // Merge NFT arrays
+      Object.keys(nftCounts).forEach(collection => {
+        aggregatedData.nftCounts[collection] = [
+          ...aggregatedData.nftCounts[collection],
+          ...nftCounts[collection]
+        ];
+      });
+
+      // Get BUX balance with retries
+      let balance;
+      retries = 3;
+      while (retries > 0) {
+        try {
+          balance = await getBUXBalance(walletAddress);
+          break;
+        } catch (error) {
+          if (error.message.includes('429') && retries > 1) {
+            console.log(`Rate limited, retrying in ${(4-retries)*2}s...`);
+            await delay((4-retries) * 2000);
+            retries--;
+            continue;
+          }
+          throw error;
+        }
+      }
+      
+      console.log('BUX balance for wallet', walletAddress + ':', balance);
+      aggregatedData.buxBalance += balance;
+
+      // Add delay between wallets
+      await delay(1000);
+
+    } catch (error) {
+      console.error('Error aggregating data for wallet', walletAddress + ':', error);
+    }
+  }
+
+  console.log('Aggregated NFT counts:', aggregatedData.nftCounts);
+  console.log('Total BUX balance:', aggregatedData.buxBalance);
+  return aggregatedData;
 }
