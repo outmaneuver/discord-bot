@@ -279,3 +279,14 @@ function calculateDailyReward(nftCounts) {
 
   return reward;
 }
+
+// Add missing exports
+export {
+  aggregateWalletData,
+  formatNFTCounts,
+  calculateDailyReward,
+  updateUserProfile,
+  getWalletData,
+  addWallet,
+  removeWallet
+};
