@@ -1,7 +1,7 @@
 import { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, PermissionsBitField } from 'discord.js';
 import fs from 'fs/promises';
 import path from 'path';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { config } from '../config/config.js';
 import { connection } from '../config/solana.js';
@@ -14,9 +14,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Use config values
 const BUX_TOKEN_MINT = config.solana.buxMint;
 const GUILD_ID = config.discord.guildId;
-
-// Initialize Solana connection from config
-const connection = new Connection(config.solana.rpcUrl);
 
 // Add verification message function
 export async function sendVerificationMessage(channel) {
