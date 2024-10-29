@@ -26,9 +26,13 @@ router.use((err, req, res, next) => {
 
 router.get('/discord', (req, res) => {
   try {
+    // Force https for production
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
+    const redirectUri = `${protocol}://${req.get('host')}/auth/callback`;
+    
     const params = new URLSearchParams({
       client_id: config.discord.clientId,
-      redirect_uri: `${req.protocol}://${req.get('host')}/auth/callback`,
+      redirect_uri: redirectUri,
       response_type: 'code',
       scope: 'identify guilds'
     });
@@ -51,6 +55,10 @@ router.get('/callback', async (req, res) => {
 
   try {
     console.log('Processing OAuth callback with code');
+    // Force https for production
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
+    const redirectUri = `${protocol}://${req.get('host')}/auth/callback`;
+
     const tokenResponse = await fetch(`${DISCORD_API_URL}/oauth2/token`, {
       method: 'POST',
       body: new URLSearchParams({
@@ -58,7 +66,7 @@ router.get('/callback', async (req, res) => {
         client_secret: config.discord.clientSecret,
         code,
         grant_type: 'authorization_code',
-        redirect_uri: `${req.protocol}://${req.get('host')}/auth/callback`,
+        redirect_uri: redirectUri,
       }),
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
