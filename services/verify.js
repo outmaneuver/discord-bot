@@ -6,7 +6,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { config } from '../config/config.js';
 
-// Update Redis configuration with better reconnection handling
+// Update Redis configuration with better error handling
 export const redis = new Redis(config.redis.url, {
   ...config.redis.options,
   retryStrategy: function(times) {
@@ -15,8 +15,13 @@ export const redis = new Redis(config.redis.url, {
       attempt: times,
       delay,
       timestamp: new Date().toISOString(),
-      instance: 'redis-elliptical'
+      instance: 'redis-elliptical',
+      maxRetries: 20 // Add max retries info
     });
+    if (times > 20) {
+      console.error('Max Redis retries reached, giving up');
+      return null; // Stop retrying after 20 attempts
+    }
     return delay;
   },
   maxRetriesPerRequest: 3,
@@ -29,23 +34,28 @@ export const redis = new Redis(config.redis.url, {
       timestamp: new Date().toISOString()
     };
     console.error('Redis reconnect error:', sanitizedError);
-    return true; // Always try to reconnect
+    return err.message.includes('READONLY') || 
+           err.message.includes('ETIMEDOUT') || 
+           err.message.includes('ECONNRESET');
   },
   showFriendlyErrorStack: false,
   lazyConnect: true,
-  autoResubscribe: true, // Automatically resubscribe to channels
-  autoResendUnfulfilledCommands: true, // Resend unfulfilled commands after reconnect
-  connectTimeout: 20000, // Increase connection timeout
-  disconnectTimeout: 5000, // Add disconnect timeout
-  keepAlive: 30000 // Add keepalive
+  autoResubscribe: true,
+  autoResendUnfulfilledCommands: true,
+  connectTimeout: 20000,
+  disconnectTimeout: 5000,
+  keepAlive: 30000,
+  noDelay: true, // Disable Nagle's algorithm
+  commandTimeout: 5000 // Add command timeout
 });
 
-// Add connection event handlers
+// Add more detailed connection event handlers
 redis.on('error', (err) => {
   const sanitizedError = {
     message: '[Redacted Error Message]',
     code: err.code,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    connectionState: redis.status
   };
   console.error('Redis connection error:', sanitizedError);
 });
@@ -53,13 +63,15 @@ redis.on('error', (err) => {
 redis.on('connect', () => {
   console.log('Redis connected successfully', {
     timestamp: new Date().toISOString(),
-    instance: 'redis-elliptical'
+    instance: 'redis-elliptical',
+    connectionState: redis.status
   });
 });
 
 redis.on('ready', () => {
   console.log('Redis client ready', {
     timestamp: new Date().toISOString(),
+    connectionState: redis.status,
     options: {
       tls: { rejectUnauthorized: false },
       maxRetriesPerRequest: 3,
@@ -69,17 +81,28 @@ redis.on('ready', () => {
       autoResendUnfulfilledCommands: true,
       connectTimeout: 20000,
       disconnectTimeout: 5000,
-      keepAlive: 30000
+      keepAlive: 30000,
+      noDelay: true,
+      commandTimeout: 5000
     }
   });
 });
 
-// Add reconnecting event handler
 redis.on('reconnecting', (delay) => {
   console.log('Redis reconnecting:', {
     delay,
     timestamp: new Date().toISOString(),
-    instance: 'redis-elliptical'
+    instance: 'redis-elliptical',
+    connectionState: redis.status,
+    retryAttempt: redis.retryAttempts
+  });
+});
+
+redis.on('end', () => {
+  console.log('Redis connection ended', {
+    timestamp: new Date().toISOString(),
+    instance: 'redis-elliptical',
+    connectionState: redis.status
   });
 });
 
