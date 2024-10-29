@@ -118,16 +118,25 @@ app.post('/holder-verify/verify', async (req, res) => {
       client
     );
 
-    // Format the response for the frontend
+    // Format the response with better spacing and emojis
     const formattedResponse = `
-      **Wallet Verification Complete!**
-      
-      NFTs Found:
-      ${Object.entries(result.nftCounts)
-        .map(([collection, nfts]) => `${collection}: ${nfts.length}`)
-        .join('\n')}
-      
-      Your roles have been updated!
+**Wallet Verification Complete!** ✅
+
+NFTs Found:
+${Object.entries(result.nftCounts)
+  .map(([collection, nfts]) => {
+    const emoji = {
+      'fcked_catz': '😺',
+      'celebcatz': '🌟',
+      'money_monsters': '👾',
+      'money_monsters3d': '🎮',
+      'ai_bitbots': '🤖'
+    }[collection] || '🎨';
+    return `${emoji} ${collection}: ${nfts.length}`;
+  })
+  .join('\n')}
+
+Your roles have been updated! 🎉
     `;
 
     res.json({
