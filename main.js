@@ -46,23 +46,31 @@ console.log('Express app created');
 // Setup application
 console.log('Application setup complete');
 
+// Setup routes before starting server
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Serve static files from public directory
+app.use(express.static('public'));
+
+// Route handler for verification page
+app.get(['/holder-verify', '/holder-verify/'], (req, res) => {
+  try {
+    res.sendFile('index.html', { root: './public' });
+  } catch (error) {
+    console.error('Error serving verification page:', error);
+    res.status(500).send('Error loading verification page');
+  }
+});
+
+// Error handler for 404s
+app.use((req, res) => {
+  res.status(404).send('Page not found');
+});
+
 // Start Express server first
 const port = process.env.PORT || 3000;
 console.log('Server is starting on port', port);
 
-// Setup routes before starting server
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.get('/holder-verify', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/holder-verify/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Start server
 const server = app.listen(port, () => {
   console.log('Server is running on port', port);
 });
