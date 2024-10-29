@@ -21,28 +21,21 @@ router.get('/discord', (req, res) => {
     const state = Math.random().toString(36).substring(7);
     req.session.oauthState = state;
 
-    // Build the authorization URL manually to ensure proper encoding
+    // Build the authorization URL with specific parameters
     const baseUrl = 'https://discord.com/api/oauth2/authorize';
+    const scopes = ['identify', 'guilds'];
+    
     const params = {
       client_id: config.discord.clientId,
       redirect_uri: 'https://buxdao-verify-d1faffc83da7.herokuapp.com/auth/callback',
       response_type: 'code',
-      scope: 'identify guilds',
-      state: state
+      scope: scopes.join(' '),
+      state: state,
+      prompt: 'consent'
     };
 
-    // Manually construct query string with proper encoding
-    const queryString = Object.entries(params)
-      .map(([key, value]) => {
-        // Special handling for scope to ensure proper encoding
-        if (key === 'scope') {
-          return `${key}=${encodeURIComponent(value)}`;
-        }
-        return `${key}=${value}`;
-      })
-      .join('&');
-
-    const url = `${baseUrl}?${queryString}`;
+    // Construct URL with proper encoding
+    const url = `${baseUrl}?${new URLSearchParams(params)}`;
     console.log('Redirecting to Discord OAuth:', url);
     res.redirect(url);
   } catch (error) {
