@@ -19,7 +19,10 @@ import {
   getTimeUntilNextClaim
 } from './services/rewards.js';
 
-// Initialize client with proper intents
+// Initialize application
+console.log('Starting application...');
+
+// Initialize Discord client first
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -32,6 +35,54 @@ const client = new Client({
     GatewayIntentBits.DirectMessageReactions
   ]
 });
+console.log('Discord client created');
+
+// Initialize Express app
+const app = express();
+app.use(cors());
+app.use(express.json());
+console.log('Express app created');
+
+// Setup application before starting server
+const setupApplication = async () => {
+  try {
+    console.log('Application setup complete');
+    
+    // Start Express server first
+    const port = process.env.PORT || 3000;
+    console.log('Server is starting on port', port);
+    
+    const server = app.listen(port, () => {
+      console.log('Server is running on port', port);
+    });
+
+    server.on('error', (error) => {
+      console.error('Server error:', error);
+      process.exit(1);
+    });
+
+    // Load hashlists
+    const hashlists = {
+      fckedCatz: 1422,
+      celebCatz: 130,
+      moneyMonsters: 666,
+      moneyMonsters3d: 666,
+      aiBitbots: 218
+    };
+    console.log('Hashlists loaded:', hashlists);
+
+    // Start Discord client after server is running
+    await client.login(config.discord.token);
+    console.log('Discord bot logged in');
+
+  } catch (error) {
+    console.error('Error during setup:', error);
+    process.exit(1);
+  }
+};
+
+// Start application
+setupApplication();
 
 // Command handlers
 const commandHandlers = {
@@ -98,19 +149,6 @@ client.on('messageCreate', async (message) => {
     }
   }
 });
-
-// Initialize Express app and start server
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
-
-// Login client
-client.login(config.discord.token);
 
 // Log when ready
 client.once('ready', () => {
