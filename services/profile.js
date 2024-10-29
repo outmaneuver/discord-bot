@@ -6,13 +6,42 @@ import ms from 'ms';
 // Add caching for NFT data
 const NFT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Update getCachedNFTData function to properly handle NFT data
 const getCachedNFTData = async (walletAddress) => {
-  const cached = await redis.get(`nft:${walletAddress}`);
-  if (cached) return JSON.parse(cached);
-  
-  const data = await checkNFTOwnership(walletAddress);
-  await redis.setex(`nft:${walletAddress}`, NFT_CACHE_TTL / 1000, JSON.stringify(data));
-  return data;
+  try {
+    // Get cached data
+    const cached = await redis.hgetall(`wallet:${walletAddress}:nfts`);
+    if (cached && Object.keys(cached).length > 0) {
+      console.log('Using cached NFT data for wallet:', walletAddress);
+      return {
+        fcked_catz: JSON.parse(cached.fcked_catz || '[]'),
+        celebcatz: JSON.parse(cached.celebcatz || '[]'),
+        money_monsters: JSON.parse(cached.money_monsters || '[]'),
+        money_monsters3d: JSON.parse(cached.money_monsters3d || '[]'),
+        ai_bitbots: JSON.parse(cached.ai_bitbots || '[]')
+      };
+    }
+    
+    console.log('Cache miss - checking NFT ownership for wallet:', walletAddress);
+    const data = await checkNFTOwnership(walletAddress);
+    
+    // Cache the results
+    const pipeline = redis.pipeline();
+    pipeline.hset(`wallet:${walletAddress}:nfts`, {
+      fcked_catz: JSON.stringify(data.fcked_catz),
+      celebcatz: JSON.stringify(data.celebcatz),
+      money_monsters: JSON.stringify(data.money_monsters),
+      money_monsters3d: JSON.stringify(data.money_monsters3d),
+      ai_bitbots: JSON.stringify(data.ai_bitbots)
+    });
+    pipeline.expire(`wallet:${walletAddress}:nfts`, NFT_CACHE_TTL / 1000);
+    await pipeline.exec();
+    
+    return data;
+  } catch (error) {
+    console.error('Error getting cached NFT data:', error);
+    throw error;
+  }
 };
 
 // Export functions individually
