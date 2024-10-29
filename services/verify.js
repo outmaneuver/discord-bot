@@ -6,7 +6,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { config } from '../config/config.js';
 
-// Update Redis configuration with complete security
+// Update Redis configuration with better security
 export const redis = new Redis(config.redis.url, {
   ...config.redis.options,
   retryStrategy: function(times) {
@@ -22,8 +22,9 @@ export const redis = new Redis(config.redis.url, {
   maxRetriesPerRequest: 3,
   enableReadyCheck: true,
   reconnectOnError: function(err) {
+    // Mask any sensitive data in error messages
     const sanitizedError = {
-      message: err.message.replace(/redis[s]?:\/\/[^@]*@([^:]*:[0-9]+)/, 'redis[s]://****@$1'),
+      message: '[Redacted Error Message]', // Don't log error message as it may contain credentials
       code: err.code,
       command: err.command,
       timestamp: new Date().toISOString()
@@ -31,15 +32,15 @@ export const redis = new Redis(config.redis.url, {
     console.error('Redis reconnect error:', sanitizedError);
     return true;
   },
-  showFriendlyErrorStack: true,
-  lazyConnect: true // Only connect when needed
+  showFriendlyErrorStack: false, // Disable detailed error stacks
+  lazyConnect: true
 });
 
 redis.on('error', (err) => {
+  // Mask any sensitive data in error messages
   const sanitizedError = {
-    message: err.message.replace(/redis[s]?:\/\/[^@]*@([^:]*:[0-9]+)/, 'redis[s]://****@$1'),
+    message: '[Redacted Error Message]',
     code: err.code,
-    stack: err.stack?.replace(/redis[s]?:\/\/[^@]*@([^:]*:[0-9]+)/g, 'redis[s]://****@$1'),
     timestamp: new Date().toISOString()
   };
   console.error('Redis connection error:', sanitizedError);
