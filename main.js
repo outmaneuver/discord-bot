@@ -50,12 +50,12 @@ console.log('Application setup complete');
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Serve static files from public directory
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Route handler for verification page
 app.get(['/holder-verify', '/holder-verify/'], (req, res) => {
   try {
-    res.sendFile('index.html', { root: './public' });
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
   } catch (error) {
     console.error('Error serving verification page:', error);
     res.status(500).send('Error loading verification page');
