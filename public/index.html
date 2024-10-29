@@ -175,8 +175,7 @@
     </div>
     <div id="closeMessage">
         <span class="verified"><i class="checkmark">✓</i> VERIFIED</span><br>
-        You can now close this window<br>
-        Please allow a few minutes for your server roles to update...
+        You can now close this window
     </div>
 
     <script>
@@ -279,7 +278,7 @@
                     console.log('Full verification response:', data);
                     if (data.success) {
                         document.getElementById('verificationResult').innerHTML = formatResponse(data.formattedResponse);
-                        statusElement.textContent = 'Verification complete!';
+                        statusElement.textContent = '';
                         closeMessageElement.style.display = 'block';
                         storeWalletAddress(walletAddress);
                     } else {
