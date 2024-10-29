@@ -404,31 +404,32 @@ export async function checkNFTOwnership(walletAddress) {
       { programId: TOKEN_PROGRAM_ID }
     );
 
-    // Create map of mint to token amount
-    const mintAmounts = new Map(
-      tokenAccounts.value
-        .map(acc => [
-          acc.account.data.parsed.info.mint,
-          Number(acc.account.data.parsed.info.tokenAmount.amount)
-        ])
-    );
+    // Create map of mint addresses to token amounts
+    const mintAmounts = new Map();
+    tokenAccounts.value.forEach(acc => {
+      const mint = acc.account.data.parsed.info.mint;
+      const amount = Number(acc.account.data.parsed.info.tokenAmount.amount);
+      if (amount > 0) { // Only include tokens with non-zero balance
+        mintAmounts.set(mint, amount);
+      }
+    });
 
-    // Check against hashlists and verify token amount > 0
+    // Check against hashlists and only include NFTs with positive balance
     const nftCounts = {
       fcked_catz: Array.from(fckedCatzHashlist)
-        .filter(mint => mintAmounts.get(mint) > 0),
+        .filter(mint => mintAmounts.has(mint)),
       celebcatz: Array.from(celebCatzHashlist)
-        .filter(mint => mintAmounts.get(mint) > 0),
+        .filter(mint => mintAmounts.has(mint)),
       money_monsters: Array.from(moneyMonstersHashlist)
-        .filter(mint => mintAmounts.get(mint) > 0),
+        .filter(mint => mintAmounts.has(mint)),
       money_monsters3d: Array.from(moneyMonsters3dHashlist)
-        .filter(mint => mintAmounts.get(mint) > 0),
+        .filter(mint => mintAmounts.has(mint)),
       ai_bitbots: Array.from(aiBitbotsHashlist)
-        .filter(mint => mintAmounts.get(mint) > 0)
+        .filter(mint => mintAmounts.has(mint))
     };
 
     // Log NFT counts for debugging
-    console.log('NFT counts for wallet', walletAddress + ':', nftCounts);
+    console.log('NFT data for wallet', walletAddress + ':', nftCounts);
 
     // Cache results
     const pipeline = redis.pipeline();
