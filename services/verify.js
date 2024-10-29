@@ -281,10 +281,13 @@ export async function verifyHolder(walletData, userId, client) {
 // Update Discord roles function
 export async function updateDiscordRoles(userId, client) {
   try {
-    // Check if client is ready using readyAt timestamp
-    if (!client.readyAt) {
+    // Check if client is ready by checking if we can access the guilds
+    if (!client.guilds) {
       console.log('Waiting for client to be ready...');
-      await new Promise(resolve => client.once('ready', resolve));
+      await new Promise(resolve => {
+        if (client.guilds) resolve();
+        else client.once('ready', resolve);
+      });
     }
 
     // Get guild directly from client
@@ -294,7 +297,7 @@ export async function updateDiscordRoles(userId, client) {
       console.error('Guild not found in cache:', {
         guildId: GUILD_ID,
         availableGuilds: Array.from(client.guilds.cache.keys()),
-        clientStatus: client.readyAt ? 'ready' : 'not ready'
+        clientStatus: client.guilds ? 'ready' : 'not ready'
       });
       
       // Try to fetch guild
