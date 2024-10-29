@@ -50,11 +50,7 @@ async function loadHashlist(filename) {
 }
 
 // Initialize hashlists
-let fckedCatzHashlist = new Set();
-let celebCatzHashlist = new Set();
-let moneyMonstersHashlist = new Set();
-let moneyMonsters3dHashlist = new Set();
-let aiBitbotsHashlist = new Set();
+let hashlists = null;
 
 // Initialize hashlists
 async function initializeHashlists() {
@@ -67,18 +63,20 @@ async function initializeHashlists() {
       readFile(path.join(__dirname, '..', 'config', 'hashlists', 'ai_bitbots.json'), 'utf8')
     ]);
 
-    fckedCatzHashlist = new Set(JSON.parse(fckedCatz));
-    celebCatzHashlist = new Set(JSON.parse(celebCatz));
-    moneyMonstersHashlist = new Set(JSON.parse(moneyMonsters));
-    moneyMonsters3dHashlist = new Set(JSON.parse(moneyMonsters3d));
-    aiBitbotsHashlist = new Set(JSON.parse(aiBitbots));
+    hashlists = {
+      fckedCatz: new Set(JSON.parse(fckedCatz)),
+      celebCatz: new Set(JSON.parse(celebCatz)),
+      moneyMonsters: new Set(JSON.parse(moneyMonsters)),
+      moneyMonsters3d: new Set(JSON.parse(moneyMonsters3d)),
+      aiBitbots: new Set(JSON.parse(aiBitbots))
+    };
 
     console.log('Hashlists loaded:', {
-      fckedCatz: fckedCatzHashlist.size,
-      celebCatz: celebCatzHashlist.size,
-      moneyMonsters: moneyMonstersHashlist.size,
-      moneyMonsters3d: moneyMonsters3dHashlist.size,
-      aiBitbots: aiBitbotsHashlist.size
+      fckedCatz: hashlists.fckedCatz.size,
+      celebCatz: hashlists.celebCatz.size,
+      moneyMonsters: hashlists.moneyMonsters.size,
+      moneyMonsters3d: hashlists.moneyMonsters3d.size,
+      aiBitbots: hashlists.aiBitbots.size
     });
 
     return true;
@@ -163,11 +161,11 @@ export async function verifyHolder(walletData, userId, client) {
     };
 
     // Check each collection
-    checkAndAddNFTs('fcked_catz', fckedCatzHashlist);
-    checkAndAddNFTs('celebcatz', celebCatzHashlist);
-    checkAndAddNFTs('money_monsters', moneyMonstersHashlist);
-    checkAndAddNFTs('money_monsters3d', moneyMonsters3dHashlist);
-    checkAndAddNFTs('ai_bitbots', aiBitbotsHashlist);
+    checkAndAddNFTs('fcked_catz', hashlists.fckedCatz);
+    checkAndAddNFTs('celebcatz', hashlists.celebCatz);
+    checkAndAddNFTs('money_monsters', hashlists.moneyMonsters);
+    checkAndAddNFTs('money_monsters3d', hashlists.moneyMonsters3d);
+    checkAndAddNFTs('ai_bitbots', hashlists.aiBitbots);
 
     // Store NFT counts in Redis
     await redis.hset(`user:${userId}:nfts`, {
@@ -326,9 +324,13 @@ export function validateWalletAddress(req, res, next) {
   }
 }
 
-// Update checkNFTOwnership to use hashlists
+// Update checkNFTOwnership to use the hashlists object
 export async function checkNFTOwnership(walletAddress) {
   try {
+    if (!hashlists) {
+      throw new Error('Hashlists not initialized');
+    }
+
     // Get token accounts
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
       new PublicKey(walletAddress),
@@ -350,11 +352,11 @@ export async function checkNFTOwnership(walletAddress) {
       const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
       
       if (amount > 0) {
-        if (fckedCatzHashlist.has(mint)) nftCounts.fcked_catz.add(mint);
-        if (celebCatzHashlist.has(mint)) nftCounts.celebcatz.add(mint);
-        if (moneyMonstersHashlist.has(mint)) nftCounts.money_monsters.add(mint);
-        if (moneyMonsters3dHashlist.has(mint)) nftCounts.money_monsters3d.add(mint);
-        if (aiBitbotsHashlist.has(mint)) nftCounts.ai_bitbots.add(mint);
+        if (hashlists.fckedCatz.has(mint)) nftCounts.fcked_catz.add(mint);
+        if (hashlists.celebCatz.has(mint)) nftCounts.celebcatz.add(mint);
+        if (hashlists.moneyMonsters.has(mint)) nftCounts.money_monsters.add(mint);
+        if (hashlists.moneyMonsters3d.has(mint)) nftCounts.money_monsters3d.add(mint);
+        if (hashlists.aiBitbots.has(mint)) nftCounts.ai_bitbots.add(mint);
       }
     }
 
