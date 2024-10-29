@@ -679,3 +679,44 @@ async function handleProfileCommand(message) {
   }
 }
 
+// Add handleVerifyCommand function
+async function handleVerifyCommand(message) {
+  try {
+    await message.reply({
+      content: 'Please visit https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify/ to verify your wallet',
+      ephemeral: true
+    });
+  } catch (error) {
+    console.error('Error handling verify command:', error);
+    await message.channel.send('An error occurred while processing your command.');
+  }
+}
+
+// Add handleAdminCommand function
+async function handleAdminCommand(message) {
+  // Check if user has admin role
+  const member = await message.guild.members.fetch(message.author.id);
+  const isAdmin = member.roles.cache.some(role => role.name === 'ADMIN');
+  
+  if (!isAdmin) {
+    await message.reply('You do not have permission to use admin commands.');
+    return;
+  }
+
+  try {
+    const args = message.content.split(' ');
+    const subCommand = args[1];
+
+    switch (subCommand) {
+      case 'verify':
+        await sendVerificationMessage(message.channel);
+        break;
+      default:
+        await message.reply('Unknown admin command');
+    }
+  } catch (error) {
+    console.error('Error handling admin command:', error);
+    await message.channel.send('An error occurred while processing your command.');
+  }
+}
+
