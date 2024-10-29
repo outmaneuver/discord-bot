@@ -6,7 +6,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { config } from '../config/config.js';
 
-// Update Redis configuration with better error handling
+// Update Redis configuration with better connection pooling
 export const redis = new Redis(config.redis.url, {
   ...config.redis.options,
   retryStrategy: function(times) {
@@ -16,11 +16,11 @@ export const redis = new Redis(config.redis.url, {
       delay,
       timestamp: new Date().toISOString(),
       instance: 'redis-elliptical',
-      maxRetries: 20 // Add max retries info
+      maxRetries: 20
     });
     if (times > 20) {
       console.error('Max Redis retries reached, giving up');
-      return null; // Stop retrying after 20 attempts
+      return null;
     }
     return delay;
   },
@@ -45,8 +45,15 @@ export const redis = new Redis(config.redis.url, {
   connectTimeout: 20000,
   disconnectTimeout: 5000,
   keepAlive: 30000,
-  noDelay: true, // Disable Nagle's algorithm
-  commandTimeout: 5000 // Add command timeout
+  noDelay: true,
+  commandTimeout: 5000,
+  maxLoadingRetryTime: 2000,
+  connectionName: 'verify-service',
+  db: 0,
+  dropBufferSupport: true,
+  enableOfflineQueue: true,
+  maxRetriesPerRequest: 3,
+  retryDelayOnFailover: 100
 });
 
 // Add more detailed connection event handlers
