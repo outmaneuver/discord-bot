@@ -210,7 +210,7 @@ export async function updateUserProfile(channel, userId, client) {
       components: [row]
     });
     
-    await updateDiscordRoles(userId, aggregatedData, client);
+    await updateDiscordRoles(userId, client);
   } catch (error) {
     console.error('Error updating user profile:', error);
     throw error;
