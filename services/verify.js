@@ -467,50 +467,80 @@ export function validateWalletAddress(req, res, next) {
   }
 }
 
-// Update the checkNFTOwnership function to use local hashlists only
+// Update checkNFTOwnership to actually check token accounts
 export async function checkNFTOwnership(walletAddress) {
   try {
-    // Get stored NFT data from Redis
-    const nftData = await redis.hgetall(`wallet:${walletAddress}:nfts`);
-    
-    // If we have cached data, use it
-    if (nftData && Object.keys(nftData).length > 0) {
-      return {
-        fcked_catz: nftData.fcked_catz ? JSON.parse(nftData.fcked_catz) : [],
-        celebcatz: nftData.celebcatz ? JSON.parse(nftData.celebcatz) : [],
-        money_monsters: nftData.money_monsters ? JSON.parse(nftData.money_monsters) : [],
-        money_monsters3d: nftData.money_monsters3d ? JSON.parse(nftData.money_monsters3d) : [],
-        ai_bitbots: nftData.ai_bitbots ? JSON.parse(nftData.ai_bitbots) : []
-      };
-    }
+    // Get token accounts
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      new PublicKey(walletAddress),
+      { programId: TOKEN_PROGRAM_ID }
+    );
 
-    // If no cached data, return empty arrays
-    return {
-      fcked_catz: [],
-      celebcatz: [],
-      money_monsters: [],
-      money_monsters3d: [],
-      ai_bitbots: []
+    // Get owned token mints
+    const ownedMints = tokenAccounts.value.map(acc => 
+      acc.account.data.parsed.info.mint
+    );
+
+    // Check against hashlists
+    const nftCounts = {
+      fcked_catz: Array.from(fckedCatzHashlist).filter(mint => 
+        ownedMints.includes(mint)
+      ),
+      celebcatz: Array.from(celebCatzHashlist).filter(mint => 
+        ownedMints.includes(mint)
+      ),
+      money_monsters: Array.from(moneyMonstersHashlist).filter(mint => 
+        ownedMints.includes(mint)
+      ),
+      money_monsters3d: Array.from(moneyMonsters3dHashlist).filter(mint => 
+        ownedMints.includes(mint)
+      ),
+      ai_bitbots: Array.from(aiBitbotsHashlist).filter(mint => 
+        ownedMints.includes(mint)
+      )
     };
-  } catch (error) {
-    console.error('Error checking NFT ownership:', {
-      walletAddress,
-      error: error.message,
-      stack: error.stack
+
+    // Cache results in Redis
+    await redis.hset(`wallet:${walletAddress}:nfts`, {
+      fcked_catz: JSON.stringify(nftCounts.fcked_catz),
+      celebcatz: JSON.stringify(nftCounts.celebcatz), 
+      money_monsters: JSON.stringify(nftCounts.money_monsters),
+      money_monsters3d: JSON.stringify(nftCounts.money_monsters3d),
+      ai_bitbots: JSON.stringify(nftCounts.ai_bitbots)
     });
+
+    return nftCounts;
+
+  } catch (error) {
+    console.error('Error checking NFT ownership:', error);
     throw error;
   }
 }
 
-// Update getBUXBalance to use cached data as well
+// Update getBUXBalance to actually check token balance
 export async function getBUXBalance(walletAddress) {
   try {
-    // Get stored BUX balance from Redis
-    const balance = await redis.get(`wallet:${walletAddress}:bux_balance`);
-    if (balance !== null) {
-      return parseInt(balance);
-    }
-    return 0;
+    // Get token accounts
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      new PublicKey(walletAddress),
+      { programId: TOKEN_PROGRAM_ID }
+    );
+
+    // Find BUX token account
+    const buxAccount = tokenAccounts.value.find(acc => 
+      acc.account.data.parsed.info.mint === BUX_TOKEN_MINT
+    );
+
+    // Get balance
+    const balance = buxAccount ? 
+      Number(buxAccount.account.data.parsed.info.tokenAmount.amount) / 1e9 : 
+      0;
+
+    // Cache in Redis
+    await redis.set(`wallet:${walletAddress}:bux_balance`, balance.toString());
+
+    return balance;
+
   } catch (error) {
     console.error('Error getting BUX balance:', error);
     throw error;
