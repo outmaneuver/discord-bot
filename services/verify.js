@@ -9,6 +9,15 @@ import { config } from '../config/config.js';
 // Create a single Redis instance to be shared across the application
 export const redis = new Redis(config.redis.url, {
   ...config.redis.options,
+  // Connection options
+  connectTimeout: 20000,
+  disconnectTimeout: 5000,
+  keepAlive: 30000,
+  connectionName: 'verify-service',
+  db: 0,
+  lazyConnect: true,
+  
+  // Retry and reconnection
   retryStrategy: function(times) {
     const delay = Math.min(times * 50, 2000);
     console.log('Redis connection attempt:', {
@@ -25,7 +34,9 @@ export const redis = new Redis(config.redis.url, {
     return delay;
   },
   maxRetriesPerRequest: 3,
-  enableReadyCheck: true,
+  retryDelayOnFailover: 100,
+  
+  // Error handling
   reconnectOnError: function(err) {
     const sanitizedError = {
       message: '[Redacted Error Message]',
@@ -39,23 +50,21 @@ export const redis = new Redis(config.redis.url, {
            err.message.includes('ECONNRESET');
   },
   showFriendlyErrorStack: false,
-  lazyConnect: true,
-  autoResubscribe: true,
-  autoResendUnfulfilledCommands: true,
-  connectTimeout: 20000,
-  disconnectTimeout: 5000,
-  keepAlive: 30000,
+  
+  // Performance options
+  enableReadyCheck: true,
   noDelay: true,
-  commandTimeout: 5000,
-  maxLoadingRetryTime: 2000,
-  connectionName: 'verify-service',
-  db: 0,
   dropBufferSupport: true,
   enableOfflineQueue: true,
-  retryDelayOnFailover: 100,
   enableAutoPipelining: true,
-  maxRetriesPerRequest: 3,
+  commandTimeout: 5000,
+  maxLoadingRetryTime: 2000,
+  
+  // Subscription handling
+  autoResubscribe: true,
   autoResendUnfulfilledCommands: true,
+  
+  // Sentinel options
   enableTLSForSentinelMode: false,
   sentinelRetryStrategy: null
 });
