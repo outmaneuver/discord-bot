@@ -467,51 +467,69 @@ export function validateWalletAddress(req, res, next) {
   }
 }
 
-// Update checkNFTOwnership to actually check token accounts
+// Update checkNFTOwnership to use hashlists directly
 export async function checkNFTOwnership(walletAddress) {
   try {
-    // Get token accounts
+    // Get cached NFT data first
+    const cachedData = await redis.hgetall(`wallet:${walletAddress}:nfts`);
+    if (cachedData) {
+      return {
+        fcked_catz: JSON.parse(cachedData.fcked_catz || '[]'),
+        celebcatz: JSON.parse(cachedData.celebcatz || '[]'),
+        money_monsters: JSON.parse(cachedData.money_monsters || '[]'),
+        money_monsters3d: JSON.parse(cachedData.money_monsters3d || '[]'),
+        ai_bitbots: JSON.parse(cachedData.ai_bitbots || '[]')
+      };
+    }
+
+    // Get token accounts only if no cache
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
       new PublicKey(walletAddress),
       { programId: TOKEN_PROGRAM_ID }
     );
 
     // Get owned token mints
-    const ownedMints = tokenAccounts.value.map(acc => 
+    const ownedMints = new Set(tokenAccounts.value.map(acc => 
       acc.account.data.parsed.info.mint
-    );
+    ));
 
-    // Check against hashlists
+    // Check against hashlists using Set intersection
     const nftCounts = {
-      fcked_catz: Array.from(fckedCatzHashlist).filter(mint => 
-        ownedMints.includes(mint)
-      ),
-      celebcatz: Array.from(celebCatzHashlist).filter(mint => 
-        ownedMints.includes(mint)
-      ),
-      money_monsters: Array.from(moneyMonstersHashlist).filter(mint => 
-        ownedMints.includes(mint)
-      ),
-      money_monsters3d: Array.from(moneyMonsters3dHashlist).filter(mint => 
-        ownedMints.includes(mint)
-      ),
-      ai_bitbots: Array.from(aiBitbotsHashlist).filter(mint => 
-        ownedMints.includes(mint)
-      )
+      fcked_catz: Array.from(fckedCatzHashlist).filter(mint => ownedMints.has(mint)),
+      celebcatz: Array.from(celebCatzHashlist).filter(mint => ownedMints.has(mint)),
+      money_monsters: Array.from(moneyMonstersHashlist).filter(mint => ownedMints.has(mint)),
+      money_monsters3d: Array.from(moneyMonsters3dHashlist).filter(mint => ownedMints.has(mint)),
+      ai_bitbots: Array.from(aiBitbotsHashlist).filter(mint => ownedMints.has(mint))
     };
 
-    // Cache results in Redis
-    await redis.hset(`wallet:${walletAddress}:nfts`, {
+    // Cache results in Redis with 1 hour TTL
+    const pipeline = redis.pipeline();
+    pipeline.hset(`wallet:${walletAddress}:nfts`, {
       fcked_catz: JSON.stringify(nftCounts.fcked_catz),
-      celebcatz: JSON.stringify(nftCounts.celebcatz), 
+      celebcatz: JSON.stringify(nftCounts.celebcatz),
       money_monsters: JSON.stringify(nftCounts.money_monsters),
       money_monsters3d: JSON.stringify(nftCounts.money_monsters3d),
       ai_bitbots: JSON.stringify(nftCounts.ai_bitbots)
     });
+    pipeline.expire(`wallet:${walletAddress}:nfts`, 3600); // 1 hour TTL
+    await pipeline.exec();
 
     return nftCounts;
 
   } catch (error) {
+    if (error.message.includes('429')) {
+      console.log('Rate limited, using cached data if available');
+      const cachedData = await redis.hgetall(`wallet:${walletAddress}:nfts`);
+      if (cachedData) {
+        return {
+          fcked_catz: JSON.parse(cachedData.fcked_catz || '[]'),
+          celebcatz: JSON.parse(cachedData.celebcatz || '[]'),
+          money_monsters: JSON.parse(cachedData.money_monsters || '[]'),
+          money_monsters3d: JSON.parse(cachedData.money_monsters3d || '[]'),
+          ai_bitbots: JSON.parse(cachedData.ai_bitbots || '[]')
+        };
+      }
+    }
     console.error('Error checking NFT ownership:', error);
     throw error;
   }
