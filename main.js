@@ -9,11 +9,21 @@ import Redis from 'ioredis';
 import RedisStore from 'connect-redis';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import { 
+  EmbedBuilder, 
+  ButtonBuilder, 
+  ActionRowBuilder, 
+  ButtonStyle 
+} from 'discord.js';
 
 import { initializeSalesListings } from './services/sales.js';
 import { verifyHolder, sendVerificationMessage, updateDiscordRoles, validateWalletAddress } from './services/verify.js';
-import { updateUserProfile } from './services/profile.js';
+import { updateUserProfile, getWalletData, aggregateWalletData, formatNFTCounts, calculateDailyReward } from './services/profile.js';
 import { config } from './config/config.js';
+import {
+  startOrUpdateDailyTimer,
+  getTimeUntilNextClaim
+} from './services/rewards.js';
 
 // Add this near the top of the file, after the imports
 global.userWallets = new Map();
