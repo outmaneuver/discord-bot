@@ -394,7 +394,7 @@ export function validateWalletAddress(req, res, next) {
   }
 }
 
-// Update checkNFTOwnership to properly check token amounts
+// Update checkNFTOwnership function to properly filter hashlists
 export async function checkNFTOwnership(walletAddress) {
   try {
     // Get cached NFT data first
@@ -434,13 +434,21 @@ export async function checkNFTOwnership(walletAddress) {
       ai_bitbots: []
     };
 
-    // Helper function to check and add NFTs
+    // Helper function to check and add NFTs with logging
     const checkAndAddNFTs = (collection, hashlist) => {
+      console.log(`Checking ${collection} hashlist...`);
+      console.log(`Hashlist size: ${hashlist.size}`);
+      console.log(`Owned tokens: ${ownedTokens.size}`);
+      
+      let count = 0;
       hashlist.forEach(mint => {
         if (ownedTokens.has(mint) && ownedTokens.get(mint) > 0) {
           nftCounts[collection].push(mint);
+          count++;
         }
       });
+      
+      console.log(`Found ${count} ${collection} NFTs`);
     };
 
     // Check each collection
@@ -451,7 +459,13 @@ export async function checkNFTOwnership(walletAddress) {
     checkAndAddNFTs('ai_bitbots', aiBitbotsHashlist);
 
     // Log NFT counts for debugging
-    console.log('NFT data for wallet', walletAddress + ':', nftCounts);
+    console.log('NFT data for wallet', walletAddress + ':', {
+      fcked_catz: nftCounts.fcked_catz.length,
+      celebcatz: nftCounts.celebcatz.length,
+      money_monsters: nftCounts.money_monsters.length,
+      money_monsters3d: nftCounts.money_monsters3d.length,
+      ai_bitbots: nftCounts.ai_bitbots.length
+    });
 
     // Cache results
     const pipeline = redis.pipeline();
