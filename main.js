@@ -116,8 +116,20 @@ client.on('messageCreate', async (message) => {
   };
 
   const command = message.content.toLowerCase().trim();
-  const handler = commands[command];
+  
+  // Check for both =my.profile and =profile
+  if (command === '=my.profile' || command === '=profile') {
+    try {
+      await updateUserProfile(message.channel, message.author.id, client);
+    } catch (error) {
+      console.error('Error handling profile command:', error);
+      await message.channel.send('An error occurred while processing your command.');
+    }
+    return;
+  }
 
+  // Handle other commands
+  const handler = commands[command.substring(1)]; // Remove the = prefix
   if (handler) {
     try {
       await handler();
