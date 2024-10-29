@@ -1,14 +1,8 @@
 import { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } from 'discord.js';
 import { updateDiscordRoles, checkNFTOwnership, getBUXBalance } from './verify.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim } from './rewards.js';
-import Redis from 'ioredis';
+import { redis } from './verify.js';
 import ms from 'ms';
-
-const redis = new Redis(process.env.REDIS_URL, {
-  tls: {
-    rejectUnauthorized: false
-  }
-});
 
 // Add caching for NFT data
 const NFT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
