@@ -228,7 +228,7 @@ export function calculateDailyReward(nftCounts) {
   return reward;
 }
 
-// Update aggregateWalletData function to properly handle NFT counting
+// Update aggregateWalletData function to prevent double counting
 export async function aggregateWalletData(walletData) {
   // Initialize with Sets to prevent duplicates
   const nftSets = {
@@ -242,6 +242,9 @@ export async function aggregateWalletData(walletData) {
 
   // Add delay between RPC calls
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Track all NFTs to prevent duplicates
+  const processedNFTs = new Set();
 
   for (const walletAddress of walletData.walletAddresses) {
     try {
@@ -268,12 +271,14 @@ export async function aggregateWalletData(walletData) {
 
       if (!nftData) continue;
 
-      // Add NFTs to Sets only if they exist in the data
+      // Add NFTs to Sets only if not already processed
       Object.entries(nftData).forEach(([collection, nfts]) => {
-        if (Array.isArray(nfts) && nfts.length > 0) {
+        if (Array.isArray(nfts)) {
           nfts.forEach(nft => {
-            if (typeof nft === 'string' && nft.length > 0) {
+            if (typeof nft === 'string' && nft.length > 0 && !processedNFTs.has(nft)) {
               nftSets[collection].add(nft);
+              processedNFTs.add(nft); // Track this NFT as processed
+              console.log(`Added ${collection} NFT: ${nft}`);
             }
           });
         }
@@ -293,17 +298,17 @@ export async function aggregateWalletData(walletData) {
     }
   }
 
-  // Convert Sets to arrays and filter out empty arrays
+  // Convert Sets to arrays
   const nftCounts = {
-    fcked_catz: Array.from(nftSets.fcked_catz).filter(Boolean),
-    celebcatz: Array.from(nftSets.celebcatz).filter(Boolean),
-    money_monsters: Array.from(nftSets.money_monsters).filter(Boolean),
-    money_monsters3d: Array.from(nftSets.money_monsters3d).filter(Boolean),
-    ai_bitbots: Array.from(nftSets.ai_bitbots).filter(Boolean)
+    fcked_catz: Array.from(nftSets.fcked_catz),
+    celebcatz: Array.from(nftSets.celebcatz),
+    money_monsters: Array.from(nftSets.money_monsters),
+    money_monsters3d: Array.from(nftSets.money_monsters3d),
+    ai_bitbots: Array.from(nftSets.ai_bitbots)
   };
 
   // Log counts for debugging
-  console.log('Aggregated NFT counts:', {
+  console.log('Final NFT counts after deduplication:', {
     fcked_catz: nftCounts.fcked_catz.length,
     celebcatz: nftCounts.celebcatz.length,
     money_monsters: nftCounts.money_monsters.length,
