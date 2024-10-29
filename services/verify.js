@@ -6,7 +6,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { config } from '../config/config.js';
 
-// Update Redis configuration with better security
+// Update Redis configuration with better reconnection handling
 export const redis = new Redis(config.redis.url, {
   ...config.redis.options,
   retryStrategy: function(times) {
@@ -22,22 +22,26 @@ export const redis = new Redis(config.redis.url, {
   maxRetriesPerRequest: 3,
   enableReadyCheck: true,
   reconnectOnError: function(err) {
-    // Mask any sensitive data in error messages
     const sanitizedError = {
-      message: '[Redacted Error Message]', // Don't log error message as it may contain credentials
+      message: '[Redacted Error Message]',
       code: err.code,
       command: err.command,
       timestamp: new Date().toISOString()
     };
     console.error('Redis reconnect error:', sanitizedError);
-    return true;
+    return true; // Always try to reconnect
   },
-  showFriendlyErrorStack: false, // Disable detailed error stacks
-  lazyConnect: true
+  showFriendlyErrorStack: false,
+  lazyConnect: true,
+  autoResubscribe: true, // Automatically resubscribe to channels
+  autoResendUnfulfilledCommands: true, // Resend unfulfilled commands after reconnect
+  connectTimeout: 20000, // Increase connection timeout
+  disconnectTimeout: 5000, // Add disconnect timeout
+  keepAlive: 30000 // Add keepalive
 });
 
+// Add connection event handlers
 redis.on('error', (err) => {
-  // Mask any sensitive data in error messages
   const sanitizedError = {
     message: '[Redacted Error Message]',
     code: err.code,
@@ -60,8 +64,22 @@ redis.on('ready', () => {
       tls: { rejectUnauthorized: false },
       maxRetriesPerRequest: 3,
       enableReadyCheck: true,
-      lazyConnect: true
+      lazyConnect: true,
+      autoResubscribe: true,
+      autoResendUnfulfilledCommands: true,
+      connectTimeout: 20000,
+      disconnectTimeout: 5000,
+      keepAlive: 30000
     }
+  });
+});
+
+// Add reconnecting event handler
+redis.on('reconnecting', (delay) => {
+  console.log('Redis reconnecting:', {
+    delay,
+    timestamp: new Date().toISOString(),
+    instance: 'redis-elliptical'
   });
 });
 
