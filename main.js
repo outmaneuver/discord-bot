@@ -47,27 +47,46 @@ app.use(cors());
 app.use(express.json());
 console.log('Express app created');
 
+// Add session debugging middleware
+app.use((req, res, next) => {
+  console.log('Session Debug:', {
+    id: req.sessionID,
+    hasSession: !!req.session,
+    sessionData: req.session,
+    cookies: req.cookies,
+    timestamp: new Date().toISOString()
+  });
+  next();
+});
+
 // Configure session with Redis store
 const redisStore = new RedisStore({
   client: redis,
-  prefix: 'session:'
+  prefix: 'session:',
+  ttl: 86400 // 24 hours
 });
 
 // Update session middleware configuration
 app.use(session({
   store: redisStore,
   secret: process.env.SESSION_SECRET || 'your-secret-key',
-  resave: false,
-  saveUninitialized: false,
+  resave: true, // Changed to true to ensure session is saved
+  saveUninitialized: true, // Changed to true to create session for all requests
   name: 'buxdao.sid',
+  rolling: true, // Reset expiration on each request
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Set to false to test
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: 'lax',
     path: '/'
   }
 }));
+
+// Add Redis store error handling
+redisStore.on('error', function(error) {
+  console.error('Redis store error:', error);
+});
 
 // Add auth routes
 app.use('/auth', authRouter);
