@@ -33,7 +33,43 @@ const client = new Client({
   ]
 });
 
-// Update message handler
+// Command handlers
+const commandHandlers = {
+  'my.profile': async (message) => {
+    await updateUserProfile(message.channel, message.author.id, client);
+  },
+  'my.wallet': async (message) => {
+    const walletData = await getWalletData(message.author.id);
+    const embed = new EmbedBuilder()
+      .setTitle(`${message.author.username}'s Connected Wallets`)
+      .setDescription(walletData.walletAddresses.join('\n') || 'No wallets connected');
+    await message.channel.send({ embeds: [embed] });
+  },
+  'verify': async (message) => {
+    await message.reply({
+      content: 'Please visit https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify/ to verify your wallet',
+      ephemeral: true
+    });
+  },
+  'help': async (message) => {
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle('BUX DAO Bot Commands')
+      .addFields(
+        { 
+          name: 'Profile Commands',
+          value: [
+            '`=my.profile` - View your full profile',
+            '`=my.wallet` - View your connected wallets',
+            '`=verify` - Get wallet verification link'
+          ].join('\n')
+        }
+      );
+    await message.channel.send({ embeds: [embed] });
+  }
+};
+
+// Message handler
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
@@ -63,5 +99,21 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-// Rest of the file remains the same...
+// Initialize Express app and start server
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+
+// Login client
+client.login(config.discord.token);
+
+// Log when ready
+client.once('ready', () => {
+  console.log(`Logged in as ${client.user.tag}!`);
+});
 
