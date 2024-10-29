@@ -219,29 +219,40 @@ export async function verifyHolder(walletData, userId, client) {
       { programId: TOKEN_PROGRAM_ID }
     );
 
-    // Get owned token mints
-    const ownedMints = tokenAccounts.value.map(acc => 
-      acc.account.data.parsed.info.mint
-    );
+    // Create map of mint addresses to token amounts
+    const ownedTokens = new Map();
+    tokenAccounts.value.forEach(acc => {
+      const mint = acc.account.data.parsed.info.mint;
+      const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+      if (amount > 0) {
+        ownedTokens.set(mint, amount);
+      }
+    });
 
     // Check NFT ownership against local hashlists
     const nftCounts = {
-      fcked_catz: Array.from(fckedCatzHashlist).filter(mint => 
-        ownedMints.includes(mint)
-      ),
-      celebcatz: Array.from(celebCatzHashlist).filter(mint => 
-        ownedMints.includes(mint)
-      ),
-      money_monsters: Array.from(moneyMonstersHashlist).filter(mint => 
-        ownedMints.includes(mint)
-      ),
-      money_monsters3d: Array.from(moneyMonsters3dHashlist).filter(mint => 
-        ownedMints.includes(mint)
-      ),
-      ai_bitbots: Array.from(aiBitbotsHashlist).filter(mint => 
-        ownedMints.includes(mint)
-      )
+      fcked_catz: [],
+      celebcatz: [],
+      money_monsters: [],
+      money_monsters3d: [],
+      ai_bitbots: []
     };
+
+    // Helper function to check and add NFTs
+    const checkAndAddNFTs = (collection, hashlist) => {
+      hashlist.forEach(mint => {
+        if (ownedTokens.has(mint) && ownedTokens.get(mint) > 0) {
+          nftCounts[collection].push(mint);
+        }
+      });
+    };
+
+    // Check each collection
+    checkAndAddNFTs('fcked_catz', fckedCatzHashlist);
+    checkAndAddNFTs('celebcatz', celebCatzHashlist);
+    checkAndAddNFTs('money_monsters', moneyMonstersHashlist);
+    checkAndAddNFTs('money_monsters3d', moneyMonsters3dHashlist);
+    checkAndAddNFTs('ai_bitbots', aiBitbotsHashlist);
 
     // Store NFT counts in Redis
     await redis.hset(`user:${userId}:nfts`, {
@@ -405,28 +416,39 @@ export async function checkNFTOwnership(walletAddress) {
     );
 
     // Create map of mint addresses to token amounts
-    const mintAmounts = new Map();
+    const ownedTokens = new Map();
     tokenAccounts.value.forEach(acc => {
       const mint = acc.account.data.parsed.info.mint;
-      const amount = Number(acc.account.data.parsed.info.tokenAmount.amount);
-      if (amount > 0) { // Only include tokens with non-zero balance
-        mintAmounts.set(mint, amount);
+      const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+      if (amount > 0) {
+        ownedTokens.set(mint, amount);
       }
     });
 
-    // Check against hashlists and only include NFTs with positive balance
+    // Check against hashlists and only include NFTs with balance > 0
     const nftCounts = {
-      fcked_catz: Array.from(fckedCatzHashlist)
-        .filter(mint => mintAmounts.has(mint)),
-      celebcatz: Array.from(celebCatzHashlist)
-        .filter(mint => mintAmounts.has(mint)),
-      money_monsters: Array.from(moneyMonstersHashlist)
-        .filter(mint => mintAmounts.has(mint)),
-      money_monsters3d: Array.from(moneyMonsters3dHashlist)
-        .filter(mint => mintAmounts.has(mint)),
-      ai_bitbots: Array.from(aiBitbotsHashlist)
-        .filter(mint => mintAmounts.has(mint))
+      fcked_catz: [],
+      celebcatz: [],
+      money_monsters: [],
+      money_monsters3d: [],
+      ai_bitbots: []
     };
+
+    // Helper function to check and add NFTs
+    const checkAndAddNFTs = (collection, hashlist) => {
+      hashlist.forEach(mint => {
+        if (ownedTokens.has(mint) && ownedTokens.get(mint) > 0) {
+          nftCounts[collection].push(mint);
+        }
+      });
+    };
+
+    // Check each collection
+    checkAndAddNFTs('fcked_catz', fckedCatzHashlist);
+    checkAndAddNFTs('celebcatz', celebCatzHashlist);
+    checkAndAddNFTs('money_monsters', moneyMonstersHashlist);
+    checkAndAddNFTs('money_monsters3d', moneyMonsters3dHashlist);
+    checkAndAddNFTs('ai_bitbots', aiBitbotsHashlist);
 
     // Log NFT counts for debugging
     console.log('NFT data for wallet', walletAddress + ':', nftCounts);
