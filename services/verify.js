@@ -50,21 +50,29 @@ async function loadHashlist(filename) {
 }
 
 // Initialize hashlists
-let fckedCatzHashlist;
-let celebCatzHashlist;
-let moneyMonstersHashlist;
-let moneyMonsters3dHashlist;
-let aiBitbotsHashlist;
+let fckedCatzHashlist = new Set();
+let celebCatzHashlist = new Set();
+let moneyMonstersHashlist = new Set();
+let moneyMonsters3dHashlist = new Set();
+let aiBitbotsHashlist = new Set();
 
 // Initialize hashlists
 async function initializeHashlists() {
   try {
-    fckedCatzHashlist = await loadHashlist('fcked_catz.json');
-    celebCatzHashlist = await loadHashlist('celebcatz.json');
-    moneyMonstersHashlist = await loadHashlist('money_monsters.json');
-    moneyMonsters3dHashlist = await loadHashlist('money_monsters3d.json');
-    aiBitbotsHashlist = await loadHashlist('ai_bitbots.json');
-    
+    const [fckedCatz, celebCatz, moneyMonsters, moneyMonsters3d, aiBitbots] = await Promise.all([
+      readFile(path.join(__dirname, '..', 'config', 'hashlists', 'fcked_catz.json'), 'utf8'),
+      readFile(path.join(__dirname, '..', 'config', 'hashlists', 'celebcatz.json'), 'utf8'),
+      readFile(path.join(__dirname, '..', 'config', 'hashlists', 'money_monsters.json'), 'utf8'),
+      readFile(path.join(__dirname, '..', 'config', 'hashlists', 'money_monsters3d.json'), 'utf8'),
+      readFile(path.join(__dirname, '..', 'config', 'hashlists', 'ai_bitbots.json'), 'utf8')
+    ]);
+
+    fckedCatzHashlist = new Set(JSON.parse(fckedCatz));
+    celebCatzHashlist = new Set(JSON.parse(celebCatz));
+    moneyMonstersHashlist = new Set(JSON.parse(moneyMonsters));
+    moneyMonsters3dHashlist = new Set(JSON.parse(moneyMonsters3d));
+    aiBitbotsHashlist = new Set(JSON.parse(aiBitbots));
+
     console.log('Hashlists loaded:', {
       fckedCatz: fckedCatzHashlist.size,
       celebCatz: celebCatzHashlist.size,
@@ -72,14 +80,16 @@ async function initializeHashlists() {
       moneyMonsters3d: moneyMonsters3dHashlist.size,
       aiBitbots: aiBitbotsHashlist.size
     });
+
+    return true;
   } catch (error) {
     console.error('Error initializing hashlists:', error);
     throw error;
   }
 }
 
-// Call initialization
-initializeHashlists().catch(console.error);
+// Initialize hashlists before exporting functions
+await initializeHashlists();
 
 // Add rate limiting and retry logic for RPC calls
 async function retryWithBackoff(fn, maxRetries = 5, initialDelay = 1000) {
