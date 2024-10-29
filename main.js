@@ -130,9 +130,10 @@ ${Object.entries(result.nftCounts)
   .map(([collection, nfts]) => `${collection}: ${nfts.length}`)
   .join('\n')}
 
-Daily reward - ${dailyReward} $BUX
+**Daily reward - ${dailyReward} $BUX**
 
 Your roles have been updated! 🎉
+
 ✓ VERIFIED
 You can now close this window`;
 
