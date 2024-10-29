@@ -88,8 +88,11 @@ async function initializeHashlists() {
   }
 }
 
-// Initialize hashlists before exporting functions
-await initializeHashlists();
+// Initialize hashlists when the module is imported
+initializeHashlists().catch(error => {
+  console.error('Failed to initialize hashlists:', error);
+  process.exit(1);
+});
 
 // Add rate limiting and retry logic for RPC calls
 async function retryWithBackoff(fn, maxRetries = 5, initialDelay = 1000) {
