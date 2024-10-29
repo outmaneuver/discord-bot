@@ -281,17 +281,18 @@ export async function verifyHolder(walletData, userId, client) {
 // Update Discord roles function
 export async function updateDiscordRoles(userId, client) {
   try {
-    // Check if client is ready by checking readyAt timestamp
-    if (!client.readyAt) {
+    // Check if client is ready by checking client.isReady()
+    if (!client.isReady()) {
       console.log('Waiting for client to be ready...', {
         clientStatus: {
+          isReady: client.isReady(),
           readyAt: client.readyAt,
           readyTimestamp: client.readyTimestamp,
           uptime: client.uptime
         }
       });
       await new Promise(resolve => {
-        if (client.readyAt) resolve();
+        if (client.isReady()) resolve();
         else client.once('ready', resolve);
       });
     }
@@ -304,6 +305,7 @@ export async function updateDiscordRoles(userId, client) {
         guildId: GUILD_ID,
         availableGuilds: Array.from(client.guilds.cache.keys()),
         clientStatus: {
+          isReady: client.isReady(),
           readyAt: client.readyAt,
           readyTimestamp: client.readyTimestamp,
           uptime: client.uptime
