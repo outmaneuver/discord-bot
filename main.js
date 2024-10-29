@@ -56,79 +56,9 @@ client.on('messageCreate', async (message) => {
   // Ignore messages from bots
   if (message.author.bot) return;
 
-  // Map commands to handlers
-  const commands = {
-    'my.profile': async () => {
-      await updateUserProfile(message.channel, message.author.id, client);
-    },
-    'my.wallet': async () => {
-      const walletData = await getWalletData(message.author.id);
-      const embed = new EmbedBuilder()
-        .setColor('#0099ff')
-        .setTitle(`${message.author.username}'s Connected Wallets`)
-        .addFields({
-          name: 'Connected Wallets',
-          value: walletData.walletAddresses.length > 0 ? 
-            walletData.walletAddresses.join('\n') : 
-            'No wallets connected'
-        });
-      await message.channel.send({ embeds: [embed] });
-    },
-    'my.nfts': async () => {
-      const walletData = await getWalletData(message.author.id);
-      const aggregatedData = await aggregateWalletData(walletData);
-      const embed = new EmbedBuilder()
-        .setColor('#0099ff')
-        .setTitle(`${message.author.username}'s NFT Collection`)
-        .addFields({
-          name: 'NFTs',
-          value: formatNFTCounts(aggregatedData.nftCounts) || 'No NFTs'
-        });
-      await message.channel.send({ embeds: [embed] });
-    },
-    'my.roles': async () => {
-      const member = await message.guild.members.fetch(message.author.id);
-      const roles = member.roles.cache
-        .filter(role => role.name !== '@everyone')
-        .sort((a, b) => b.position - a.position)
-        .map(role => role.name)
-        .join('\n');
-      const embed = new EmbedBuilder()
-        .setColor('#0099ff')
-        .setTitle(`${message.author.username}'s Server Roles`)
-        .addFields({
-          name: 'Server Roles',
-          value: roles || 'No roles'
-        });
-      await message.channel.send({ embeds: [embed] });
-    },
-    'my.bux': async () => {
-      const walletData = await getWalletData(message.author.id);
-      const aggregatedData = await aggregateWalletData(walletData);
-      const [timerData, timeUntilNext] = await Promise.all([
-        startOrUpdateDailyTimer(message.author.id, aggregatedData.nftCounts, aggregatedData.buxBalance),
-        getTimeUntilNextClaim(message.author.id)
-      ]);
-      const dailyReward = calculateDailyReward(aggregatedData.nftCounts);
-      const embed = new EmbedBuilder()
-        .setColor('#0099ff')
-        .setTitle(`${message.author.username}'s BUX Balance`)
-        .addFields(
-          { name: 'BUX Balance', value: `${aggregatedData.buxBalance.toLocaleString()} BUX` },
-          { name: 'Daily Reward', value: `${dailyReward.toLocaleString()} BUX` },
-          { name: 'BUX Claim', value: `${timerData.claimAmount.toLocaleString()} BUX` },
-          { name: 'Claim updates in', value: timeUntilNext || 'Start timer by verifying wallet' }
-        );
-      await message.channel.send({ embeds: [embed] });
-    },
-    'verify': handleVerifyCommand,
-    'admin': handleAdminCommand
-  };
-
-  const command = message.content.toLowerCase().trim();
-  
   // Check for both =my.profile and =profile
-  if (command === '=my.profile' || command === '=profile') {
+  if (message.content.toLowerCase().trim() === '=my.profile' || 
+      message.content.toLowerCase().trim() === '=profile') {
     try {
       await updateUserProfile(message.channel, message.author.id, client);
     } catch (error) {
@@ -139,10 +69,11 @@ client.on('messageCreate', async (message) => {
   }
 
   // Handle other commands
-  const handler = commands[command.substring(1)]; // Remove the = prefix
+  const command = message.content.toLowerCase().trim().substring(1); // Remove the = prefix
+  const handler = commandHandlers[command];
   if (handler) {
     try {
-      await handler();
+      await handler(message);
     } catch (error) {
       console.error('Error handling message:', error);
       await message.channel.send('An error occurred while processing your command.');
@@ -475,43 +406,16 @@ try {
 }
 
 // Add command handlers
-async function handleProfileCommands(message, client) {
-  try {
-    await updateUserProfile(message.channel, message.author.id, client);
-  } catch (error) {
-    console.error('Error handling profile command:', error);
-    throw error;
-  }
-}
-
-async function handleVerifyCommands(message, client) {
-  try {
-    await sendVerificationMessage(message.channel);
-  } catch (error) {
-    console.error('Error handling verify command:', error);
-    throw error;
-  }
-}
-
-async function handleSalesListingsCommands(message) {
-  try {
-    await testSale(client, message.content.split(' ')[1]);
-  } catch (error) {
-    console.error('Error handling sales command:', error);
-    throw error;
-  }
-}
-
-async function handleMainCommands(message, client) {
-  try {
-    if (message.content === '=help') {
-      await message.reply('Available commands:\n=profile - View your profile\n=verify - Get wallet verification link');
-    }
-  } catch (error) {
-    console.error('Error handling main command:', error);
-    throw error;
-  }
-}
+const commandHandlers = {
+  'my.profile': handleProfileCommand,
+  'my.wallet': handleWalletSection,
+  'my.nfts': handleNFTSection,
+  'my.roles': handleRolesSection,
+  'my.bux': handleBUXSection,
+  'verify': handleVerifyCommand,
+  'admin': handleAdminCommand,
+  'help': handleHelpCommand
+};
 
 // Add interaction handlers
 async function handleVerifyInteraction(interaction) {
@@ -727,6 +631,41 @@ async function handleAdminCommand(message) {
   } catch (error) {
     console.error('Error handling admin command:', error);
     await message.channel.send('An error occurred while processing your command.');
+  }
+}
+
+// Update the help command handler
+async function handleHelpCommand(message) {
+  try {
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle('BUX DAO Bot Commands')
+      .addFields(
+        { 
+          name: 'Profile Commands',
+          value: [
+            '`=my.profile` - View your full profile',
+            '`=my.wallet` - View your connected wallets',
+            '`=my.nfts` - View your NFT holdings',
+            '`=my.roles` - View your server roles',
+            '`=my.bux` - View your BUX balance and rewards'
+          ].join('\n')
+        },
+        {
+          name: 'Verification',
+          value: '`=verify` - Get wallet verification link'
+        },
+        {
+          name: 'Admin Commands',
+          value: '`=admin verify` - Send verification message (Admin only)'
+        }
+      )
+      .setFooter({ text: 'BUX DAO Bot • Version 1.0.0' });
+
+    await message.channel.send({ embeds: [embed] });
+  } catch (error) {
+    console.error('Error handling help command:', error);
+    await message.channel.send('An error occurred while displaying help.');
   }
 }
 
