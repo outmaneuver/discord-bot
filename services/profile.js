@@ -192,110 +192,91 @@ export function formatNFTCounts(nftCounts) {
     .join('\n');
 }
 
-export function calculateDailyReward(nftCounts) {
-  let reward = 0;
-  
-  // Updated reward multipliers
-  reward += nftCounts.fcked_catz.length * 2;      // 2 BUX per FCatz
-  reward += nftCounts.celebcatz.length * 8;       // 8 BUX per CelebCatz
-  reward += nftCounts.money_monsters.length * 2;   // 2 BUX per MM
-  reward += nftCounts.money_monsters3d.length * 4; // 4 BUX per MM3D
-  reward += nftCounts.ai_bitbots.length * 1;      // 1 BUX per AI Bitbot
+// Fix calculateDailyReward function
+function calculateDailyReward(nftCounts) {
+  try {
+    let reward = 0;
+    
+    // Make sure we're working with numbers
+    const counts = {
+      fcked_catz: parseInt(nftCounts.fcked_catz) || 0,
+      celebcatz: parseInt(nftCounts.celebcatz) || 0,
+      money_monsters: parseInt(nftCounts.money_monsters) || 0,
+      money_monsters3d: parseInt(nftCounts.money_monsters3d) || 0,
+      ai_bitbots: parseInt(nftCounts.ai_bitbots) || 0
+    };
+    
+    // Calculate rewards
+    reward += counts.fcked_catz * 2;      // 2 BUX per FCatz
+    reward += counts.celebcatz * 8;       // 8 BUX per CelebCatz
+    reward += counts.money_monsters * 2;   // 2 BUX per MM
+    reward += counts.money_monsters3d * 4; // 4 BUX per MM3D
+    reward += counts.ai_bitbots * 1;      // 1 BUX per AI Bitbot
 
-  return reward;
+    console.log('Daily reward calculation:', {
+      counts,
+      reward,
+      timestamp: new Date().toISOString()
+    });
+
+    return reward;
+  } catch (error) {
+    console.error('Error calculating daily reward:', error);
+    return 0;
+  }
 }
 
-// Update aggregateWalletData function to prevent double counting
+// Fix my.nfts command handler in aggregateWalletData
 export async function aggregateWalletData(walletData) {
-  // Initialize with Sets to prevent duplicates
-  const nftSets = {
-    fcked_catz: new Set(),
-    celebcatz: new Set(),
-    money_monsters: new Set(),
-    money_monsters3d: new Set(),
-    ai_bitbots: new Set()
-  };
-  let totalBuxBalance = 0;
+  try {
+    // Initialize with Sets to prevent duplicates
+    const nftSets = {
+      fcked_catz: new Set(),
+      celebcatz: new Set(),
+      money_monsters: new Set(),
+      money_monsters3d: new Set(),
+      ai_bitbots: new Set()
+    };
+    let totalBuxBalance = 0;
 
-  // Add delay between RPC calls
-  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-  // Track all NFTs to prevent duplicates
-  const processedNFTs = new Set();
-
-  for (const walletAddress of walletData.walletAddresses) {
-    try {
-      console.log('Aggregating data for wallet:', walletAddress);
-
-      // Get NFT data with retries
-      let nftData;
-      let retries = 3;
-      while (retries > 0) {
-        try {
-          nftData = await getCachedNFTData(walletAddress);
-          console.log('NFT data for wallet', walletAddress + ':', nftData);
-          break;
-        } catch (error) {
-          console.error(`Error getting NFT data (attempt ${4-retries}/3):`, error);
-          if (error.message.includes('429') && retries > 1) {
-            await delay((4-retries) * 2000);
-            retries--;
-            continue;
-          }
-          break;
-        }
-      }
-
-      if (!nftData) continue;
-
-      // Add NFTs to Sets only if not already processed
+    // Get NFTs from all wallets
+    for (const walletAddress of walletData.walletAddresses) {
+      const nftData = await checkNFTOwnership(walletAddress);
+      
+      // Add NFTs to Sets
       Object.entries(nftData).forEach(([collection, nfts]) => {
-        if (Array.isArray(nfts)) {
-          nfts.forEach(nft => {
-            if (typeof nft === 'string' && nft.length > 0 && !processedNFTs.has(nft)) {
-              nftSets[collection].add(nft);
-              processedNFTs.add(nft); // Track this NFT as processed
-              console.log(`Added ${collection} NFT: ${nft}`);
-            }
-          });
-        }
+        nfts.forEach(nft => nftSets[collection].add(nft));
       });
 
       // Get BUX balance
-      try {
-        const balance = await getBUXBalance(walletAddress);
-        totalBuxBalance += balance;
-      } catch (error) {
-        console.error('Error getting BUX balance:', error);
-      }
-
-      await delay(1000); // Delay between wallets
-    } catch (error) {
-      console.error('Error processing wallet:', walletAddress, error);
+      const balance = await getBUXBalance(walletAddress);
+      totalBuxBalance += balance;
     }
+
+    // Convert Sets to arrays
+    const nftCounts = {
+      fcked_catz: Array.from(nftSets.fcked_catz),
+      celebcatz: Array.from(nftSets.celebcatz),
+      money_monsters: Array.from(nftSets.money_monsters),
+      money_monsters3d: Array.from(nftSets.money_monsters3d),
+      ai_bitbots: Array.from(nftSets.ai_bitbots)
+    };
+
+    console.log('Aggregated NFT counts:', {
+      fcked_catz: nftCounts.fcked_catz.length,
+      celebcatz: nftCounts.celebcatz.length,
+      money_monsters: nftCounts.money_monsters.length,
+      money_monsters3d: nftCounts.money_monsters3d.length,
+      ai_bitbots: nftCounts.ai_bitbots.length,
+      timestamp: new Date().toISOString()
+    });
+
+    return {
+      nftCounts,
+      buxBalance: totalBuxBalance
+    };
+  } catch (error) {
+    console.error('Error in aggregateWalletData:', error);
+    throw error;
   }
-
-  // Convert Sets to arrays
-  const nftCounts = {
-    fcked_catz: Array.from(nftSets.fcked_catz),
-    celebcatz: Array.from(nftSets.celebcatz),
-    money_monsters: Array.from(nftSets.money_monsters),
-    money_monsters3d: Array.from(nftSets.money_monsters3d),
-    ai_bitbots: Array.from(nftSets.ai_bitbots)
-  };
-
-  // Log counts for debugging
-  console.log('Final NFT counts after deduplication:', {
-    fcked_catz: nftCounts.fcked_catz.length,
-    celebcatz: nftCounts.celebcatz.length,
-    money_monsters: nftCounts.money_monsters.length,
-    money_monsters3d: nftCounts.money_monsters3d.length,
-    ai_bitbots: nftCounts.ai_bitbots.length
-  });
-  console.log('Total BUX balance:', totalBuxBalance);
-
-  return {
-    nftCounts,
-    buxBalance: totalBuxBalance
-  };
 }
