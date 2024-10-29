@@ -199,35 +199,34 @@ export function calculateDailyReward(nftCounts) {
   return reward;
 }
 
+// Update aggregateWalletData function to properly handle duplicates
 export async function aggregateWalletData(walletData) {
-  const aggregatedData = {
-    nftCounts: {
-      fcked_catz: new Set(),
-      celebcatz: new Set(),
-      money_monsters: new Set(), 
-      money_monsters3d: new Set(),
-      ai_bitbots: new Set()
-    },
-    buxBalance: 0
+  // Initialize with Sets to prevent duplicates
+  const nftSets = {
+    fcked_catz: new Set(),
+    celebcatz: new Set(),
+    money_monsters: new Set(),
+    money_monsters3d: new Set(),
+    ai_bitbots: new Set()
   };
+  let totalBuxBalance = 0;
 
-  // Add delay between RPC calls to avoid rate limiting
+  // Add delay between RPC calls
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-  
+
   for (const walletAddress of walletData.walletAddresses) {
     try {
       console.log('Aggregating data for wallet:', walletAddress);
-      
+
       // Get NFT data with retries
-      let nftCounts;
+      let nftData;
       let retries = 3;
       while (retries > 0) {
         try {
-          nftCounts = await getCachedNFTData(walletAddress);
+          nftData = await getCachedNFTData(walletAddress);
           break;
         } catch (error) {
           if (error.message.includes('429') && retries > 1) {
-            console.log(`Rate limited, retrying in ${(4-retries)*2}s...`);
             await delay((4-retries) * 2000);
             retries--;
             continue;
@@ -235,58 +234,38 @@ export async function aggregateWalletData(walletData) {
           throw error;
         }
       }
-      
-      console.log('NFT counts for wallet', walletAddress + ':', nftCounts);
-      
-      // Add NFTs to Sets to prevent duplicates
-      Object.keys(nftCounts).forEach(collection => {
-        nftCounts[collection].forEach(nft => {
-          aggregatedData.nftCounts[collection].add(nft);
-        });
+
+      // Add NFTs to Sets
+      Object.entries(nftData).forEach(([collection, nfts]) => {
+        nfts.forEach(nft => nftSets[collection].add(nft));
       });
 
-      // Get BUX balance with retries
-      let balance;
-      retries = 3;
-      while (retries > 0) {
-        try {
-          balance = await getBUXBalance(walletAddress);
-          break;
-        } catch (error) {
-          if (error.message.includes('429') && retries > 1) {
-            console.log(`Rate limited, retrying in ${(4-retries)*2}s...`);
-            await delay((4-retries) * 2000);
-            retries--;
-            continue;
-          }
-          throw error;
-        }
-      }
-      
-      console.log('BUX balance for wallet', walletAddress + ':', balance);
-      aggregatedData.buxBalance += balance;
+      // Get BUX balance
+      const balance = await getBUXBalance(walletAddress);
+      totalBuxBalance += balance;
 
-      // Add delay between wallets
-      await delay(1000);
-
+      await delay(1000); // Delay between wallets
     } catch (error) {
-      console.error('Error aggregating data for wallet', walletAddress + ':', error);
+      console.error('Error processing wallet:', walletAddress, error);
     }
   }
 
-  // Convert Sets back to arrays for the response
-  const finalCounts = {
-    fcked_catz: Array.from(aggregatedData.nftCounts.fcked_catz),
-    celebcatz: Array.from(aggregatedData.nftCounts.celebcatz),
-    money_monsters: Array.from(aggregatedData.nftCounts.money_monsters),
-    money_monsters3d: Array.from(aggregatedData.nftCounts.money_monsters3d),
-    ai_bitbots: Array.from(aggregatedData.nftCounts.ai_bitbots)
-  };
+  // Convert Sets to arrays for response
+  const nftCounts = Object.fromEntries(
+    Object.entries(nftSets).map(([key, set]) => [key, Array.from(set)])
+  );
 
-  console.log('Aggregated NFT counts:', finalCounts);
-  console.log('Total BUX balance:', aggregatedData.buxBalance);
+  console.log('Aggregated NFT counts:', {
+    fcked_catz: nftCounts.fcked_catz.length,
+    celebcatz: nftCounts.celebcatz.length,
+    money_monsters: nftCounts.money_monsters.length,
+    money_monsters3d: nftCounts.money_monsters3d.length,
+    ai_bitbots: nftCounts.ai_bitbots.length
+  });
+  console.log('Total BUX balance:', totalBuxBalance);
+
   return {
-    nftCounts: finalCounts,
-    buxBalance: aggregatedData.buxBalance
+    nftCounts,
+    buxBalance: totalBuxBalance
   };
 }
