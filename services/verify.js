@@ -5,6 +5,12 @@ import path from 'path';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { config } from '../config/config.js';
+import { connection } from '../config/solana.js';
+import { redis } from '../config/redis.js';
+import { readFile } from 'fs/promises';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Create a single Redis instance to be shared across the application
 export const redis = new Redis(config.redis.url, {
@@ -155,17 +161,17 @@ export async function sendVerificationMessage(channel) {
   });
 }
 
-// Load hashlists and convert to Sets
-const loadHashlist = async (filename) => {
+// Load hashlists from JSON files
+async function loadHashlist(filename) {
   try {
-    const filePath = path.join(process.cwd(), 'config', 'hashlists', filename);
-    const data = await fs.readFile(filePath, 'utf8');
+    const filePath = path.join(__dirname, '..', 'config', 'hashlists', filename);
+    const data = await readFile(filePath, 'utf8');
     return new Set(JSON.parse(data));
   } catch (error) {
     console.error(`Error loading hashlist ${filename}:`, error);
-    return new Set();
+    throw error;
   }
-};
+}
 
 let fckedCatzHashlist;
 let celebCatzHashlist;
@@ -197,6 +203,25 @@ async function initializeHashlists() {
 
 // Call initialization
 initializeHashlists().catch(console.error);
+
+// Add rate limiting and retry logic for RPC calls
+async function retryWithBackoff(fn, maxRetries = 5, initialDelay = 1000) {
+  let retries = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (error.message.includes('429') && retries < maxRetries) {
+        retries++;
+        const delay = initialDelay * Math.pow(2, retries - 1);
+        console.log(`RPC rate limited. Retrying in ${delay}ms (attempt ${retries}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw error;
+    }
+  }
+}
 
 // Update verifyHolder function to properly check NFT ownership
 export async function verifyHolder(walletData, userId, client) {
@@ -334,7 +359,7 @@ export async function updateDiscordRoles(userId, client) {
     const member = await guild.members.fetch(userId);
     if (!member) throw new Error('Member not found');
 
-    // Define role assignments
+    // Define role assignments with exact Discord role names
     const roleAssignments = [
       { name: 'MONSTER', collection: 'money_monsters', threshold: 1 },
       { name: 'MONSTER 3D', collection: 'money_monsters3d', threshold: 1 },
@@ -344,8 +369,8 @@ export async function updateDiscordRoles(userId, client) {
       { name: 'MONSTER 🐋', collection: 'money_monsters', threshold: 20 },
       { name: 'MONSTER 3D 🐋', collection: 'money_monsters3d', threshold: 20 },
       { name: 'MEGA BOT 🐋', collection: 'ai_bitbots', threshold: 5 },
-      { name: 'MEGA CAT 🐋', collection: 'fcked_catz', threshold: 20 },
-      { name: 'MEGA CELEB 🐋', collection: 'celebcatz', threshold: 5 }
+      { name: 'MEGA CAT', collection: 'fcked_catz', threshold: 20 },
+      { name: 'MEGA CELEB', collection: 'celebcatz', threshold: 5 }
     ];
 
     // Update roles
@@ -411,7 +436,7 @@ export function validateWalletAddress(req, res, next) {
   }
 }
 
-// Update checkNFTOwnership to be more accurate
+// Update checkNFTOwnership to use hashlists
 export async function checkNFTOwnership(walletAddress) {
   try {
     // Get token accounts
@@ -419,16 +444,6 @@ export async function checkNFTOwnership(walletAddress) {
       new PublicKey(walletAddress),
       { programId: TOKEN_PROGRAM_ID }
     );
-
-    // Create map of mint addresses to token amounts
-    const ownedTokens = new Map();
-    tokenAccounts.value.forEach(acc => {
-      const mint = acc.account.data.parsed.info.mint;
-      const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
-      if (amount > 0) {
-        ownedTokens.set(mint, amount);
-      }
-    });
 
     // Initialize NFT counts with Sets to prevent duplicates
     const nftCounts = {
@@ -439,13 +454,18 @@ export async function checkNFTOwnership(walletAddress) {
       ai_bitbots: new Set()
     };
 
-    // Check each collection
-    for (const [mint] of ownedTokens) {
-      if (fckedCatzHashlist.has(mint)) nftCounts.fcked_catz.add(mint);
-      if (celebCatzHashlist.has(mint)) nftCounts.celebcatz.add(mint);
-      if (moneyMonstersHashlist.has(mint)) nftCounts.money_monsters.add(mint);
-      if (moneyMonsters3dHashlist.has(mint)) nftCounts.money_monsters3d.add(mint);
-      if (aiBitbotsHashlist.has(mint)) nftCounts.ai_bitbots.add(mint);
+    // Check each token account against hashlists
+    for (const acc of tokenAccounts.value) {
+      const mint = acc.account.data.parsed.info.mint;
+      const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+      
+      if (amount > 0) {
+        if (fckedCatzHashlist.has(mint)) nftCounts.fcked_catz.add(mint);
+        if (celebCatzHashlist.has(mint)) nftCounts.celebcatz.add(mint);
+        if (moneyMonstersHashlist.has(mint)) nftCounts.money_monsters.add(mint);
+        if (moneyMonsters3dHashlist.has(mint)) nftCounts.money_monsters3d.add(mint);
+        if (aiBitbotsHashlist.has(mint)) nftCounts.ai_bitbots.add(mint);
+      }
     }
 
     // Convert Sets to arrays
@@ -462,9 +482,9 @@ export async function checkNFTOwnership(walletAddress) {
   }
 }
 
-// Update getBUXBalance to actually check token balance
+// Update getBUXBalance to use retry logic
 export async function getBUXBalance(walletAddress) {
-  try {
+  return retryWithBackoff(async () => {
     // Get token accounts
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
       new PublicKey(walletAddress),
@@ -486,8 +506,5 @@ export async function getBUXBalance(walletAddress) {
 
     return balance;
 
-  } catch (error) {
-    console.error('Error getting BUX balance:', error);
-    throw error;
-  }
+  });
 }
