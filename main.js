@@ -12,6 +12,8 @@ import {
 } from 'discord.js';
 import session from 'express-session';
 import authRouter from './routes/auth.js';
+import RedisStore from 'connect-redis';
+import { redis } from './services/verify.js';
 
 import { verifyHolder, sendVerificationMessage, updateDiscordRoles } from './services/verify.js';
 import { updateUserProfile, getWalletData } from './services/profile.js';
@@ -45,14 +47,25 @@ app.use(cors());
 app.use(express.json());
 console.log('Express app created');
 
-// Add session middleware before routes
+// Configure session with Redis store
+const redisStore = new RedisStore({
+  client: redis,
+  prefix: 'session:'
+});
+
+// Update session middleware configuration
 app.use(session({
+  store: redisStore,
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
+  name: 'buxdao.sid',
   cookie: {
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax',
+    domain: process.env.NODE_ENV === 'production' ? '.buxdao-verify-d1faffc83da7.herokuapp.com' : undefined
   }
 }));
 
