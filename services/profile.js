@@ -202,11 +202,11 @@ export function calculateDailyReward(nftCounts) {
 export async function aggregateWalletData(walletData) {
   const aggregatedData = {
     nftCounts: {
-      fcked_catz: [],
-      celebcatz: [],
-      money_monsters: [],
-      money_monsters3d: [],
-      ai_bitbots: []
+      fcked_catz: new Set(),
+      celebcatz: new Set(),
+      money_monsters: new Set(), 
+      money_monsters3d: new Set(),
+      ai_bitbots: new Set()
     },
     buxBalance: 0
   };
@@ -238,12 +238,11 @@ export async function aggregateWalletData(walletData) {
       
       console.log('NFT counts for wallet', walletAddress + ':', nftCounts);
       
-      // Merge NFT arrays
+      // Add NFTs to Sets to prevent duplicates
       Object.keys(nftCounts).forEach(collection => {
-        aggregatedData.nftCounts[collection] = [
-          ...aggregatedData.nftCounts[collection],
-          ...nftCounts[collection]
-        ];
+        nftCounts[collection].forEach(nft => {
+          aggregatedData.nftCounts[collection].add(nft);
+        });
       });
 
       // Get BUX balance with retries
@@ -275,7 +274,19 @@ export async function aggregateWalletData(walletData) {
     }
   }
 
-  console.log('Aggregated NFT counts:', aggregatedData.nftCounts);
+  // Convert Sets back to arrays for the response
+  const finalCounts = {
+    fcked_catz: Array.from(aggregatedData.nftCounts.fcked_catz),
+    celebcatz: Array.from(aggregatedData.nftCounts.celebcatz),
+    money_monsters: Array.from(aggregatedData.nftCounts.money_monsters),
+    money_monsters3d: Array.from(aggregatedData.nftCounts.money_monsters3d),
+    ai_bitbots: Array.from(aggregatedData.nftCounts.ai_bitbots)
+  };
+
+  console.log('Aggregated NFT counts:', finalCounts);
   console.log('Total BUX balance:', aggregatedData.buxBalance);
-  return aggregatedData;
+  return {
+    nftCounts: finalCounts,
+    buxBalance: aggregatedData.buxBalance
+  };
 }
