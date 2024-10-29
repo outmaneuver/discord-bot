@@ -122,8 +122,7 @@ app.post('/holder-verify/verify', async (req, res) => {
     const dailyReward = calculateDailyReward(result.nftCounts);
 
     // Clean, simple formatting with daily reward
-    const formattedResponse = `
-**Wallet Verification Complete!** ✅
+    const formattedResponse = `**Wallet Verification Complete!** ✅
 
 NFTs Found:
 ${Object.entries(result.nftCounts)
@@ -132,10 +131,7 @@ ${Object.entries(result.nftCounts)
 
 **Daily reward - ${dailyReward} $BUX**
 
-Your roles have been updated! 🎉
-
-✓ VERIFIED
-You can now close this window`;
+Your roles have been updated! 🎉`;
 
     res.json({
       success: true,
