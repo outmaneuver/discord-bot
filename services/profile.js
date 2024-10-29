@@ -218,30 +218,63 @@ export async function aggregateWalletData(walletData) {
     try {
       console.log('Aggregating data for wallet:', walletAddress);
 
-      // Get NFT data with retries
+      // Get NFT data with retries and proper error handling
       let nftData;
       let retries = 3;
       while (retries > 0) {
         try {
           nftData = await getCachedNFTData(walletAddress);
+          if (!nftData) throw new Error('No NFT data returned');
           break;
         } catch (error) {
+          console.error(`Error getting NFT data (attempt ${4-retries}/3):`, error);
           if (error.message.includes('429') && retries > 1) {
             await delay((4-retries) * 2000);
             retries--;
             continue;
           }
-          throw error;
+          if (retries === 1) {
+            console.error('All retries failed for wallet:', walletAddress);
+            nftData = {
+              fcked_catz: [],
+              celebcatz: [],
+              money_monsters: [],
+              money_monsters3d: [],
+              ai_bitbots: []
+            };
+          }
+          break;
         }
       }
 
-      // Add NFTs to Sets
+      // Add NFTs to Sets with validation
       Object.entries(nftData).forEach(([collection, nfts]) => {
-        nfts.forEach(nft => nftSets[collection].add(nft));
+        if (Array.isArray(nfts)) {
+          nfts.forEach(nft => {
+            if (typeof nft === 'string' && nft.length > 0) {
+              nftSets[collection].add(nft);
+            }
+          });
+        }
       });
 
-      // Get BUX balance
-      const balance = await getBUXBalance(walletAddress);
+      // Get BUX balance with retries
+      let balance = 0;
+      retries = 3;
+      while (retries > 0) {
+        try {
+          balance = await getBUXBalance(walletAddress);
+          break;
+        } catch (error) {
+          console.error(`Error getting BUX balance (attempt ${4-retries}/3):`, error);
+          if (error.message.includes('429') && retries > 1) {
+            await delay((4-retries) * 2000);
+            retries--;
+            continue;
+          }
+          break;
+        }
+      }
       totalBuxBalance += balance;
 
       await delay(1000); // Delay between wallets
@@ -255,6 +288,7 @@ export async function aggregateWalletData(walletData) {
     Object.entries(nftSets).map(([key, set]) => [key, Array.from(set)])
   );
 
+  // Log counts for debugging
   console.log('Aggregated NFT counts:', {
     fcked_catz: nftCounts.fcked_catz.length,
     celebcatz: nftCounts.celebcatz.length,
