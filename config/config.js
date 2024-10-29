@@ -9,6 +9,7 @@ export const config = {
   discord: {
     token: process.env.DISCORD_TOKEN,
     clientId: process.env.DISCORD_CLIENT_ID,
+    clientSecret: process.env.DISCORD_CLIENT_SECRET,
     guildId: process.env.GUILD_ID
   },
   solana: {

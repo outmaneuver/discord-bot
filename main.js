@@ -10,6 +10,8 @@ import {
   ActionRowBuilder, 
   ButtonStyle 
 } from 'discord.js';
+import session from 'express-session';
+import authRouter from './routes/auth.js';
 
 import { verifyHolder, sendVerificationMessage, updateDiscordRoles } from './services/verify.js';
 import { updateUserProfile, getWalletData } from './services/profile.js';
@@ -42,6 +44,20 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 console.log('Express app created');
+
+// Add session middleware before routes
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Add auth routes
+app.use('/auth', authRouter);
 
 // Setup application
 console.log('Application setup complete');
