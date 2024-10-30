@@ -293,3 +293,74 @@ function setsAreEqual(a, b) {
   }
   return true;
 }
+
+// Add and export updateDiscordRoles function
+export async function updateDiscordRoles(userId, client) {
+  try {
+    const guildId = config.discord.guildId;
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) throw new Error('Guild not found');
+
+    const member = await guild.members.fetch(userId);
+    if (!member) throw new Error('Member not found');
+
+    // Get wallet data
+    const wallets = await redis.smembers(`wallets:${userId}`);
+    if (!wallets || wallets.length === 0) {
+      console.log('No wallets found for user:', userId);
+      return false;
+    }
+
+    // Check NFTs for all wallets
+    const nftCounts = {
+      fcked_catz: new Set(),
+      celebcatz: new Set(),
+      money_monsters: new Set(),
+      money_monsters3d: new Set(),
+      ai_bitbots: new Set(),
+      warriors: new Set(),
+      squirrels: new Set(),
+      rjctd_bots: new Set(),
+      energy_apes: new Set(),
+      doodle_bots: new Set(),
+      candy_bots: new Set()
+    };
+
+    for (const wallet of wallets) {
+      const nfts = await checkNFTOwnership(wallet);
+      Object.entries(nfts).forEach(([collection, tokens]) => {
+        tokens.forEach(token => nftCounts[collection].add(token));
+      });
+    }
+
+    // Update roles based on NFT holdings
+    const currentRoles = new Set(member.roles.cache.map(role => role.id));
+    const newRoles = new Set(currentRoles);
+
+    // Add roles based on NFT holdings
+    if (nftCounts.fcked_catz.size > 0) newRoles.add(ROLES.FCKED_CATZ);
+    if (nftCounts.celebcatz.size > 0) newRoles.add(ROLES.CELEBCATZ);
+    if (nftCounts.money_monsters.size > 0) newRoles.add(ROLES.MONEY_MONSTERS);
+    if (nftCounts.money_monsters3d.size > 0) newRoles.add(ROLES.MONEY_MONSTERS_3D);
+    if (nftCounts.ai_bitbots.size > 0) newRoles.add(ROLES.AI_BITBOTS);
+    if (nftCounts.warriors.size > 0) newRoles.add(ROLES.WARRIORS);
+    if (nftCounts.squirrels.size > 0) newRoles.add(ROLES.SQUIRRELS);
+    if (nftCounts.rjctd_bots.size > 0) newRoles.add(ROLES.RJCTD_BOTS);
+    if (nftCounts.energy_apes.size > 0) newRoles.add(ROLES.ENERGY_APES);
+    if (nftCounts.doodle_bots.size > 0) newRoles.add(ROLES.DOODLE_BOTS);
+    if (nftCounts.candy_bots.size > 0) newRoles.add(ROLES.CANDY_BOTS);
+
+    // Update roles if they've changed
+    if (!setsAreEqual(currentRoles, newRoles)) {
+      await member.roles.set(Array.from(newRoles));
+      console.log('Updated roles for user:', userId);
+      return true;
+    }
+
+    console.log('No role updates needed for user:', userId);
+    return false;
+  } catch (error) {
+    console.error('Error updating Discord roles:', error);
+    throw error;
+  }
+}
