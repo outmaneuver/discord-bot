@@ -19,7 +19,8 @@ const getCachedNFTData = async (walletAddress) => {
         celebcatz: JSON.parse(cached.celebcatz || '[]'),
         money_monsters: JSON.parse(cached.money_monsters || '[]'),
         money_monsters3d: JSON.parse(cached.money_monsters3d || '[]'),
-        ai_bitbots: JSON.parse(cached.ai_bitbots || '[]')
+        ai_bitbots: JSON.parse(cached.ai_bitbots || '[]'),
+        warriors: JSON.parse(cached.warriors || '[]')
       };
     }
     
@@ -33,7 +34,8 @@ const getCachedNFTData = async (walletAddress) => {
       celebcatz: JSON.stringify(data.celebcatz),
       money_monsters: JSON.stringify(data.money_monsters),
       money_monsters3d: JSON.stringify(data.money_monsters3d),
-      ai_bitbots: JSON.stringify(data.ai_bitbots)
+      ai_bitbots: JSON.stringify(data.ai_bitbots),
+      warriors: JSON.stringify(data.warriors)
     });
     pipeline.expire(`wallet:${walletAddress}:nfts`, NFT_CACHE_TTL / 1000);
     await pipeline.exec();
@@ -105,7 +107,8 @@ export async function updateUserProfile(channel, userId, client) {
       celebcatz: JSON.parse(nftData.celebcatz || '[]').length,
       money_monsters: JSON.parse(nftData.money_monsters || '[]').length,
       money_monsters3d: JSON.parse(nftData.money_monsters3d || '[]').length,
-      ai_bitbots: JSON.parse(nftData.ai_bitbots || '[]').length
+      ai_bitbots: JSON.parse(nftData.ai_bitbots || '[]').length,
+      warriors: JSON.parse(nftData.warriors || '[]').length
     };
 
     // Get guild and member
@@ -204,7 +207,8 @@ function calculateDailyReward(nftCounts) {
       celebcatz: parseInt(nftCounts.celebcatz) || 0,
       money_monsters: parseInt(nftCounts.money_monsters) || 0,
       money_monsters3d: parseInt(nftCounts.money_monsters3d) || 0,
-      ai_bitbots: parseInt(nftCounts.ai_bitbots) || 0
+      ai_bitbots: parseInt(nftCounts.ai_bitbots) || 0,
+      warriors: parseInt(nftCounts.warriors) || 0
     };
     
     // Calculate rewards
@@ -213,6 +217,7 @@ function calculateDailyReward(nftCounts) {
     reward += counts.money_monsters * 2;   // 2 BUX per MM
     reward += counts.money_monsters3d * 4; // 4 BUX per MM3D
     reward += counts.ai_bitbots * 1;      // 1 BUX per AI Bitbot
+    reward += counts.warriors * 2;      // 2 BUX per Warriors NFT
 
     console.log('Daily reward calculation:', {
       counts,
@@ -236,7 +241,8 @@ export async function aggregateWalletData(walletData) {
       celebcatz: new Set(),
       money_monsters: new Set(),
       money_monsters3d: new Set(),
-      ai_bitbots: new Set()
+      ai_bitbots: new Set(),
+      warriors: new Set()
     };
     let totalBuxBalance = 0;
 
@@ -260,7 +266,8 @@ export async function aggregateWalletData(walletData) {
       celebcatz: Array.from(nftSets.celebcatz),
       money_monsters: Array.from(nftSets.money_monsters),
       money_monsters3d: Array.from(nftSets.money_monsters3d),
-      ai_bitbots: Array.from(nftSets.ai_bitbots)
+      ai_bitbots: Array.from(nftSets.ai_bitbots),
+      warriors: Array.from(nftSets.warriors)
     };
 
     console.log('Aggregated NFT counts:', {
@@ -269,6 +276,7 @@ export async function aggregateWalletData(walletData) {
       money_monsters: nftCounts.money_monsters.length,
       money_monsters3d: nftCounts.money_monsters3d.length,
       ai_bitbots: nftCounts.ai_bitbots.length,
+      warriors: nftCounts.warriors.length,
       timestamp: new Date().toISOString()
     });
 

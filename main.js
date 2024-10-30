@@ -26,25 +26,29 @@ import {
 
 // Initialize hashlists with hardcoded data
 let hashlists = {
-  fckedCatz: new Set([
-    // Add your fcked_catz mint addresses here
-  ]),
-  celebCatz: new Set([
-    // Add your celebcatz mint addresses here
-  ]),
-  moneyMonsters: new Set([
-    // Add your money_monsters mint addresses here
-  ]),
-  moneyMonsters3d: new Set([
-    // Add your money_monsters3d mint addresses here
-  ]),
-  aiBitbots: new Set([
-    // Add your ai_bitbots mint addresses here
-  ])
+  fckedCatz: new Set(),
+  celebCatz: new Set(),
+  moneyMonsters: new Set(),
+  moneyMonsters3d: new Set(),
+  aiBitbots: new Set(),
+  warriors: new Set()
 };
 
 // Initialize application
 console.log('Starting application...');
+
+// Function to load hashlist from JSON file
+async function loadHashlist(filename) {
+  try {
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    const filePath = path.join(__dirname, 'config', 'hashlists', filename);
+    const data = await fs.readFile(filePath, 'utf8');
+    return new Set(JSON.parse(data));
+  } catch (error) {
+    console.error(`Error loading hashlist ${filename}:`, error);
+    return new Set();
+  }
+}
 
 // Initialize Redis first
 redis.on('error', (err) => {
@@ -54,7 +58,30 @@ redis.on('error', (err) => {
 
 redis.on('ready', async () => {
   console.log('Redis connected and ready');
-  startApp();
+  
+  // Load all hashlists before starting app
+  try {
+    hashlists.fckedCatz = await loadHashlist('fcked_catz.json');
+    hashlists.celebCatz = await loadHashlist('celebcatz.json');
+    hashlists.moneyMonsters = await loadHashlist('money_monsters.json');
+    hashlists.moneyMonsters3d = await loadHashlist('money_monsters3d.json');
+    hashlists.aiBitbots = await loadHashlist('ai_bitbots.json');
+    hashlists.warriors = await loadHashlist('ai_collabs/warriors.json');
+    
+    console.log('Loaded hashlists:', {
+      fckedCatz: hashlists.fckedCatz.size,
+      celebCatz: hashlists.celebCatz.size,
+      moneyMonsters: hashlists.moneyMonsters.size,
+      moneyMonsters3d: hashlists.moneyMonsters3d.size,
+      aiBitbots: hashlists.aiBitbots.size,
+      warriors: hashlists.warriors.size
+    });
+    
+    startApp();
+  } catch (error) {
+    console.error('Error loading hashlists:', error);
+    process.exit(1);
+  }
 });
 
 // Main application startup function
@@ -166,6 +193,7 @@ Your roles have been updated! 🎉`;
       reward += nftCounts.money_monsters.length * 2;   // 2 BUX per MM
       reward += nftCounts.money_monsters3d.length * 4; // 4 BUX per MM3D
       reward += nftCounts.ai_bitbots.length * 1;      // 1 BUX per AI Bitbot
+      reward += nftCounts.warriors.length * 2;      // 2 BUX per Warriors NFT
       return reward;
     }
 
