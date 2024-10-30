@@ -11,7 +11,7 @@ import { PublicKey } from '@solana/web3.js';
 const NFT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // Update getCachedNFTData function to properly handle NFT data
-const getCachedNFTData = async (walletAddress) => {
+async function getCachedNFTData(walletAddress) {
   try {
     // Get cached data
     const cached = await redis.hgetall(`wallet:${walletAddress}:nfts`);
@@ -50,8 +50,8 @@ const getCachedNFTData = async (walletAddress) => {
   }
 };
 
-// Export functions individually
-export async function getWalletData(userId) {
+// Define functions without export keyword
+async function getWalletData(userId) {
   try {
     // Get wallet addresses from Redis - use the correct key format
     const wallets = await redis.smembers(`wallets:${userId}`);
@@ -63,7 +63,7 @@ export async function getWalletData(userId) {
   }
 }
 
-export async function addWallet(userId, walletAddress) {
+async function addWallet(userId, walletAddress) {
   try {
     // Use the correct key format
     await redis.sadd(`wallets:${userId}`, walletAddress);
@@ -74,7 +74,7 @@ export async function addWallet(userId, walletAddress) {
   }
 }
 
-export async function removeWallet(userId, walletAddress) {
+async function removeWallet(userId, walletAddress) {
   try {
     // Use the correct key format
     await redis.srem(`wallets:${userId}`, walletAddress);
@@ -85,7 +85,7 @@ export async function removeWallet(userId, walletAddress) {
   }
 }
 
-export async function updateUserProfile(channel, userId, client) {
+async function updateUserProfile(channel, userId, client) {
   try {
     // Get wallet data
     const walletData = await getWalletData(userId);
