@@ -333,7 +333,7 @@ async function fetchTensorStats(collection) {
     };
 
     const slug = slugMap[collection] || collection;
-    const response = await fetch(`https://api.tensor.so/api/v1/stats?collection=${slug}`, {
+    const response = await fetch(`https://api.tensor.so/api/v2/markets?collection=${slug}&sortBy=PRICE_LOW_TO_HIGH&limit=1`, {
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
