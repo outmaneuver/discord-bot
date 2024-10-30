@@ -345,47 +345,59 @@ async function fetchTensorStats(collection) {
     });
     
     page = await browser.newPage();
-    await page.setDefaultNavigationTimeout(30000);
+    
+    // Set viewport and user agent
+    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36');
     
     // Navigate to page
     await page.goto(`https://www.tensor.trade/trade/${slug}`, {
-      waitUntil: 'networkidle0'
+      waitUntil: 'networkidle0',
+      timeout: 30000
     });
 
-    // Wait for stats to load and extract them directly
-    const stats = await page.evaluate(() => {
-      // Helper function to get number from element
-      const getNumber = (selector, defaultValue = 0) => {
-        const el = document.querySelector(selector);
-        if (!el) return defaultValue;
-        const text = el.textContent.trim();
+    // Wait for content to load
+    await page.waitForFunction(() => {
+      const text = document.body.innerText;
+      return text.includes('Floor') || text.includes('Listed');
+    }, { timeout: 20000 });
+
+    // Get page content
+    const content = await page.evaluate(() => {
+      // Helper function to get number from text
+      const getNumber = (text) => {
+        if (!text) return 0;
         const match = text.match(/[\d,.]+/);
-        if (!match) return defaultValue;
-        return parseFloat(match[0].replace(/,/g, ''));
+        return match ? parseFloat(match[0].replace(/,/g, '')) : 0;
       };
 
-      // Get stats from DOM
+      // Find elements containing stats
+      const floorEl = Array.from(document.querySelectorAll('div')).find(el => el.textContent.includes('Floor'));
+      const listedEl = Array.from(document.querySelectorAll('div')).find(el => el.textContent.includes('Listed'));
+      const volumeEl = Array.from(document.querySelectorAll('div')).find(el => el.textContent.includes('Volume'));
+      const salesEl = Array.from(document.querySelectorAll('div')).find(el => el.textContent.includes('Sales'));
+      const changeEl = Array.from(document.querySelectorAll('div')).find(el => el.textContent.includes('Change'));
+
       return {
-        floor: getNumber('[data-price]', 0),
-        buyNow: getNumber('[data-price]', 0),
-        listed: getNumber('[data-listed]', 0),
-        totalSupply: getNumber('[data-supply]', 0),
-        volume24h: getNumber('[data-volume-24h]', 0),
-        volumeAll: getNumber('[data-volume-all]', 0),
-        sales24h: getNumber('[data-sales]', 0),
-        priceChange24h: getNumber('[data-change]', 0)
+        floor: getNumber(floorEl?.textContent),
+        buyNow: getNumber(floorEl?.textContent),
+        listed: getNumber(listedEl?.textContent),
+        totalSupply: getNumber(listedEl?.textContent?.split('/')[1]),
+        volume24h: getNumber(volumeEl?.textContent),
+        volumeAll: getNumber(volumeEl?.textContent),
+        sales24h: getNumber(salesEl?.textContent),
+        priceChange24h: getNumber(changeEl?.textContent) / 100
       };
     });
 
     // Convert SOL to lamports
-    stats.floor *= 1e9;
-    stats.buyNow *= 1e9;
-    stats.volume24h *= 1e9;
-    stats.volumeAll *= 1e9;
-    stats.priceChange24h /= 100;
+    content.floor *= 1e9;
+    content.buyNow *= 1e9;
+    content.volume24h *= 1e9;
+    content.volumeAll *= 1e9;
 
     await browser.close();
-    return stats;
+    return content;
   } catch (error) {
     if (browser) await browser.close();
     console.error('Error fetching Tensor stats:', error);
