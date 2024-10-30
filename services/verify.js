@@ -3,7 +3,7 @@ import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { PublicKey } from '@solana/web3.js';
 import { redis } from '../config/redis.js';
 import { config } from '../config/config.js';
-import fs from 'fs/promises';
+import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -25,6 +25,55 @@ export let hashlists = {
   mmTop10: new Set(),
   mm3dTop10: new Set()
 };
+
+// Load hashlist from JSON file
+async function loadHashlist(filename) {
+  try {
+    const filePath = path.join(__dirname, '..', 'config', 'hashlists', filename);
+    const data = await fs.readFile(filePath, 'utf8');
+    return new Set(JSON.parse(data));
+  } catch (error) {
+    console.error(`Error loading hashlist ${filename}:`, error);
+    return new Set();
+  }
+}
+
+// Initialize hashlists on startup
+export async function initializeHashlists() {
+  try {
+    hashlists.fckedCatz = await loadHashlist('fcked_catz.json');
+    hashlists.celebCatz = await loadHashlist('celebcatz.json');
+    hashlists.moneyMonsters = await loadHashlist('money_monsters.json');
+    hashlists.moneyMonsters3d = await loadHashlist('money_monsters3d.json');
+    hashlists.aiBitbots = await loadHashlist('ai_bitbots.json');
+    hashlists.mmTop10 = await loadHashlist('MM_top10.json');
+    hashlists.mm3dTop10 = await loadHashlist('MM3D_top10.json');
+    hashlists.warriors = await loadHashlist('ai_collabs/warriors.json');
+    hashlists.squirrels = await loadHashlist('ai_collabs/squirrels.json');
+    hashlists.rjctdBots = await loadHashlist('ai_collabs/rjctd_bots.json');
+    hashlists.energyApes = await loadHashlist('ai_collabs/energy_apes.json');
+    hashlists.doodleBots = await loadHashlist('ai_collabs/doodle_bot.json');
+    hashlists.candyBots = await loadHashlist('ai_collabs/candy_bots.json');
+
+    console.log('Hashlists loaded:', {
+      fckedCatz: hashlists.fckedCatz.size,
+      celebCatz: hashlists.celebCatz.size,
+      moneyMonsters: hashlists.moneyMonsters.size,
+      moneyMonsters3d: hashlists.moneyMonsters3d.size,
+      aiBitbots: hashlists.aiBitbots.size,
+      warriors: hashlists.warriors.size,
+      squirrels: hashlists.squirrels.size,
+      rjctdBots: hashlists.rjctdBots.size,
+      energyApes: hashlists.energyApes.size,
+      doodleBots: hashlists.doodleBots.size,
+      candyBots: hashlists.candyBots.size,
+      mmTop10: hashlists.mmTop10.size,
+      mm3dTop10: hashlists.mm3dTop10.size
+    });
+  } catch (error) {
+    console.error('Error initializing hashlists:', error);
+  }
+}
 
 // Add function to update hashlists
 export function updateHashlists(newHashlists) {
