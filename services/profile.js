@@ -24,11 +24,20 @@ export async function updateUserProfile(channel, userId, client) {
     const roleUpdate = await updateDiscordRoles(userId, client);
     console.log('Role update result:', roleUpdate);
 
-    // Extract nftCounts from roleUpdate
-    const nftCounts = roleUpdate?.nftCounts;
-    if (!nftCounts) {
-      throw new Error('Failed to get NFT counts');
-    }
+    // Extract nftCounts from roleUpdate - handle both object and boolean returns
+    const nftCounts = roleUpdate?.nftCounts || {
+      fcked_catz: 0,
+      celebcatz: 0,
+      money_monsters: 0,
+      money_monsters3d: 0,
+      ai_bitbots: 0,
+      warriors: 0,
+      squirrels: 0,
+      rjctd_bots: 0,
+      energy_apes: 0,
+      doodle_bots: 0,
+      candy_bots: 0
+    };
 
     // Get BUX balance from Redis
     let totalBuxBalance = 0;
@@ -47,7 +56,7 @@ export async function updateUserProfile(channel, userId, client) {
       .filter(role => role.name !== '@everyone')
       .sort((a, b) => b.position - a.position)
       .map(role => role.name)
-      .join('\n');
+      .join('\n') || 'No roles';
 
     const dailyReward = await calculateDailyReward(nftCounts, totalBuxBalance);
     const [timerData, timeUntilNext] = await Promise.all([
@@ -61,7 +70,7 @@ export async function updateUserProfile(channel, userId, client) {
       .addFields(
         { 
           name: 'Connected Wallets', 
-          value: walletData.walletAddresses.join('\n')
+          value: walletData.walletAddresses.join('\n') || 'No wallets connected'
         },
         { name: '\u200B', value: '─'.repeat(40) },
         { 
@@ -72,7 +81,7 @@ export async function updateUserProfile(channel, userId, client) {
             `Money Monsters: ${nftCounts.money_monsters || 0}`,
             `Money Monsters 3D: ${nftCounts.money_monsters3d || 0}`,
             `AI Bitbots: ${nftCounts.ai_bitbots || 0}`
-          ].join('\n')
+          ].join('\n') || 'No NFTs'
         },
         { name: '\u200B', value: '─'.repeat(40) },
         {
@@ -84,7 +93,7 @@ export async function updateUserProfile(channel, userId, client) {
             `RJCTD Bots: ${nftCounts.rjctd_bots || 0}`,
             `Candy Bots: ${nftCounts.candy_bots || 0}`,
             `Doodle Bots: ${nftCounts.doodle_bots || 0}`
-          ].join('\n')
+          ].join('\n') || 'No NFTs'
         },
         { name: '\u200B', value: '─'.repeat(40) },
         {
@@ -102,7 +111,7 @@ export async function updateUserProfile(channel, userId, client) {
         },
         { 
           name: 'BUX Claim', 
-          value: `${timerData.claimAmount.toLocaleString()} BUX` 
+          value: `${(timerData?.claimAmount || 0).toLocaleString()} BUX` 
         },
         { 
           name: 'Claim updates in', 
