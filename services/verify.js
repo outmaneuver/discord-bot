@@ -73,15 +73,15 @@ redis.on('ready', () => {
 // Update ROLES object to use the exact role IDs from .env
 const ROLES = {
   // Main collections
-  FCKED_CATZ: process.env.ROLE_FCKED_CATZ,
-  CELEBCATZ: process.env.ROLE_CELEBCATZ,
-  MONEY_MONSTERS: process.env.ROLE_MONEY_MONSTERS,
-  MONEY_MONSTERS_3D: process.env.ROLE_MONEY_MONSTERS_3D,
-  AI_BITBOTS: process.env.ROLE_AI_BITBOTS,
+  FCKED_CATZ: process.env.ROLE_ID_FCKED_CATZ,
+  CELEBCATZ: process.env.ROLE_ID_CELEBCATZ,
+  MONEY_MONSTERS: process.env.ROLE_ID_MONEY_MONSTERS,
+  MONEY_MONSTERS_3D: process.env.ROLE_ID_MONEY_MONSTERS3D,
+  AI_BITBOTS: process.env.ROLE_ID_AI_BITBOTS,
   
   // Top holders
-  MM_TOP_10: process.env.ROLE_MM_TOP_10,
-  MM3D_TOP_10: process.env.ROLE_MM3D_TOP_10,
+  MM_TOP_10: process.env.ROLE_ID_MM_TOP10,
+  MM3D_TOP_10: process.env.ROLE_ID_MM3D_TOP10,
   
   // AI Collabs with exact role IDs from .env
   WARRIORS: process.env.ROLE_ID_WARRIORS,      // 1300968343783735296
