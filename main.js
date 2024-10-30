@@ -15,7 +15,8 @@ import {
   verifyHolder, 
   updateDiscordRoles,
   updateHashlists,
-  getBUXBalance 
+  getBUXBalance,
+  hashlists 
 } from './services/verify.js';
 
 import { 
@@ -24,7 +25,7 @@ import {
 } from './services/profile.js';
 
 // Initialize hashlists with all collections
-let hashlists = {
+let hashlistsData = {
   fckedCatz: new Set(),
   celebCatz: new Set(),
   moneyMonsters: new Set(),
@@ -39,9 +40,6 @@ let hashlists = {
   mmTop10: new Set(),
   mm3dTop10: new Set()
 };
-
-// Initialize application
-console.log('Starting application...');
 
 // Function to load hashlist from JSON file
 async function loadHashlist(filename) {
@@ -78,82 +76,29 @@ async function startApp() {
 
     console.log('Server started successfully');
 
-    // Wait for Redis to be ready with retries
-    let retries = 5;
-    while (retries > 0) {
-      try {
-        await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error('Redis connection attempt timeout'));
-          }, 5000);
+    // Wait for Redis to be ready
+    await redis.connect();
+    console.log('Redis connected successfully');
 
-          // Check if Redis is already connected
-          if (redis.status === 'ready') {
-            clearTimeout(timeout);
-            resolve();
-            return;
-          }
-
-          // Try to connect using URL directly
-          redis.connect(process.env.REDIS_URL).then(() => {
-            clearTimeout(timeout);
-            resolve();
-          }).catch(err => {
-            clearTimeout(timeout);
-            reject(err);
-          });
-        });
-        console.log('Redis connected successfully');
-        break;
-      } catch (error) {
-        retries--;
-        console.log(`Redis connection attempt failed, ${retries} retries left:`, error.message);
-        if (retries === 0) throw new Error('Redis connection failed after all retries');
-        // Wait 2 seconds before retrying
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-    }
-
-    // Load all hashlists after Redis is ready
-    hashlists.fckedCatz = await loadHashlist('fcked_catz.json');
-    hashlists.celebCatz = await loadHashlist('celebcatz.json');
-    hashlists.moneyMonsters = await loadHashlist('money_monsters.json');
-    hashlists.moneyMonsters3d = await loadHashlist('money_monsters3d.json');
-    hashlists.aiBitbots = await loadHashlist('ai_bitbots.json');
-    hashlists.mmTop10 = await loadHashlist('MM_top10.json');
-    hashlists.mm3dTop10 = await loadHashlist('MM3D_top10.json');
+    // Load all hashlists
+    hashlistsData.fckedCatz = await loadHashlist('fcked_catz.json');
+    hashlistsData.celebCatz = await loadHashlist('celebcatz.json');
+    hashlistsData.moneyMonsters = await loadHashlist('money_monsters.json');
+    hashlistsData.moneyMonsters3d = await loadHashlist('money_monsters3d.json');
+    hashlistsData.aiBitbots = await loadHashlist('ai_bitbots.json');
+    hashlistsData.mmTop10 = await loadHashlist('MM_top10.json');
+    hashlistsData.mm3dTop10 = await loadHashlist('MM3D_top10.json');
     
     // Load AI Collabs hashlists
-    hashlists.warriors = await loadHashlist('ai_collabs/warriors.json');
-    hashlists.squirrels = await loadHashlist('ai_collabs/squirrels.json');
-    hashlists.rjctdBots = await loadHashlist('ai_collabs/rjctd_bots.json');
-    hashlists.energyApes = await loadHashlist('ai_collabs/energy_apes.json');
-    hashlists.doodleBots = await loadHashlist('ai_collabs/doodle_bot.json');
-    hashlists.candyBots = await loadHashlist('ai_collabs/candy_bots.json');
-    
-    console.log('Loaded hashlists:', {
-      // Main collections
-      fckedCatz: hashlists.fckedCatz.size,
-      celebCatz: hashlists.celebCatz.size,
-      moneyMonsters: hashlists.moneyMonsters.size,
-      moneyMonsters3d: hashlists.moneyMonsters3d.size,
-      aiBitbots: hashlists.aiBitbots.size,
-      
-      // Top holders
-      mmTop10: hashlists.mmTop10.size,
-      mm3dTop10: hashlists.mm3dTop10.size,
-      
-      // AI Collabs
-      warriors: hashlists.warriors.size,
-      squirrels: hashlists.squirrels.size,
-      rjctdBots: hashlists.rjctdBots.size,
-      energyApes: hashlists.energyApes.size,
-      doodleBots: hashlists.doodleBots.size,
-      candyBots: hashlists.candyBots.size
-    });
+    hashlistsData.warriors = await loadHashlist('ai_collabs/warriors.json');
+    hashlistsData.squirrels = await loadHashlist('ai_collabs/squirrels.json');
+    hashlistsData.rjctdBots = await loadHashlist('ai_collabs/rjctd_bots.json');
+    hashlistsData.energyApes = await loadHashlist('ai_collabs/energy_apes.json');
+    hashlistsData.doodleBots = await loadHashlist('ai_collabs/doodle_bot.json');
+    hashlistsData.candyBots = await loadHashlist('ai_collabs/candy_bots.json');
 
     // Update hashlists in verify service
-    updateHashlists(hashlists);
+    updateHashlists(hashlistsData);
 
     // Configure Redis store
     const redisStore = new RedisStore({
@@ -183,101 +128,6 @@ async function startApp() {
     app.use(express.static(path.join(__dirname, 'public')));
     app.use('/holder-verify', express.static(path.join(__dirname, 'public')));
 
-    // Add API endpoints
-    app.post('/holder-verify/verify', async (req, res) => {
-      try {
-        const { walletAddress } = req.body;
-        if (!req.session?.user?.id) {
-          return res.status(401).json({
-            success: false,
-            error: 'Not authenticated'
-          });
-        }
-
-        const result = await verifyHolder(
-          { walletAddress }, 
-          req.session.user.id,
-          client
-        );
-
-        // Calculate daily reward based on NFT holdings
-        const dailyReward = calculateDailyReward(result.nftCounts);
-
-        // Clean, simple formatting with daily reward
-        const formattedResponse = `**Wallet Verification Complete!** ✅
-
-NFTs Found:
-${Object.entries(result.nftCounts)
-  .map(([collection, nfts]) => `${collection}: ${nfts.length}`)
-  .join('\n')}
-
-**Daily reward - ${dailyReward} $BUX**
-
-Your roles have been updated! 🎉`;
-
-        res.json({
-          success: true,
-          nftCounts: result.nftCounts,
-          message: result.message,
-          formattedResponse: formattedResponse
-        });
-
-      } catch (error) {
-        console.error('Verification error:', error);
-        res.status(500).json({
-          success: false,
-          error: error.message
-        });
-      }
-    });
-
-    app.get(['/holder-verify', '/holder-verify/'], (req, res) => {
-      try {
-        res.sendFile(path.join(__dirname, 'public', 'index.html'));
-      } catch (error) {
-        console.error('Error serving verification page:', error);
-        res.status(500).send('Error loading verification page');
-      }
-    });
-
-    app.post('/store-wallet', async (req, res) => {
-      try {
-        const { walletAddress } = req.body;
-        if (!req.session?.user?.id) {
-          return res.status(401).json({
-            success: false,
-            error: 'Not authenticated'
-          });
-        }
-
-        // Store wallet address in Redis
-        await redis.sadd(`wallets:${req.session.user.id}`, walletAddress);
-
-        console.log('Stored wallet address:', {
-          userId: req.session.user.id,
-          walletAddress,
-          timestamp: new Date().toISOString()
-        });
-
-        res.json({
-          success: true,
-          message: 'Wallet address stored successfully'
-        });
-
-      } catch (error) {
-        console.error('Error storing wallet address:', error);
-        res.status(500).json({
-          success: false,
-          error: error.message
-        });
-      }
-    });
-
-    // Error handler
-    app.use((req, res) => {
-      res.status(404).send('Page not found');
-    });
-
     // Initialize Discord client
     const client = new Client({
       intents: [
@@ -285,61 +135,21 @@ Your roles have been updated! 🎉`;
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildPresences,
-        GatewayIntentBits.GuildMessageReactions,
-        GatewayIntentBits.DirectMessages,
-        GatewayIntentBits.DirectMessageReactions
+        GatewayIntentBits.GuildPresences
       ]
     });
 
     // Add message event handler
     client.on('messageCreate', async (message) => {
       try {
-        // Ignore bot messages
         if (message.author.bot) return;
 
-        // Check for commands
         if (message.content.startsWith('=')) {
           const command = message.content.slice(1).toLowerCase();
 
           switch (command) {
             case 'my.profile':
               await updateUserProfile(message.channel, message.author.id, client);
-              break;
-
-            case 'my.nfts':
-              const walletData = await getWalletData(message.author.id);
-              if (!walletData || !walletData.walletAddresses.length) {
-                await message.channel.send('No wallets connected. Please verify your wallet first.');
-                return;
-              }
-              const nftData = await aggregateWalletData(walletData);
-              const nftList = formatNFTCounts(nftData.nftCounts);
-              await message.channel.send(`Your NFTs:\n${nftList || 'No NFTs found'}`);
-              break;
-
-            case 'my.roles':
-              const member = await message.guild.members.fetch(message.author.id);
-              const roles = member.roles.cache
-                .filter(role => role.name !== '@everyone')
-                .sort((a, b) => b.position - a.position)
-                .map(role => role.name)
-                .join('\n');
-              await message.channel.send(`Your roles:\n${roles || 'No roles'}`);
-              break;
-
-            case 'my.bux':
-              const buxWalletData = await getWalletData(message.author.id);
-              if (!buxWalletData || !buxWalletData.walletAddresses.length) {
-                await message.channel.send('No wallets connected. Please verify your wallet first.');
-                return;
-              }
-              let totalBux = 0;
-              for (const wallet of buxWalletData.walletAddresses) {
-                const balance = await getBUXBalance(wallet);
-                totalBux += balance;
-              }
-              await message.channel.send(`Your BUX balance: ${totalBux.toLocaleString()} BUX`);
               break;
 
             case 'my.wallets':
@@ -381,40 +191,4 @@ process.on('unhandledRejection', (error) => {
   console.error('Unhandled Rejection:', error);
   process.exit(1);
 });
-
-// Add helper function to calculate daily reward
-function calculateDailyReward(nftCounts) {
-  try {
-    let reward = 0;
-    
-    // Make sure we're working with numbers
-    const counts = {
-      fcked_catz: nftCounts.fcked_catz?.length || 0,
-      celebcatz: nftCounts.celebcatz?.length || 0,
-      money_monsters: nftCounts.money_monsters?.length || 0,
-      money_monsters3d: nftCounts.money_monsters3d?.length || 0,
-      ai_bitbots: nftCounts.ai_bitbots?.length || 0,
-      warriors: nftCounts.warriors?.length || 0
-    };
-    
-    // Calculate rewards
-    reward += counts.fcked_catz * 2;      // 2 BUX per FCatz
-    reward += counts.celebcatz * 8;       // 8 BUX per CelebCatz
-    reward += counts.money_monsters * 2;   // 2 BUX per MM
-    reward += counts.money_monsters3d * 4; // 4 BUX per MM3D
-    reward += counts.ai_bitbots * 1;      // 1 BUX per AI Bitbot
-    reward += counts.warriors * 2;         // 2 BUX per Warriors NFT
-
-    console.log('Daily reward calculation:', {
-      counts,
-      reward,
-      timestamp: new Date().toISOString()
-    });
-
-    return reward;
-  } catch (error) {
-    console.error('Error calculating daily reward:', error);
-    return 0;
-  }
-}
 
