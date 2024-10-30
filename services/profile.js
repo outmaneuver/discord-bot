@@ -338,7 +338,12 @@ async function fetchTensorStats(collection) {
     const slug = slugMap[collection] || collection;
     
     browser = await puppeteer.launch({
-      args: ['--no-sandbox'],
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--single-process'
+      ],
       executablePath: '/app/.apt/usr/bin/google-chrome',
       ignoreHTTPSErrors: true,
       headless: true
@@ -356,11 +361,12 @@ async function fetchTensorStats(collection) {
       timeout: 30000
     });
 
-    // Wait for content to load
-    await page.waitForFunction(() => {
-      const text = document.body.innerText;
-      return text.includes('Floor') || text.includes('Listed');
-    }, { timeout: 20000 });
+    // Wait for specific elements
+    await Promise.race([
+      page.waitForSelector('div[class*="price"]', { timeout: 20000 }),
+      page.waitForSelector('div[class*="floor"]', { timeout: 20000 }),
+      page.waitForSelector('div[class*="volume"]', { timeout: 20000 })
+    ]);
 
     // Get page content
     const content = await page.evaluate(() => {
@@ -372,21 +378,31 @@ async function fetchTensorStats(collection) {
       };
 
       // Find elements containing stats
-      const floorEl = Array.from(document.querySelectorAll('div')).find(el => el.textContent.includes('Floor'));
-      const listedEl = Array.from(document.querySelectorAll('div')).find(el => el.textContent.includes('Listed'));
-      const volumeEl = Array.from(document.querySelectorAll('div')).find(el => el.textContent.includes('Volume'));
-      const salesEl = Array.from(document.querySelectorAll('div')).find(el => el.textContent.includes('Sales'));
-      const changeEl = Array.from(document.querySelectorAll('div')).find(el => el.textContent.includes('Change'));
+      const priceElements = Array.from(document.querySelectorAll('div[class*="price"]'));
+      const floorElements = Array.from(document.querySelectorAll('div[class*="floor"]'));
+      const volumeElements = Array.from(document.querySelectorAll('div[class*="volume"]'));
+      const listedElements = Array.from(document.querySelectorAll('div[class*="listed"]'));
+      const supplyElements = Array.from(document.querySelectorAll('div[class*="supply"]'));
+      const salesElements = Array.from(document.querySelectorAll('div[class*="sales"]'));
+      const changeElements = Array.from(document.querySelectorAll('div[class*="change"]'));
+
+      // Get text content from first matching element
+      const floorText = floorElements[0]?.textContent || priceElements[0]?.textContent || '';
+      const listedText = listedElements[0]?.textContent || '';
+      const supplyText = supplyElements[0]?.textContent || '';
+      const volumeText = volumeElements[0]?.textContent || '';
+      const salesText = salesElements[0]?.textContent || '';
+      const changeText = changeElements[0]?.textContent || '';
 
       return {
-        floor: getNumber(floorEl?.textContent),
-        buyNow: getNumber(floorEl?.textContent),
-        listed: getNumber(listedEl?.textContent),
-        totalSupply: getNumber(listedEl?.textContent?.split('/')[1]),
-        volume24h: getNumber(volumeEl?.textContent),
-        volumeAll: getNumber(volumeEl?.textContent),
-        sales24h: getNumber(salesEl?.textContent),
-        priceChange24h: getNumber(changeEl?.textContent) / 100
+        floor: getNumber(floorText),
+        buyNow: getNumber(floorText),
+        listed: getNumber(listedText),
+        totalSupply: getNumber(supplyText),
+        volume24h: getNumber(volumeText),
+        volumeAll: getNumber(volumeText),
+        sales24h: getNumber(salesText),
+        priceChange24h: getNumber(changeText) / 100
       };
     });
 
