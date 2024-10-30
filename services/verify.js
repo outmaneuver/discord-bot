@@ -498,15 +498,28 @@ export async function verifyHolder(data, userId, client) {
       }
     }
 
+    // Log NFT data before storing
+    console.log('Storing NFT data for wallet:', walletAddress, nftCollections);
+
     // Store NFT data in Redis
-    await redis.hmset(
-      `wallet:${walletAddress}:nfts`,
-      ...Object.entries(nftCollections).flatMap(([key, value]) => [key, JSON.stringify(value)])
-    );
+    for (const [collection, mints] of Object.entries(nftCollections)) {
+      if (mints.length > 0) {
+        await redis.sadd(`nfts:${walletAddress}:${collection}`, ...mints);
+      }
+    }
 
     // Store BUX balance in Redis
     const buxBalance = await getBUXBalance(walletAddress);
-    await redis.set(`wallet:${walletAddress}:bux`, buxBalance.toString());
+    await redis.set(`bux:${walletAddress}`, buxBalance.toString());
+
+    // Log stored data
+    console.log('Stored data in Redis:', {
+      walletAddress,
+      nftCounts: Object.fromEntries(
+        Object.entries(nftCollections).map(([k, v]) => [k, v.length])
+      ),
+      buxBalance
+    });
 
     // Update Discord roles
     await updateDiscordRoles(userId, client);
