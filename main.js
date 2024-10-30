@@ -87,23 +87,11 @@ redis.on('ready', async () => {
 // Main application startup function
 async function startApp() {
   try {
-    // Initialize Discord client
-    const client = new Client({
-      intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildPresences,
-        GatewayIntentBits.GuildMessageReactions,
-        GatewayIntentBits.DirectMessages,
-        GatewayIntentBits.DirectMessageReactions
-      ]
-    });
-    console.log('Discord client created');
-
-    // Initialize Express app
+    // Start server first
+    const port = process.env.PORT || 3000;
     const app = express();
+    
+    // Initialize Express app
     app.use(cors());
     app.use(express.json());
     console.log('Express app created');
@@ -246,13 +234,27 @@ Your roles have been updated! 🎉`;
       res.status(404).send('Page not found');
     });
 
-    // Start server
-    const port = process.env.PORT || 3000;
-    app.listen(port, () => {
+    // Start server first
+    const server = app.listen(port, () => {
       console.log(`Server running on port ${port}`);
     });
 
-    // Start Discord client
+    // Initialize Discord client after server is started
+    const client = new Client({
+      intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildPresences,
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.DirectMessageReactions
+      ]
+    });
+    console.log('Discord client created');
+
+    // Start Discord client after server is running
     await client.login(config.discord.token);
     console.log('Discord bot logged in');
 
