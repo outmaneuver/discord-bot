@@ -2,7 +2,6 @@ import { EmbedBuilder } from 'discord.js';
 import { updateDiscordRoles, getBUXBalance } from './verify.js';
 import { redis } from '../config/redis.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim, calculateDailyReward } from './rewards.js';
-import puppeteer from 'puppeteer-core';
 
 export async function getWalletData(userId) {
   try {
@@ -323,9 +322,6 @@ export async function displayHelp(channel) {
 
 // Update the fetchTensorStats function
 async function fetchTensorStats(collection) {
-  let browser = null;
-  let page = null;
-  
   try {
     const slugMap = {
       'fcked_catz': 'fckedcatz',
@@ -336,92 +332,36 @@ async function fetchTensorStats(collection) {
     };
 
     const slug = slugMap[collection] || collection;
-    
-    browser = await puppeteer.launch({
-      args: ['--no-sandbox'],
-      executablePath: '/app/.apt/usr/bin/google-chrome',
-      ignoreHTTPSErrors: true,
-      headless: true
-    });
-    
-    page = await browser.newPage();
-    
-    // Block images and stylesheets
-    await page.setRequestInterception(true);
-    page.on('request', (request) => {
-      if (['image', 'stylesheet', 'font'].includes(request.resourceType())) {
-        request.abort();
-      } else {
-        request.continue();
+
+    // Use Tensor's public stats API
+    const response = await fetch(`https://tensor-api-production.up.railway.app/api/v1/collections/${slug}/stats`, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+        'Origin': 'https://tensor.trade',
+        'Referer': 'https://tensor.trade/'
       }
     });
 
-    // Navigate to page
-    const response = await page.goto(`https://www.tensor.trade/trade/${slug}`, {
-      waitUntil: 'networkidle0',
-      timeout: 30000
-    });
-
-    // Check if navigation was successful
-    if (!response.ok()) {
-      throw new Error(`Failed to load page: ${response.status()}`);
+    if (!response.ok) {
+      console.error('Tensor API error:', await response.text());
+      throw new Error(`Failed to fetch collection data: ${response.status}`);
     }
 
-    // Wait for API data to load
-    await page.waitForFunction(() => {
-      const scripts = document.getElementsByTagName('script');
-      for (const script of scripts) {
-        if (script.textContent && script.textContent.includes('__NEXT_DATA__')) {
-          return true;
-        }
-      }
-      return false;
-    }, { timeout: 10000 });
+    const data = await response.json();
+    console.log('Tensor response:', data);
 
-    // Extract data from __NEXT_DATA__
-    const stats = await page.evaluate(() => {
-      const scriptContent = Array.from(document.getElementsByTagName('script'))
-        .find(script => script.textContent && script.textContent.includes('__NEXT_DATA__'))
-        ?.textContent;
-
-      if (!scriptContent) return null;
-
-      try {
-        const data = JSON.parse(scriptContent.split('__NEXT_DATA__ = ')[1]);
-        const collectionData = data?.props?.pageProps?.collection || {};
-        
-        return {
-          floor: parseFloat(collectionData.floor || 0),
-          buyNow: parseFloat(collectionData.floor || 0),
-          listed: parseInt(collectionData.listedCount || 0),
-          totalSupply: parseInt(collectionData.totalSupply || 0),
-          volume24h: parseFloat(collectionData.volume24h || 0),
-          volumeAll: parseFloat(collectionData.volumeAll || 0),
-          sales24h: parseInt(collectionData.sales24h || 0),
-          priceChange24h: parseFloat(collectionData.priceChange24h || 0) / 100
-        };
-      } catch (error) {
-        console.error('Error parsing data:', error);
-        return null;
-      }
-    });
-
-    if (!stats) {
-      throw new Error('Failed to extract collection data');
-    }
-
-    // Convert SOL to lamports
-    stats.floor *= 1e9;
-    stats.buyNow *= 1e9;
-    stats.volume24h *= 1e9;
-    stats.volumeAll *= 1e9;
-
-    console.log('Extracted stats:', stats);
-
-    await browser.close();
-    return stats;
+    return {
+      floor: (data.floor_price || 0) * 1e9,
+      buyNow: (data.floor_price || 0) * 1e9,
+      listed: data.listed_count || 0,
+      totalSupply: data.total_supply || 0,
+      volume24h: (data.volume_24h || 0) * 1e9,
+      volumeAll: (data.volume_all || 0) * 1e9,
+      sales24h: data.sales_24h || 0,
+      priceChange24h: (data.floor_change_24h || 0) / 100
+    };
   } catch (error) {
-    if (browser) await browser.close();
     console.error('Error fetching Tensor stats:', error);
     throw error;
   }
