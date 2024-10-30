@@ -17,7 +17,7 @@ import { redis } from './config/redis.js';
 import fs from 'fs/promises';
 
 import { verifyHolder, updateDiscordRoles, updateHashlists } from './services/verify.js';
-import { updateUserProfile, getWalletData } from './services/profile.js';
+import { updateUserProfile, getWalletData, aggregateWalletData, formatNFTCounts, getBUXBalance } from './services/profile.js';
 import { config } from './config/config.js';
 import {
   startOrUpdateDailyTimer,
