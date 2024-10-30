@@ -76,6 +76,35 @@ async function startApp() {
     app.use(express.json());
     console.log('Express app created');
 
+    // Configure Redis store
+    const redisStore = new RedisStore({
+      client: redis,
+      prefix: 'session:'
+    });
+
+    // Add session middleware
+    app.use(session({
+      store: redisStore,
+      secret: process.env.SESSION_SECRET || 'your-secret-key',
+      resave: true,
+      saveUninitialized: true,
+      name: 'buxdao.sid',
+      cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000,
+        sameSite: 'lax'
+      }
+    }));
+
+    // Serve static files
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    app.use(express.static(path.join(__dirname, 'public')));
+    app.use('/holder-verify', express.static(path.join(__dirname, 'public')));
+
+    // Mount auth routes at /auth
+    app.use('/auth', authRouter);
+
     // Start server first
     const server = await new Promise((resolve, reject) => {
       const server = app.listen(port, '0.0.0.0', () => {
@@ -109,35 +138,6 @@ async function startApp() {
 
     // Update hashlists in verify service
     updateHashlists(hashlistsData);
-
-    // Configure Redis store
-    const redisStore = new RedisStore({
-      client: redis,
-      prefix: 'session:'
-    });
-
-    // Add session middleware
-    app.use(session({
-      store: redisStore,
-      secret: process.env.SESSION_SECRET || 'your-secret-key',
-      resave: true,
-      saveUninitialized: true,
-      name: 'buxdao.sid',
-      cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000,
-        sameSite: 'lax'
-      }
-    }));
-
-    // Mount auth routes at root level
-    app.use('/', authRouter);
-    
-    // Serve static files after routes
-    const __dirname = path.dirname(fileURLToPath(import.meta.url));
-    app.use(express.static(path.join(__dirname, 'public')));
-    app.use('/holder-verify', express.static(path.join(__dirname, 'public')));
 
     // Initialize Discord client
     const client = new Client({
