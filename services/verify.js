@@ -2,109 +2,24 @@ import { connection } from '../config/solana.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { PublicKey } from '@solana/web3.js';
 import { redis } from '../config/redis.js';
-
-// Export redis so it can be imported by other modules
-export { redis };
-
-// Add getBUXBalance function and export it
-export async function getBUXBalance(walletAddress) {
-  try {
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-      new PublicKey(walletAddress),
-      { programId: TOKEN_PROGRAM_ID }
-    );
-
-    let buxBalance = 0;
-    for (const acc of tokenAccounts.value) {
-      if (acc.account.data.parsed.info.mint === process.env.BUX_TOKEN_MINT) {
-        buxBalance += parseInt(acc.account.data.parsed.info.tokenAmount.amount);
-      }
-    }
-    return buxBalance;
-  } catch (error) {
-    console.error('Error getting BUX balance:', error);
-    return 0;
-  }
-}
+import { config } from '../config/config.js';
 
 // Initialize hashlists with hardcoded data
 let hashlists = {
-  fckedCatz: new Set([
-    "BsarXX8ByP61bQaxHB1BumzjJHZipySbkAZM9HTsGHnZ",
-    "ti93mWDrGoN4F3L9QbceWWrPDyy6rG8p4SxcwqNneT4",
-    // ... rest of fcked_catz addresses
-  ]),
-  
-  celebCatz: new Set([
-    "27AZCipUgnokLraJiFRzihNbVkC1p1BFwo7yYy8Dehwg",
-    "2AMCTGkrxMsPoYsEi3k5HoHqBV71yZvCfhJ7qkhj8sfv",
-    // ... rest of celebcatz addresses
-  ]),
-  
-  moneyMonsters: new Set([
-    "5BZFAbdrh7C41RMa9i8mdMwKy4L2yij4AVWDPMx5Jr6h",
-    "CgiAp4FwF8uv2oQ18pB7KsVSCotX9MrX3LU5aCzZHJ2s",
-    // ... rest of money_monsters addresses
-  ]),
-  
-  moneyMonsters3d: new Set([
-    "5WhqtK8P9ycdaH7sDPccm6zwxBQoGB2Eoq6n6FFxGdXi",
-    "8vLh5iEvNNT85h7hucsCWQ9MPNNeHXUiQsaEgT8yXssT",
-    // ... rest of money_monsters3d addresses
-  ]),
-  
-  aiBitbots: new Set([
-    "2AMwhQ1VJE5XrChgLAAN2ho67Z3Kd6G6ZH9K3tUDaeAj",
-    "2DFivijFtTUrG8wU1yG6zguPNDatCfc8oggKkcMtPtDK",
-    // ... rest of ai_bitbots addresses
-  ]),
-  
-  // Top 10 collections
-  mmTop10: new Set([
-    "DjBWcV9MMDYT184mZex1FokGo9RiR5HKcLi8RA7vMF1V",
-    "2PNNMgdVLpxjDY2DsUCmB1gf7pVNenrydWBiWCZxxDxG",
-    // ... rest of MM_top10 addresses
-  ]),
-  
-  mm3dTop10: new Set([
-    "C4SNQtPwPVt5k1tju9QVFK4PuiU32SJt7pZjBPNUA2X9",
-    "CPBmgYsyLc6Y7aqRJvrpiaBBmB5DtQiisX4dFLpGkELT",
-    // ... rest of MM3D_top10 addresses
-  ]),
-  
-  // AI Collabs
-  squirrels: new Set([
-    "53uo3rxsC581PogRokje1heL9guwVDHWGJgizCsH8Lhq",
-    "5mh8x7Mtr4LbPmxUWNjj8ub7RAwf2mDyTeJ5RnqZgi7S",
-    // ... rest of squirrels addresses
-  ]),
-  
-  rjctdBots: new Set([
-    "6bFtMFRA62sPJFioZkARRU1FNruEPMJ4KRswwkXyYzQ9",
-    "5sLRard2DHmwYjtR6eadJm61PWBn3zFrhX1bQcaowqT7",
-    // ... rest of rjctd_bots addresses
-  ]),
-  
-  energyApes: new Set([
-    "GhYWZ23HBe4c5srSSrVg1TtN734a9fLFdG4dxvt4NRNP",
-    "4oM1zXktE85P7o4e9Zps5FAwZRdTCu11XLMKZ1gUbbYN",
-    // ... rest of energy_apes addresses
-  ]),
-  
-  doodleBots: new Set([
-    "298Lo9g3mKS925ZZDdcuq3WmEZeooxok1GXq16YMSCNh",
-    "GG71RzW86XYc5VVvBmHDy8xRC8w3qYNY4zKHoMEvVfP",
-    // ... rest of doodle_bot addresses
-  ]),
-  
-  candyBots: new Set([
-    "5WSgTYGEyvwrSPzZ8iJcvGHNJcFKYzhadgsiah26HLgn",
-    "HVRdxDPXymftQA6BDbNHJbB8Lp1XQwobFQMx8MYijv2U",
-    // ... rest of candy_bots addresses
-  ])
+  fckedCatz: new Set(),
+  celebCatz: new Set(),
+  moneyMonsters: new Set(),
+  moneyMonsters3d: new Set(),
+  aiBitbots: new Set(),
+  mmTop10: new Set(),
+  mm3dTop10: new Set(),
+  warriors: new Set(),
+  squirrels: new Set(),
+  rjctdBots: new Set(),
+  energyApes: new Set(),
+  doodleBots: new Set(),
+  candyBots: new Set()
 };
-
-// No need for loadHashlists function anymore since data is hardcoded
 
 // Initialize Redis first
 redis.on('error', (err) => {
@@ -130,68 +45,6 @@ redis.on('ready', () => {
   });
 });
 
-export async function checkNFTOwnership(walletAddress) {
-  try {
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-      new PublicKey(walletAddress),
-      { programId: TOKEN_PROGRAM_ID }
-    );
-
-    const nftCounts = {
-      fcked_catz: new Set(),
-      celebcatz: new Set(),
-      money_monsters: new Set(),
-      money_monsters3d: new Set(),
-      ai_bitbots: new Set(),
-      mm_top10: new Set(),
-      mm3d_top10: new Set(),
-      squirrels: new Set(),
-      rjctd_bots: new Set(),
-      energy_apes: new Set(),
-      doodle_bots: new Set(),
-      candy_bots: new Set()
-    };
-
-    for (const acc of tokenAccounts.value) {
-      const mint = acc.account.data.parsed.info.mint;
-      const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
-      
-      if (amount > 0) {
-        if (hashlists.fckedCatz.has(mint)) nftCounts.fcked_catz.add(mint);
-        if (hashlists.celebCatz.has(mint)) nftCounts.celebcatz.add(mint);
-        if (hashlists.moneyMonsters.has(mint)) nftCounts.money_monsters.add(mint);
-        if (hashlists.moneyMonsters3d.has(mint)) nftCounts.money_monsters3d.add(mint);
-        if (hashlists.aiBitbots.has(mint)) nftCounts.ai_bitbots.add(mint);
-        if (hashlists.mmTop10.has(mint)) nftCounts.mm_top10.add(mint);
-        if (hashlists.mm3dTop10.has(mint)) nftCounts.mm3d_top10.add(mint);
-        if (hashlists.squirrels.has(mint)) nftCounts.squirrels.add(mint);
-        if (hashlists.rjctdBots.has(mint)) nftCounts.rjctd_bots.add(mint);
-        if (hashlists.energyApes.has(mint)) nftCounts.energy_apes.add(mint);
-        if (hashlists.doodleBots.has(mint)) nftCounts.doodle_bots.add(mint);
-        if (hashlists.candyBots.has(mint)) nftCounts.candy_bots.add(mint);
-      }
-    }
-
-    return {
-      fcked_catz: Array.from(nftCounts.fcked_catz),
-      celebcatz: Array.from(nftCounts.celebcatz),
-      money_monsters: Array.from(nftCounts.money_monsters),
-      money_monsters3d: Array.from(nftCounts.money_monsters3d),
-      ai_bitbots: Array.from(nftCounts.ai_bitbots),
-      mm_top10: Array.from(nftCounts.mm_top10),
-      mm3d_top10: Array.from(nftCounts.mm3d_top10),
-      squirrels: Array.from(nftCounts.squirrels),
-      rjctd_bots: Array.from(nftCounts.rjctd_bots),
-      energy_apes: Array.from(nftCounts.energy_apes),
-      doodle_bots: Array.from(nftCounts.doodle_bots),
-      candy_bots: Array.from(nftCounts.candy_bots)
-    };
-  } catch (error) {
-    console.error('Error checking NFT ownership:', error);
-    throw error;
-  }
-}
-
 // Update ROLES object to use the exact role IDs from .env
 const ROLES = {
   // Main collections
@@ -214,7 +67,103 @@ const ROLES = {
   DOODLE_BOTS: process.env.ROLE_ID_DOODLE_BOTS // 1300969353952362557
 };
 
-// Update assignRoles function to handle all collections
+// Helper function to compare sets
+function setsAreEqual(a, b) {
+  if (a.size !== b.size) return false;
+  for (const item of a) {
+    if (!b.has(item)) return false;
+  }
+  return true;
+}
+
+// Export all required functions
+export { redis };
+
+export async function getBUXBalance(walletAddress) {
+  try {
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      new PublicKey(walletAddress),
+      { programId: TOKEN_PROGRAM_ID }
+    );
+
+    let buxBalance = 0;
+    for (const acc of tokenAccounts.value) {
+      if (acc.account.data.parsed.info.mint === process.env.BUX_TOKEN_MINT) {
+        buxBalance += parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+      }
+    }
+    return buxBalance;
+  } catch (error) {
+    console.error('Error getting BUX balance:', error);
+    return 0;
+  }
+}
+
+export async function checkNFTOwnership(walletAddress) {
+  try {
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      new PublicKey(walletAddress),
+      { programId: TOKEN_PROGRAM_ID }
+    );
+
+    const nftCounts = {
+      fcked_catz: new Set(),
+      celebcatz: new Set(),
+      money_monsters: new Set(),
+      money_monsters3d: new Set(),
+      ai_bitbots: new Set(),
+      mm_top10: new Set(),
+      mm3d_top10: new Set(),
+      warriors: new Set(),
+      squirrels: new Set(),
+      rjctd_bots: new Set(),
+      energy_apes: new Set(),
+      doodle_bots: new Set(),
+      candy_bots: new Set()
+    };
+
+    for (const acc of tokenAccounts.value) {
+      const mint = acc.account.data.parsed.info.mint;
+      const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+      
+      if (amount > 0) {
+        if (hashlists.fckedCatz.has(mint)) nftCounts.fcked_catz.add(mint);
+        if (hashlists.celebCatz.has(mint)) nftCounts.celebcatz.add(mint);
+        if (hashlists.moneyMonsters.has(mint)) nftCounts.money_monsters.add(mint);
+        if (hashlists.moneyMonsters3d.has(mint)) nftCounts.money_monsters3d.add(mint);
+        if (hashlists.aiBitbots.has(mint)) nftCounts.ai_bitbots.add(mint);
+        if (hashlists.mmTop10.has(mint)) nftCounts.mm_top10.add(mint);
+        if (hashlists.mm3dTop10.has(mint)) nftCounts.mm3d_top10.add(mint);
+        if (hashlists.warriors.has(mint)) nftCounts.warriors.add(mint);
+        if (hashlists.squirrels.has(mint)) nftCounts.squirrels.add(mint);
+        if (hashlists.rjctdBots.has(mint)) nftCounts.rjctd_bots.add(mint);
+        if (hashlists.energyApes.has(mint)) nftCounts.energy_apes.add(mint);
+        if (hashlists.doodleBots.has(mint)) nftCounts.doodle_bots.add(mint);
+        if (hashlists.candyBots.has(mint)) nftCounts.candy_bots.add(mint);
+      }
+    }
+
+    return {
+      fcked_catz: Array.from(nftCounts.fcked_catz),
+      celebcatz: Array.from(nftCounts.celebcatz),
+      money_monsters: Array.from(nftCounts.money_monsters),
+      money_monsters3d: Array.from(nftCounts.money_monsters3d),
+      ai_bitbots: Array.from(nftCounts.ai_bitbots),
+      mm_top10: Array.from(nftCounts.mm_top10),
+      mm3d_top10: Array.from(nftCounts.mm3d_top10),
+      warriors: Array.from(nftCounts.warriors),
+      squirrels: Array.from(nftCounts.squirrels),
+      rjctd_bots: Array.from(nftCounts.rjctd_bots),
+      energy_apes: Array.from(nftCounts.energy_apes),
+      doodle_bots: Array.from(nftCounts.doodle_bots),
+      candy_bots: Array.from(nftCounts.candy_bots)
+    };
+  } catch (error) {
+    console.error('Error checking NFT ownership:', error);
+    throw error;
+  }
+}
+
 export async function assignRoles(nftCounts, discordId, accessToken) {
   try {
     const guildId = config.discord.guildId;
@@ -243,12 +192,8 @@ export async function assignRoles(nftCounts, discordId, accessToken) {
     if (nftCounts.money_monsters.length > 0) newRoles.add(ROLES.MONEY_MONSTERS);
     if (nftCounts.money_monsters3d.length > 0) newRoles.add(ROLES.MONEY_MONSTERS_3D);
     if (nftCounts.ai_bitbots.length > 0) newRoles.add(ROLES.AI_BITBOTS);
-
-    // Top holders
     if (nftCounts.mm_top10.length > 0) newRoles.add(ROLES.MM_TOP_10);
     if (nftCounts.mm3d_top10.length > 0) newRoles.add(ROLES.MM3D_TOP_10);
-
-    // AI Collabs
     if (nftCounts.warriors.length > 0) newRoles.add(ROLES.WARRIORS);
     if (nftCounts.squirrels.length > 0) newRoles.add(ROLES.SQUIRRELS);
     if (nftCounts.rjctd_bots.length > 0) newRoles.add(ROLES.RJCTD_BOTS);
@@ -285,16 +230,6 @@ export async function assignRoles(nftCounts, discordId, accessToken) {
   }
 }
 
-// Helper function to compare sets
-function setsAreEqual(a, b) {
-  if (a.size !== b.size) return false;
-  for (const item of a) {
-    if (!b.has(item)) return false;
-  }
-  return true;
-}
-
-// Add and export updateDiscordRoles function
 export async function updateDiscordRoles(userId, client) {
   try {
     const guildId = config.discord.guildId;
@@ -364,10 +299,3 @@ export async function updateDiscordRoles(userId, client) {
     throw error;
   }
 }
-
-// Export all required functions
-export { redis };
-export { getBUXBalance };
-export { checkNFTOwnership };
-export { assignRoles };
-export { updateDiscordRoles };
