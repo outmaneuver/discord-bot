@@ -128,9 +128,47 @@ async function verifyHolder(data, userId, client) {
 const CACHE_TTL = 60 * 5; // 5 minutes
 const RPC_DELAY = 100; // 100ms between RPC calls
 
-// Helper function to add delay between RPC calls
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+// Add rate limiting queue
+class RPCQueue {
+  constructor(delay = 1000) {
+    this.queue = [];
+    this.delay = delay;
+    this.processing = false;
+  }
 
+  async add(fn) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ fn, resolve, reject });
+      if (!this.processing) {
+        this.process();
+      }
+    });
+  }
+
+  async process() {
+    if (this.queue.length === 0) {
+      this.processing = false;
+      return;
+    }
+
+    this.processing = true;
+    const { fn, resolve, reject } = this.queue.shift();
+
+    try {
+      const result = await fn();
+      resolve(result);
+    } catch (error) {
+      reject(error);
+    }
+
+    await new Promise(resolve => setTimeout(resolve, this.delay));
+    this.process();
+  }
+}
+
+const rpcQueue = new RPCQueue(1000); // 1 second between RPC calls
+
+// Update verifyWallet to use queue
 async function verifyWallet(userId, walletAddress) {
   try {
     console.log('Verifying wallet:', { userId, walletAddress });
@@ -143,16 +181,15 @@ async function verifyWallet(userId, walletAddress) {
       return JSON.parse(cached);
     }
 
-    // Add delay before RPC call
-    await delay(RPC_DELAY);
-
-    // Get token accounts for wallet
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-      new PublicKey(walletAddress),
-      { programId: TOKEN_PROGRAM_ID }
+    // Queue RPC calls
+    const tokenAccounts = await rpcQueue.add(() => 
+      connection.getParsedTokenAccountsByOwner(
+        new PublicKey(walletAddress),
+        { programId: TOKEN_PROGRAM_ID }
+      )
     );
 
-    // Initialize NFT counts
+    // Process token accounts
     const nftCounts = {
       fcked_catz: 0,
       celebcatz: 0,
@@ -190,13 +227,10 @@ async function verifyWallet(userId, walletAddress) {
     // Store wallet in Redis
     await redis.sadd(`wallets:${userId}`, walletAddress);
 
-    // Add delay before BUX balance check
-    await delay(RPC_DELAY);
+    // Queue BUX balance check
+    const buxBalance = await rpcQueue.add(() => getBUXBalance(walletAddress));
 
-    // Get BUX balance
-    const buxBalance = await getBUXBalance(walletAddress);
-
-    // Calculate daily reward based on holdings
+    // Calculate daily reward
     const dailyReward = calculateDailyReward(nftCounts);
 
     const result = {
@@ -212,7 +246,6 @@ async function verifyWallet(userId, walletAddress) {
     await redis.setex(cacheKey, CACHE_TTL, JSON.stringify(result));
 
     console.log('Verification results:', result);
-
     return result;
 
   } catch (error) {
