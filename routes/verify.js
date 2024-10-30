@@ -26,16 +26,23 @@ router.post('/verify', async (req, res) => {
     // Add formatted response for frontend
     const formattedResponse = `
       **Wallet Verification Successful!**
-      Your wallet ${walletAddress.slice(0,4)}...${walletAddress.slice(-4)} has been verified.
       
-      You can now use the following commands in Discord:
-      • =my.profile - View your full profile
-      • =my.wallet - View your connected wallets  
-      • =my.nfts - View your NFT holdings
-      • =my.roles - View your server roles
-      • =my.bux - View your BUX balance
+      VERIFIED NFTs
+     
+      Fcked Catz - ${result.nftCounts?.fcked_catz || 0}
+      Celeb Catz - ${result.nftCounts?.celebcatz || 0}
+      Monsters - ${result.nftCounts?.money_monsters || 0}
+      3D Monsters - ${result.nftCounts?.money_monsters3d || 0}
+      BitBots - ${result.nftCounts?.ai_bitbots || 0}
       
-      Type =help in Discord for a full list of commands.
+      A.I. collabs - ${(result.nftCounts?.warriors || 0) + 
+                      (result.nftCounts?.squirrels || 0) + 
+                      (result.nftCounts?.rjctd_bots || 0) + 
+                      (result.nftCounts?.energy_apes || 0) + 
+                      (result.nftCounts?.doodle_bots || 0) + 
+                      (result.nftCounts?.candy_bots || 0)}
+
+      Daily reward - ${result.dailyReward || 0} BUX
     `;
 
     // Return success response with formatted message
