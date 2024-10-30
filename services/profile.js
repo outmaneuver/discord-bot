@@ -323,13 +323,28 @@ export async function displayHelp(channel) {
 // Update the fetchTensorStats function
 async function fetchTensorStats(collection) {
   try {
-    // Use Tensor's public API endpoint
-    const response = await fetch(`https://api.tensor.so/api/v2/collections/${collection}/stats`);
+    const response = await fetch(`https://api.tensor.so/api/v2/markets?collection=${collection}&sortBy=PRICE_LOW_TO_HIGH&limit=1`, {
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
+
     const data = await response.json();
-    return data;
+    
+    return {
+      floor: data.floor || 0,
+      buyNowPrice: data.floor || 0,
+      listedCount: data.listed || 0,
+      totalSupply: data.total_supply || 0,
+      volume24hr: data.volume_24h || 0,
+      volumeAll: data.volume_all || 0,
+      sales24hr: data.sales_24h || 0,
+      priceChange24hr: data.floor_price_24h_change || 0
+    };
   } catch (error) {
     console.error('Error fetching Tensor stats:', error);
     throw error;
