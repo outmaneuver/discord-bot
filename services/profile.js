@@ -3,6 +3,10 @@ import { updateDiscordRoles, checkNFTOwnership, getBUXBalance } from './verify.j
 import { redis } from '../config/redis.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim } from './rewards.js';
 import ms from 'ms';
+import { connection } from '../config/solana.js';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { PublicKey } from '@solana/web3.js';
+import { hashlists } from './verify.js';
 
 // Add caching for NFT data
 const NFT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -261,12 +265,12 @@ function calculateDailyReward(nftCounts) {
     
     // Make sure we're working with numbers
     const counts = {
-      fcked_catz: parseInt(nftCounts.fcked_catz) || 0,
-      celebcatz: parseInt(nftCounts.celebcatz) || 0,
-      money_monsters: parseInt(nftCounts.money_monsters) || 0,
-      money_monsters3d: parseInt(nftCounts.money_monsters3d) || 0,
-      ai_bitbots: parseInt(nftCounts.ai_bitbots) || 0,
-      warriors: parseInt(nftCounts.warriors) || 0
+      fcked_catz: nftCounts.fcked_catz || 0,
+      celebcatz: nftCounts.celebcatz || 0,
+      money_monsters: nftCounts.money_monsters || 0,
+      money_monsters3d: nftCounts.money_monsters3d || 0,
+      ai_bitbots: nftCounts.ai_bitbots || 0,
+      warriors: nftCounts.warriors || 0
     };
     
     // Calculate rewards
@@ -275,13 +279,7 @@ function calculateDailyReward(nftCounts) {
     reward += counts.money_monsters * 2;   // 2 BUX per MM
     reward += counts.money_monsters3d * 4; // 4 BUX per MM3D
     reward += counts.ai_bitbots * 1;      // 1 BUX per AI Bitbot
-    reward += counts.warriors * 2;      // 2 BUX per Warriors NFT
-
-    console.log('Daily reward calculation:', {
-      counts,
-      reward,
-      timestamp: new Date().toISOString()
-    });
+    reward += counts.warriors * 2;         // 2 BUX per Warriors NFT
 
     return reward;
   } catch (error) {
@@ -345,5 +343,26 @@ export async function aggregateWalletData(walletData) {
   } catch (error) {
     console.error('Error in aggregateWalletData:', error);
     throw error;
+  }
+}
+
+// Add getBUXBalance function
+async function getBUXBalance(walletAddress) {
+  try {
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      new PublicKey(walletAddress),
+      { programId: TOKEN_PROGRAM_ID }
+    );
+
+    let buxBalance = 0;
+    for (const acc of tokenAccounts.value) {
+      if (acc.account.data.parsed.info.mint === process.env.BUX_TOKEN_MINT) {
+        buxBalance += parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+      }
+    }
+    return buxBalance;
+  } catch (error) {
+    console.error('Error getting BUX balance:', error);
+    return 0;
   }
 }
