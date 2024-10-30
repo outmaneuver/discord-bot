@@ -38,82 +38,26 @@ router.get('/discord', (req, res) => {
 });
 
 router.get('/callback', async (req, res) => {
-  const { code, state } = req.query;
-
-  // Verify state parameter to prevent CSRF
-  if (!state || state !== req.session.oauthState) {
-    console.error('State mismatch - possible CSRF attack');
-    return res.redirect('/holder-verify?error=state');
-  }
-
-  if (!code) {
-    console.log('No code provided in callback');
-    return res.redirect('/holder-verify?error=nocode');
-  }
-
   try {
+    const { code } = req.query;
     console.log('Processing OAuth callback with code');
 
-    const tokenResponse = await fetch(`${DISCORD_API_URL}/oauth2/token`, {
-      method: 'POST',
-      body: new URLSearchParams({
-        client_id: config.discord.clientId,
-        client_secret: config.discord.clientSecret,
-        code,
-        grant_type: 'authorization_code',
-        redirect_uri: 'https://buxdao-verify-d1faffc83da7.herokuapp.com/auth/callback',
-      }),
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
-
-    if (!tokenResponse.ok) {
-      const errorText = await tokenResponse.text();
-      console.error('Token response error:', errorText);
-      throw new Error(`Failed to get access token: ${errorText}`);
-    }
-
-    const tokenData = await tokenResponse.json();
+    const tokenData = await getOAuthToken(code);
     console.log('Received token data');
 
-    const userResponse = await fetch(`${DISCORD_API_URL}/users/@me`, {
-      headers: {
-        Authorization: `Bearer ${tokenData.access_token}`,
-      },
-    });
+    const userData = await getDiscordUser(tokenData.access_token);
+    console.log('Received user data:', userData);
 
-    if (!userResponse.ok) {
-      const errorText = await userResponse.text();
-      console.error('User response error:', errorText);
-      throw new Error(`Failed to get user data: ${errorText}`);
-    }
-
-    const userData = await userResponse.json();
-    console.log('Received user data:', { id: userData.id, username: userData.username });
-
-    // Store user data in session
     req.session.user = {
       id: userData.id,
       username: userData.username,
       accessToken: tokenData.access_token
     };
 
-    // Clear OAuth state
-    delete req.session.oauthState;
-
-    // Save session explicitly
-    req.session.save((err) => {
-      if (err) {
-        console.error('Session save error:', err);
-        return res.redirect('/holder-verify?error=session');
-      }
-      res.redirect('/holder-verify');
-    });
-
+    res.redirect('/holder-verify/');
   } catch (error) {
-    console.error('Auth callback error:', error);
-    res.redirect('/holder-verify?error=auth');
+    console.error('Error in OAuth callback:', error);
+    res.redirect('/holder-verify/?error=auth_failed');
   }
 });
 
@@ -128,6 +72,37 @@ router.get('/status', (req, res) => {
     authenticated: !!req.session?.user,
     username: req.session?.user?.username || null
   });
+});
+
+// Add this route handler for /holder-verify/verify
+router.post('/holder-verify/verify', async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const { walletAddress } = req.body;
+    if (!walletAddress) {
+      return res.status(400).json({ error: 'Wallet address required' });
+    }
+
+    // Verify the wallet
+    const result = await verifyWallet(req.session.user.id, walletAddress);
+    
+    // Return success response
+    res.json({ 
+      success: true,
+      message: 'Wallet verified successfully',
+      data: result
+    });
+
+  } catch (error) {
+    console.error('Error in verify endpoint:', error);
+    res.status(500).json({ 
+      error: 'Failed to verify wallet',
+      details: error.message
+    });
+  }
 });
 
 export default router; 
