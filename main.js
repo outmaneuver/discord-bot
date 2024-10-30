@@ -81,12 +81,18 @@ async function startApp() {
             reject(new Error('Redis connection attempt timeout'));
           }, 5000);
 
-          redis.on('ready', () => {
+          // Check if Redis is already connected
+          if (redis.status === 'ready') {
             clearTimeout(timeout);
             resolve();
-          });
+            return;
+          }
 
-          redis.on('error', (err) => {
+          // Try to connect using URL directly
+          redis.connect(process.env.REDIS_URL).then(() => {
+            clearTimeout(timeout);
+            resolve();
+          }).catch(err => {
             clearTimeout(timeout);
             reject(err);
           });
