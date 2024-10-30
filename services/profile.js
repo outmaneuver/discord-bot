@@ -332,51 +332,51 @@ async function fetchTensorStats(collection) {
     };
 
     const slug = slugMap[collection] || collection;
-    const response = await fetch(`https://www.tensor.trade/trade/${slug}`, {
+    
+    // First get collection ID from search
+    const searchResponse = await fetch(`https://api.tensor.so/api/v1/search?q=${slug}`, {
       headers: {
-        'Accept': 'text/html',
+        'Accept': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
       }
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (!searchResponse.ok) {
+      throw new Error(`Search error! status: ${searchResponse.status}`);
     }
 
-    const html = await response.text();
-    console.log('HTML content:', html.substring(0, 1000)); // Debug log
-    
-    // Updated regex patterns to match Tensor's HTML structure
-    const floorMatch = html.match(/Floor Price[^0-9]*?([\d,]+\.?\d*)/i);
-    const listedMatch = html.match(/Listed[^0-9]*?([\d,]+)/i);
-    const volumeMatch = html.match(/24h Volume[^0-9]*?([\d,]+\.?\d*)/i);
-    const volumeAllMatch = html.match(/Total Volume[^0-9]*?([\d,]+\.?\d*)/i);
-    const salesMatch = html.match(/24h Sales[^0-9]*?([\d,]+)/i);
-    const supplyMatch = html.match(/Supply[^0-9]*?([\d,]+)/i);
-    const changeMatch = html.match(/24h[^0-9-+]*?([-+]?[\d,]+\.?\d*)/i);
+    const searchData = await searchResponse.json();
+    console.log('Search response:', searchData); // Debug log
 
-    // Remove commas and convert to numbers
-    const floor = parseFloat(floorMatch?.[1]?.replace(/,/g, '') || 0);
-    const listed = parseInt(listedMatch?.[1]?.replace(/,/g, '') || 0);
-    const volume24h = parseFloat(volumeMatch?.[1]?.replace(/,/g, '') || 0);
-    const volumeAll = parseFloat(volumeAllMatch?.[1]?.replace(/,/g, '') || 0);
-    const sales = parseInt(salesMatch?.[1]?.replace(/,/g, '') || 0);
-    const supply = parseInt(supplyMatch?.[1]?.replace(/,/g, '') || 0);
-    const change = parseFloat(changeMatch?.[1]?.replace(/,/g, '') || 0);
+    const collectionId = searchData.collections?.[0]?.id;
+    if (!collectionId) {
+      throw new Error('Collection not found');
+    }
 
-    console.log('Extracted values:', { // Debug log
-      floor, listed, volume24h, volumeAll, sales, supply, change
+    // Then get stats using collection ID
+    const statsResponse = await fetch(`https://api.tensor.so/api/v1/stats/${collectionId}`, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+      }
     });
 
+    if (!statsResponse.ok) {
+      throw new Error(`Stats error! status: ${statsResponse.status}`);
+    }
+
+    const data = await statsResponse.json();
+    console.log('Stats response:', data); // Debug log
+
     return {
-      floor: floor * 1e9,
-      buyNowPrice: floor * 1e9,
-      listedCount: listed,
-      totalSupply: supply,
-      volume24hr: volume24h * 1e9,
-      volumeAll: volumeAll * 1e9,
-      sales24hr: sales,
-      priceChange24hr: change / 100
+      floor: data.floor_price || 0,
+      buyNowPrice: data.floor_price || 0,
+      listedCount: data.listed_count || 0,
+      totalSupply: data.total_supply || 0,
+      volume24hr: data.volume_24h || 0,
+      volumeAll: data.volume_all || 0,
+      sales24hr: data.sales_24h || 0,
+      priceChange24hr: data.floor_change_24h || 0
     };
   } catch (error) {
     console.error('Error fetching Tensor stats:', error);
