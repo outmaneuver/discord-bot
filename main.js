@@ -50,17 +50,47 @@ async function loadHashlist(filename) {
   }
 }
 
-// Initialize Redis first
-redis.on('error', (err) => {
-  console.error('Redis error:', err);
-  process.exit(1);
-});
-
-redis.on('ready', async () => {
-  console.log('Redis connected and ready');
-  
-  // Load all hashlists before starting app
+// Main application startup function
+async function startApp() {
   try {
+    // Get port from environment first
+    const port = process.env.PORT || 3000;
+    const app = express();
+    
+    // Initialize Express app with middleware
+    app.use(cors());
+    app.use(express.json());
+    console.log('Express app created');
+
+    // Start server first
+    const server = await new Promise((resolve, reject) => {
+      const server = app.listen(port, '0.0.0.0', () => {
+        console.log(`Server running on port ${port}`);
+        resolve(server);
+      }).on('error', reject);
+    });
+
+    console.log('Server started successfully');
+
+    // Wait for Redis to be ready
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Redis connection timeout'));
+      }, 10000);
+
+      redis.on('ready', () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+
+      redis.on('error', (err) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
+    });
+    console.log('Redis connected');
+
+    // Load hashlists after Redis is ready
     hashlists.fckedCatz = await loadHashlist('fcked_catz.json');
     hashlists.celebCatz = await loadHashlist('celebcatz.json');
     hashlists.moneyMonsters = await loadHashlist('money_monsters.json');
@@ -76,46 +106,6 @@ redis.on('ready', async () => {
       aiBitbots: hashlists.aiBitbots.size,
       warriors: hashlists.warriors.size
     });
-    
-    startApp();
-  } catch (error) {
-    console.error('Error loading hashlists:', error);
-    process.exit(1);
-  }
-});
-
-// Main application startup function
-async function startApp() {
-  try {
-    // Get port from environment first
-    const port = process.env.PORT || 3000;
-    const app = express();
-    
-    // Initialize Express app with middleware
-    app.use(cors());
-    app.use(express.json());
-    console.log('Express app created');
-
-    // Wait for Redis to be ready
-    await new Promise((resolve, reject) => {
-      redis.on('ready', resolve);
-      redis.on('error', reject);
-      
-      // Add timeout
-      setTimeout(() => reject(new Error('Redis connection timeout')), 10000);
-    });
-    console.log('Redis connected');
-
-    // Load hashlists after Redis is ready
-    await Promise.all([
-      loadHashlist('fcked_catz.json').then(list => hashlists.fckedCatz = list),
-      loadHashlist('celebcatz.json').then(list => hashlists.celebCatz = list),
-      loadHashlist('money_monsters.json').then(list => hashlists.moneyMonsters = list),
-      loadHashlist('money_monsters3d.json').then(list => hashlists.moneyMonsters3d = list),
-      loadHashlist('ai_bitbots.json').then(list => hashlists.aiBitbots = list),
-      loadHashlist('ai_collabs/warriors.json').then(list => hashlists.warriors = list)
-    ]);
-    console.log('Hashlists loaded');
 
     // Configure Redis store
     const redisStore = new RedisStore({
@@ -239,16 +229,6 @@ Your roles have been updated! 🎉`;
     app.use((req, res) => {
       res.status(404).send('Page not found');
     });
-
-    // Start server first
-    const server = await new Promise((resolve, reject) => {
-      const server = app.listen(port, '0.0.0.0', () => {
-        console.log(`Server running on port ${port}`);
-        resolve(server);
-      }).on('error', reject);
-    });
-
-    console.log('Server started successfully');
 
     // Initialize Discord client after server is running
     const client = new Client({
