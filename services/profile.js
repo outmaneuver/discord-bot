@@ -338,17 +338,7 @@ async function fetchTensorStats(collection) {
     const slug = slugMap[collection] || collection;
     
     browser = await puppeteer.launch({
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--single-process',
-        '--disable-gpu',
-        '--disable-software-rasterizer',
-        '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process',
-        '--no-zygote'
-      ],
+      args: ['--no-sandbox'],
       executablePath: '/app/.apt/usr/bin/google-chrome',
       ignoreHTTPSErrors: true,
       headless: true
@@ -356,11 +346,7 @@ async function fetchTensorStats(collection) {
     
     page = await browser.newPage();
     
-    // Set viewport and user agent
-    await page.setViewport({ width: 1920, height: 1080 });
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36');
-    
-    // Enable request interception
+    // Block images and stylesheets
     await page.setRequestInterception(true);
     page.on('request', (request) => {
       if (['image', 'stylesheet', 'font'].includes(request.resourceType())) {
@@ -376,49 +362,29 @@ async function fetchTensorStats(collection) {
       timeout: 30000
     });
 
-    // Wait and retry up to 3 times
-    let content = null;
-    for (let i = 0; i < 3; i++) {
-      try {
-        // Wait for dynamic content
-        await page.waitForFunction(() => {
-          const text = document.body.innerText;
-          return text.includes('Floor') || text.includes('Volume');
-        }, { timeout: 10000 });
+    // Get page content
+    const content = await page.evaluate(() => {
+      const text = document.body.innerText;
+      
+      // Helper function to get number from text
+      const getNumber = (pattern) => {
+        const match = text.match(pattern);
+        if (!match) return 0;
+        const num = parseFloat(match[1].replace(/[^\d.]/g, ''));
+        return isNaN(num) ? 0 : num;
+      };
 
-        // Get page content
-        content = await page.evaluate(() => {
-          const text = document.body.innerText;
-          console.log('Page text:', text);
-
-          // Helper function to get number from text
-          const getNumber = (pattern) => {
-            const match = text.match(pattern);
-            if (!match) return 0;
-            const num = parseFloat(match[1].replace(/[^\d.]/g, ''));
-            return isNaN(num) ? 0 : num;
-          };
-
-          return {
-            floor: getNumber(/Floor[^\d]*([\d,.]+)/i),
-            buyNow: getNumber(/Floor[^\d]*([\d,.]+)/i),
-            listed: getNumber(/Listed[^\d]*([\d,.]+)/i),
-            totalSupply: getNumber(/Supply[^\d]*([\d,.]+)/i),
-            volume24h: getNumber(/24h Volume[^\d]*([\d,.]+)/i),
-            volumeAll: getNumber(/All Volume[^\d]*([\d,.]+)/i),
-            sales24h: getNumber(/24h Sales[^\d]*([\d,.]+)/i),
-            priceChange24h: getNumber(/Change[^\d%-]*([-\d,.]+)/i) / 100
-          };
-        });
-
-        if (content.floor > 0 || content.listed > 0) break;
-        await page.reload({ waitUntil: 'networkidle0' });
-      } catch (error) {
-        console.error(`Attempt ${i + 1} failed:`, error);
-        if (i === 2) throw error;
-        await page.reload({ waitUntil: 'networkidle0' });
-      }
-    }
+      return {
+        floor: getNumber(/Floor[^\d]*([\d,.]+)/i),
+        buyNow: getNumber(/Floor[^\d]*([\d,.]+)/i),
+        listed: getNumber(/Listed[^\d]*([\d,.]+)/i),
+        totalSupply: getNumber(/Supply[^\d]*([\d,.]+)/i),
+        volume24h: getNumber(/24h Volume[^\d]*([\d,.]+)/i),
+        volumeAll: getNumber(/All Volume[^\d]*([\d,.]+)/i),
+        sales24h: getNumber(/24h Sales[^\d]*([\d,.]+)/i),
+        priceChange24h: getNumber(/Change[^\d%-]*([-\d,.]+)/i) / 100
+      };
+    });
 
     // Convert SOL to lamports
     content.floor *= 1e9;
