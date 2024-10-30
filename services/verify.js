@@ -104,65 +104,51 @@ export async function getBUXBalance(walletAddress) {
   }
 }
 
+// Check NFT ownership against hashlists
 export async function checkNFTOwnership(walletAddress) {
   try {
+    // Get token accounts for wallet
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
       new PublicKey(walletAddress),
       { programId: TOKEN_PROGRAM_ID }
     );
 
+    // Initialize NFT counts with empty Sets
     const nftCounts = {
       fcked_catz: new Set(),
       celebcatz: new Set(),
       money_monsters: new Set(),
       money_monsters3d: new Set(),
       ai_bitbots: new Set(),
-      mm_top10: new Set(),
-      mm3d_top10: new Set(),
-      warriors: new Set(),
-      squirrels: new Set(),
-      rjctd_bots: new Set(),
-      energy_apes: new Set(),
-      doodle_bots: new Set(),
-      candy_bots: new Set()
+      warriors: new Set()
     };
 
+    // Check each token against hashlists
     for (const acc of tokenAccounts.value) {
       const mint = acc.account.data.parsed.info.mint;
       const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
       
       if (amount > 0) {
+        // Check against each hashlist
         if (hashlists.fckedCatz.has(mint)) nftCounts.fcked_catz.add(mint);
         if (hashlists.celebCatz.has(mint)) nftCounts.celebcatz.add(mint);
         if (hashlists.moneyMonsters.has(mint)) nftCounts.money_monsters.add(mint);
         if (hashlists.moneyMonsters3d.has(mint)) nftCounts.money_monsters3d.add(mint);
         if (hashlists.aiBitbots.has(mint)) nftCounts.ai_bitbots.add(mint);
-        if (hashlists.mmTop10.has(mint)) nftCounts.mm_top10.add(mint);
-        if (hashlists.mm3dTop10.has(mint)) nftCounts.mm3d_top10.add(mint);
         if (hashlists.warriors.has(mint)) nftCounts.warriors.add(mint);
-        if (hashlists.squirrels.has(mint)) nftCounts.squirrels.add(mint);
-        if (hashlists.rjctdBots.has(mint)) nftCounts.rjctd_bots.add(mint);
-        if (hashlists.energyApes.has(mint)) nftCounts.energy_apes.add(mint);
-        if (hashlists.doodleBots.has(mint)) nftCounts.doodle_bots.add(mint);
-        if (hashlists.candyBots.has(mint)) nftCounts.candy_bots.add(mint);
       }
     }
 
+    // Convert Sets to Arrays for response
     return {
       fcked_catz: Array.from(nftCounts.fcked_catz),
       celebcatz: Array.from(nftCounts.celebcatz),
       money_monsters: Array.from(nftCounts.money_monsters),
       money_monsters3d: Array.from(nftCounts.money_monsters3d),
       ai_bitbots: Array.from(nftCounts.ai_bitbots),
-      mm_top10: Array.from(nftCounts.mm_top10),
-      mm3d_top10: Array.from(nftCounts.mm3d_top10),
-      warriors: Array.from(nftCounts.warriors),
-      squirrels: Array.from(nftCounts.squirrels),
-      rjctd_bots: Array.from(nftCounts.rjctd_bots),
-      energy_apes: Array.from(nftCounts.energy_apes),
-      doodle_bots: Array.from(nftCounts.doodle_bots),
-      candy_bots: Array.from(nftCounts.candy_bots)
+      warriors: Array.from(nftCounts.warriors)
     };
+
   } catch (error) {
     console.error('Error checking NFT ownership:', error);
     throw error;
