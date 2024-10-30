@@ -39,11 +39,20 @@ export async function updateUserProfile(channel, userId, client) {
       candy_bots: 0
     };
 
-    // Get BUX balance from Redis
+    // Get BUX balance from Redis and refresh from chain
     let totalBuxBalance = 0;
     for (const wallet of walletData.walletAddresses) {
-      const buxBalance = parseInt(await redis.get(`bux:${wallet}`) || '0');
-      totalBuxBalance += buxBalance;
+      // Get fresh balance from chain
+      const chainBalance = await getBUXBalance(wallet);
+      console.log('Chain BUX balance for wallet:', wallet, chainBalance);
+      
+      // Get cached balance from Redis
+      const cachedBalance = parseInt(await redis.get(`bux:${wallet}`) || '0');
+      console.log('Cached BUX balance for wallet:', wallet, cachedBalance);
+      
+      // Use chain balance if available, otherwise use cached
+      const balance = chainBalance || cachedBalance;
+      totalBuxBalance += balance;
     }
 
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
