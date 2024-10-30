@@ -340,7 +340,7 @@ export async function updateDiscordRoles(userId, client) {
     const wallets = await redis.smembers(`wallets:${userId}`);
     if (!wallets || wallets.length === 0) {
       console.log('No wallets found for user:', userId);
-      return false;
+      return { nftCounts: {} };
     }
 
     // Initialize NFT counts with empty Sets
@@ -437,11 +437,27 @@ export async function updateDiscordRoles(userId, client) {
         added: [...newRoles].filter(r => !currentRoles.has(r)),
         removed: [...currentRoles].filter(r => !newRoles.has(r))
       });
-      return true;
+    } else {
+      console.log('No role updates needed for user:', userId);
     }
 
-    console.log('No role updates needed for user:', userId);
-    return false;
+    // Always return the nftCounts
+    return {
+      nftCounts: {
+        fcked_catz: nftCounts.fcked_catz.size,
+        celebcatz: nftCounts.celebcatz.size,
+        money_monsters: nftCounts.money_monsters.size,
+        money_monsters3d: nftCounts.money_monsters3d.size,
+        ai_bitbots: nftCounts.ai_bitbots.size,
+        warriors: nftCounts.warriors.size,
+        squirrels: nftCounts.squirrels.size,
+        rjctd_bots: nftCounts.rjctd_bots.size,
+        energy_apes: nftCounts.energy_apes.size,
+        doodle_bots: nftCounts.doodle_bots.size,
+        candy_bots: nftCounts.candy_bots.size
+      }
+    };
+
   } catch (error) {
     console.error('Error updating Discord roles:', error);
     throw error;
