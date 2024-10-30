@@ -334,19 +334,28 @@ async function fetchTensorStats(collection) {
 
     const slug = slugMap[collection] || collection;
     
-    // Launch browser
+    // Launch browser with Chrome buildpack configuration
     const browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--single-process'
+      ],
+      executablePath: '/app/.apt/usr/bin/google-chrome',
+      headless: true
     });
+    
     const page = await browser.newPage();
     
     // Go to collection page
     await page.goto(`https://www.tensor.trade/trade/${slug}`, {
-      waitUntil: 'networkidle0'
+      waitUntil: 'networkidle0',
+      timeout: 60000
     });
 
     // Wait for stats to load
-    await page.waitForSelector('[data-floor-price]');
+    await page.waitForSelector('[data-floor-price]', { timeout: 30000 });
 
     // Extract stats
     const stats = await page.evaluate(() => ({
