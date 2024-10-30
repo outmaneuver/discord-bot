@@ -131,9 +131,10 @@ async function startApp() {
       }
     }));
 
-    // Add routes and middleware
-    app.use('/auth', authRouter);
+    // Mount auth routes at root level
+    app.use('/', authRouter);
     
+    // Serve static files
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
     app.use(express.static(path.join(__dirname, 'public')));
     app.use('/holder-verify', express.static(path.join(__dirname, 'public')));
