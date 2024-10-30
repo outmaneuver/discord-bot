@@ -251,12 +251,6 @@ export async function updateUserProfile(channel, userId, client) {
   }
 }
 
-export function formatNFTCounts(nftCounts) {
-  return Object.entries(nftCounts)
-    .map(([collection, nfts]) => `${collection}: ${nfts.length}`)
-    .join('\n');
-}
-
 // Fix calculateDailyReward function
 function calculateDailyReward(nftCounts) {
   try {
@@ -345,7 +339,7 @@ async function aggregateWalletData(walletData) {
   }
 }
 
-// Export all functions at the end
+// Export all functions at the top
 export {
   getWalletData,
   addWallet,
