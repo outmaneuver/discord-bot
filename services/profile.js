@@ -334,21 +334,26 @@ async function fetchTensorStats(collection) {
       },
       body: JSON.stringify({
         query: `
-          {
-            statsV2(slug: "${collection}") {
-              floor
-              listed
-              buyNow
-              volume24h
-              volumeAll
-              sales24h
-              totalSupply
-              changes {
-                floor24h
+          query GetCollectionStats($slug: String!) {
+            collection(slug: $slug) {
+              stats {
+                buyNow
+                floor
+                listed
+                volume24h
+                volumeAll
+                sales24h
+                totalSupply
+                changes {
+                  floor24h
+                }
               }
             }
           }
-        `
+        `,
+        variables: {
+          slug: collection
+        }
       })
     });
 
@@ -358,7 +363,7 @@ async function fetchTensorStats(collection) {
 
     const data = await response.json();
     console.log('Tensor response:', data);  // Debug log
-    const stats = data.data.statsV2;
+    const stats = data.data.collection.stats;
 
     return {
       floor: stats.floor,
