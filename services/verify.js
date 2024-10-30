@@ -155,17 +155,28 @@ export { redis };
 
 export async function getBUXBalance(walletAddress) {
   try {
+    console.log('Getting BUX balance for wallet:', walletAddress);
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
       new PublicKey(walletAddress),
       { programId: TOKEN_PROGRAM_ID }
     );
 
+    console.log('Token accounts found:', tokenAccounts.value.length);
+    
     let buxBalance = 0;
     for (const acc of tokenAccounts.value) {
+      const mint = acc.account.data.parsed.info.mint;
+      console.log('Checking token mint:', mint);
+      console.log('Expected BUX mint:', process.env.BUX_TOKEN_MINT);
+      
       if (acc.account.data.parsed.info.mint === process.env.BUX_TOKEN_MINT) {
-        buxBalance += parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+        const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+        console.log('Found BUX token, amount:', amount);
+        buxBalance += amount;
       }
     }
+    
+    console.log('Final BUX balance:', buxBalance);
     return buxBalance;
   } catch (error) {
     console.error('Error getting BUX balance:', error);
