@@ -565,3 +565,30 @@ export async function verifyHolder(data, userId, client) {
     throw error;
   }
 }
+
+// Add export for verifyWallet
+export async function verifyWallet(userId, walletAddress) {
+  try {
+    // Add wallet to user's set in Redis
+    await redis.sadd(`wallets:${userId}`, walletAddress);
+    
+    // Return success
+    return {
+      userId,
+      walletAddress,
+      success: true
+    };
+  } catch (error) {
+    console.error('Error verifying wallet:', error);
+    throw error;
+  }
+}
+
+// Keep existing exports
+export {
+  verifyHolder,
+  updateDiscordRoles,
+  updateHashlists,
+  getBUXBalance,
+  hashlists
+};
