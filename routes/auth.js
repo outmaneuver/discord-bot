@@ -2,6 +2,7 @@ import express from 'express';
 import fetch from 'node-fetch';
 import cors from 'cors';
 import { config } from '../config/config.js';
+import { verifyWallet } from '../services/verify.js';
 
 const router = express.Router();
 
@@ -74,7 +75,7 @@ router.get('/status', (req, res) => {
   });
 });
 
-// Add this route handler for /holder-verify/verify
+// Fix the verify endpoint path to match frontend
 router.post('/holder-verify/verify', async (req, res) => {
   try {
     if (!req.session.user) {
@@ -85,6 +86,11 @@ router.post('/holder-verify/verify', async (req, res) => {
     if (!walletAddress) {
       return res.status(400).json({ error: 'Wallet address required' });
     }
+
+    console.log('Verifying wallet:', {
+      userId: req.session.user.id,
+      walletAddress,
+    });
 
     // Verify the wallet
     const result = await verifyWallet(req.session.user.id, walletAddress);
