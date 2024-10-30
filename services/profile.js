@@ -323,7 +323,6 @@ export async function displayHelp(channel) {
 // Update the fetchTensorStats function
 async function fetchTensorStats(collection) {
   try {
-    // Map collection names to Tensor slugs
     const slugMap = {
       'fcked_catz': 'fckedcatz',
       'celebcatz': 'celebcatz', 
@@ -345,25 +344,39 @@ async function fetchTensorStats(collection) {
     }
 
     const html = await response.text();
+    console.log('HTML content:', html.substring(0, 1000)); // Debug log
     
-    // Extract stats from HTML using regex
-    const floorMatch = html.match(/floor price.*?(\d+\.?\d*)/i);
-    const listedMatch = html.match(/listed.*?(\d+)/i);
-    const volumeMatch = html.match(/volume \(24h\).*?(\d+\.?\d*)/i);
-    const volumeAllMatch = html.match(/volume \(all\).*?(\d+\.?\d*)/i);
-    const salesMatch = html.match(/sales \(24h\).*?(\d+)/i);
-    const supplyMatch = html.match(/total supply.*?(\d+)/i);
-    const changeMatch = html.match(/price change.*?([-+]?\d+\.?\d*)/i);
+    // Updated regex patterns to match Tensor's HTML structure
+    const floorMatch = html.match(/Floor Price[^0-9]*?([\d,]+\.?\d*)/i);
+    const listedMatch = html.match(/Listed[^0-9]*?([\d,]+)/i);
+    const volumeMatch = html.match(/24h Volume[^0-9]*?([\d,]+\.?\d*)/i);
+    const volumeAllMatch = html.match(/Total Volume[^0-9]*?([\d,]+\.?\d*)/i);
+    const salesMatch = html.match(/24h Sales[^0-9]*?([\d,]+)/i);
+    const supplyMatch = html.match(/Supply[^0-9]*?([\d,]+)/i);
+    const changeMatch = html.match(/24h[^0-9-+]*?([-+]?[\d,]+\.?\d*)/i);
+
+    // Remove commas and convert to numbers
+    const floor = parseFloat(floorMatch?.[1]?.replace(/,/g, '') || 0);
+    const listed = parseInt(listedMatch?.[1]?.replace(/,/g, '') || 0);
+    const volume24h = parseFloat(volumeMatch?.[1]?.replace(/,/g, '') || 0);
+    const volumeAll = parseFloat(volumeAllMatch?.[1]?.replace(/,/g, '') || 0);
+    const sales = parseInt(salesMatch?.[1]?.replace(/,/g, '') || 0);
+    const supply = parseInt(supplyMatch?.[1]?.replace(/,/g, '') || 0);
+    const change = parseFloat(changeMatch?.[1]?.replace(/,/g, '') || 0);
+
+    console.log('Extracted values:', { // Debug log
+      floor, listed, volume24h, volumeAll, sales, supply, change
+    });
 
     return {
-      floor: parseFloat(floorMatch?.[1] || 0) * 1e9,
-      buyNowPrice: parseFloat(floorMatch?.[1] || 0) * 1e9,
-      listedCount: parseInt(listedMatch?.[1] || 0),
-      totalSupply: parseInt(supplyMatch?.[1] || 0),
-      volume24hr: parseFloat(volumeMatch?.[1] || 0) * 1e9,
-      volumeAll: parseFloat(volumeAllMatch?.[1] || 0) * 1e9,
-      sales24hr: parseInt(salesMatch?.[1] || 0),
-      priceChange24hr: parseFloat(changeMatch?.[1] || 0) / 100
+      floor: floor * 1e9,
+      buyNowPrice: floor * 1e9,
+      listedCount: listed,
+      totalSupply: supply,
+      volume24hr: volume24h * 1e9,
+      volumeAll: volumeAll * 1e9,
+      sales24hr: sales,
+      priceChange24hr: change / 100
     };
   } catch (error) {
     console.error('Error fetching Tensor stats:', error);
