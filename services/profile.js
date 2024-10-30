@@ -288,7 +288,7 @@ function calculateDailyReward(nftCounts) {
 }
 
 // Fix my.nfts command handler in aggregateWalletData
-export async function aggregateWalletData(walletData) {
+async function aggregateWalletData(walletData) {
   try {
     // Initialize with Sets to prevent duplicates
     const nftSets = {
@@ -345,12 +345,13 @@ export async function aggregateWalletData(walletData) {
   }
 }
 
-// Export functions
+// Export all functions at the end
 export {
   getWalletData,
   addWallet,
   removeWallet,
   updateUserProfile,
   formatNFTCounts,
-  aggregateWalletData
+  aggregateWalletData,
+  getCachedNFTData
 };
