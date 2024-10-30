@@ -96,33 +96,26 @@ async function startApp() {
     app.use(express.json());
     console.log('Express app created');
 
-    // Start server first
-    const server = await new Promise((resolve, reject) => {
-      const server = app.listen(port, '0.0.0.0', () => {
-        console.log(`Server running on port ${port}`);
-        resolve(server);
-      }).on('error', reject);
+    // Wait for Redis to be ready
+    await new Promise((resolve, reject) => {
+      redis.on('ready', resolve);
+      redis.on('error', reject);
+      
+      // Add timeout
+      setTimeout(() => reject(new Error('Redis connection timeout')), 10000);
     });
+    console.log('Redis connected');
 
-    console.log('Server started successfully');
-
-    // Initialize Discord client after server is running
-    const client = new Client({
-      intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildPresences,
-        GatewayIntentBits.GuildMessageReactions,
-        GatewayIntentBits.DirectMessages,
-        GatewayIntentBits.DirectMessageReactions
-      ]
-    });
-
-    // Login to Discord
-    await client.login(config.discord.token);
-    console.log('Discord bot logged in');
+    // Load hashlists after Redis is ready
+    await Promise.all([
+      loadHashlist('fcked_catz.json').then(list => hashlists.fckedCatz = list),
+      loadHashlist('celebcatz.json').then(list => hashlists.celebCatz = list),
+      loadHashlist('money_monsters.json').then(list => hashlists.moneyMonsters = list),
+      loadHashlist('money_monsters3d.json').then(list => hashlists.moneyMonsters3d = list),
+      loadHashlist('ai_bitbots.json').then(list => hashlists.aiBitbots = list),
+      loadHashlist('ai_collabs/warriors.json').then(list => hashlists.warriors = list)
+    ]);
+    console.log('Hashlists loaded');
 
     // Configure Redis store
     const redisStore = new RedisStore({
@@ -247,11 +240,42 @@ Your roles have been updated! 🎉`;
       res.status(404).send('Page not found');
     });
 
+    // Start server first
+    const server = await new Promise((resolve, reject) => {
+      const server = app.listen(port, '0.0.0.0', () => {
+        console.log(`Server running on port ${port}`);
+        resolve(server);
+      }).on('error', reject);
+    });
+
+    console.log('Server started successfully');
+
+    // Initialize Discord client after server is running
+    const client = new Client({
+      intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildPresences,
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.DirectMessageReactions
+      ]
+    });
+
+    // Login to Discord
+    await client.login(config.discord.token);
+    console.log('Discord bot logged in');
+
   } catch (error) {
     console.error('Error starting application:', error);
     process.exit(1);
   }
 }
+
+// Start the application
+startApp();
 
 // Handle process errors
 process.on('uncaughtException', (error) => {
