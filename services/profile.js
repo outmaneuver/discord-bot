@@ -362,27 +362,43 @@ async function fetchTensorStats(collection) {
       timeout: 30000
     });
 
+    // Wait for network requests to finish
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
     // Get page content
     const content = await page.evaluate(() => {
-      const text = document.body.innerText;
-      
       // Helper function to get number from text
-      const getNumber = (pattern) => {
-        const match = text.match(pattern);
-        if (!match) return 0;
-        const num = parseFloat(match[1].replace(/[^\d.]/g, ''));
-        return isNaN(num) ? 0 : num;
+      const getNumber = (text) => {
+        if (!text) return 0;
+        const match = text.match(/[\d,.]+/);
+        return match ? parseFloat(match[0].replace(/,/g, '')) : 0;
+      };
+
+      // Get all text nodes
+      const textNodes = Array.from(document.querySelectorAll('*'))
+        .filter(el => el.childNodes.length === 1 && el.childNodes[0].nodeType === 3)
+        .map(el => el.textContent.trim())
+        .filter(text => text.length > 0);
+
+      console.log('Found text nodes:', textNodes);
+
+      // Find values in text nodes
+      const findValue = (keywords) => {
+        const node = textNodes.find(text => 
+          keywords.some(keyword => text.toLowerCase().includes(keyword.toLowerCase()))
+        );
+        return node ? getNumber(node) : 0;
       };
 
       return {
-        floor: getNumber(/Floor[^\d]*([\d,.]+)/i),
-        buyNow: getNumber(/Floor[^\d]*([\d,.]+)/i),
-        listed: getNumber(/Listed[^\d]*([\d,.]+)/i),
-        totalSupply: getNumber(/Supply[^\d]*([\d,.]+)/i),
-        volume24h: getNumber(/24h Volume[^\d]*([\d,.]+)/i),
-        volumeAll: getNumber(/All Volume[^\d]*([\d,.]+)/i),
-        sales24h: getNumber(/24h Sales[^\d]*([\d,.]+)/i),
-        priceChange24h: getNumber(/Change[^\d%-]*([-\d,.]+)/i) / 100
+        floor: findValue(['Floor', 'floor']),
+        buyNow: findValue(['Floor', 'floor']),
+        listed: findValue(['Listed', 'listed']),
+        totalSupply: findValue(['Supply', 'supply']),
+        volume24h: findValue(['24h Volume', '24h volume']),
+        volumeAll: findValue(['All Volume', 'all volume']),
+        sales24h: findValue(['24h Sales', '24h sales']),
+        priceChange24h: findValue(['Change', 'change']) / 100
       };
     });
 
@@ -391,6 +407,8 @@ async function fetchTensorStats(collection) {
     content.buyNow *= 1e9;
     content.volume24h *= 1e9;
     content.volumeAll *= 1e9;
+
+    console.log('Extracted content:', content);
 
     await browser.close();
     return content;
