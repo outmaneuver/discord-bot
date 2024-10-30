@@ -1,12 +1,11 @@
 import { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } from 'discord.js';
-import { updateDiscordRoles, checkNFTOwnership, getBUXBalance } from './verify.js';
+import { updateDiscordRoles, checkNFTOwnership, getBUXBalance, hashlists } from './verify.js';
 import { redis } from '../config/redis.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim } from './rewards.js';
 import ms from 'ms';
 import { connection } from '../config/solana.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { PublicKey } from '@solana/web3.js';
-import { hashlists } from './verify.js';
 
 // Add caching for NFT data
 const NFT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -346,23 +345,12 @@ export async function aggregateWalletData(walletData) {
   }
 }
 
-// Add getBUXBalance function
-async function getBUXBalance(walletAddress) {
-  try {
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-      new PublicKey(walletAddress),
-      { programId: TOKEN_PROGRAM_ID }
-    );
-
-    let buxBalance = 0;
-    for (const acc of tokenAccounts.value) {
-      if (acc.account.data.parsed.info.mint === process.env.BUX_TOKEN_MINT) {
-        buxBalance += parseInt(acc.account.data.parsed.info.tokenAmount.amount);
-      }
-    }
-    return buxBalance;
-  } catch (error) {
-    console.error('Error getting BUX balance:', error);
-    return 0;
-  }
-}
+// Export functions
+export {
+  getWalletData,
+  addWallet,
+  removeWallet,
+  updateUserProfile,
+  formatNFTCounts,
+  aggregateWalletData
+};
