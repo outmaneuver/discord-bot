@@ -323,11 +323,31 @@ export async function displayHelp(channel) {
 // Update the fetchTensorStats function
 async function fetchTensorStats(collection) {
   try {
-    const response = await fetch(`https://api.tensor.so/api/v1/market/stats?collection=${collection}`, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'BuxDAO Discord Bot/1.0'
+    const query = `
+      query CollectionStats {
+        collection(slug: "${collection}") {
+          stats {
+            floor
+            listed
+            buyNow
+            volume24h
+            volumeAll
+            sales24h
+            totalSupply
+            changes {
+              floor24h
+            }
+          }
+        }
       }
+    `;
+
+    const response = await fetch('https://api.tensor.so/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query })
     });
 
     if (!response.ok) {
@@ -335,16 +355,17 @@ async function fetchTensorStats(collection) {
     }
 
     const data = await response.json();
-    
+    const stats = data.data.collection.stats;
+
     return {
-      floor: data.floor || 0,
-      buyNowPrice: data.floor || 0,
-      listedCount: data.listed || 0,
-      totalSupply: data.total_supply || 0,
-      volume24hr: data.volume_24h || 0,
-      volumeAll: data.volume_all || 0,
-      sales24hr: data.sales_24h || 0,
-      priceChange24hr: data.floor_change_24h || 0
+      floor: stats.floor,
+      buyNowPrice: stats.buyNow,
+      listedCount: stats.listed,
+      totalSupply: stats.totalSupply,
+      volume24hr: stats.volume24h,
+      volumeAll: stats.volumeAll,
+      sales24hr: stats.sales24h,
+      priceChange24hr: stats.changes.floor24h
     };
   } catch (error) {
     console.error('Error fetching Tensor stats:', error);
