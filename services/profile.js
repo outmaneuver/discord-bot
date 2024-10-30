@@ -323,6 +323,7 @@ export async function displayHelp(channel) {
 
 // Update the fetchTensorStats function
 async function fetchTensorStats(collection) {
+  let browser;
   try {
     const slugMap = {
       'fcked_catz': 'fckedcatz',
@@ -334,54 +335,58 @@ async function fetchTensorStats(collection) {
 
     const slug = slugMap[collection] || collection;
     
-    // Launch browser with Chrome buildpack configuration
-    const browser = await puppeteer.launch({
+    browser = await puppeteer.launch({
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--single-process'
+        '--single-process',
+        '--disable-gpu',
+        '--disable-software-rasterizer'
       ],
       executablePath: '/app/.apt/usr/bin/google-chrome',
-      headless: true
+      headless: true,
+      timeout: 60000
     });
     
     const page = await browser.newPage();
+    await page.setDefaultNavigationTimeout(60000);
     
-    // Go to collection page
-    await page.goto(`https://www.tensor.trade/trade/${slug}`, {
-      waitUntil: 'networkidle0',
-      timeout: 60000
-    });
+    // Navigate and wait for any content
+    await page.goto(`https://www.tensor.trade/trade/${slug}`);
+    await page.waitForSelector('body', { timeout: 30000 });
+    
+    // Wait a bit for dynamic content
+    await page.waitForTimeout(5000);
 
-    // Wait for stats to load
-    await page.waitForSelector('div[class*="stats"]', { timeout: 30000 });
+    // Get page content
+    const content = await page.content();
+    console.log('Page content:', content);
 
-    // Extract stats using more specific selectors
-    const stats = await page.evaluate(() => {
-      const getNumber = (selector) => {
-        const el = document.querySelector(selector);
-        if (!el) return 0;
-        const text = el.textContent.replace(/[^\d.]/g, '');
-        return text ? parseFloat(text) : 0;
-      };
+    // Extract numbers from content using regex
+    const getNumber = (regex, defaultValue = 0) => {
+      const match = content.match(regex);
+      if (!match) return defaultValue;
+      const num = parseFloat(match[1].replace(/[^\d.]/g, ''));
+      return isNaN(num) ? defaultValue : num;
+    };
 
-      return {
-        floor: getNumber('div[class*="stats"] div[class*="floor"]') * 1e9,
-        buyNow: getNumber('div[class*="stats"] div[class*="floor"]') * 1e9,
-        listed: getNumber('div[class*="stats"] div[class*="listed"]'),
-        totalSupply: getNumber('div[class*="stats"] div[class*="supply"]'),
-        volume24h: getNumber('div[class*="stats"] div[class*="volume24h"]') * 1e9,
-        volumeAll: getNumber('div[class*="stats"] div[class*="volumeAll"]') * 1e9,
-        sales24h: getNumber('div[class*="stats"] div[class*="sales"]'),
-        priceChange24h: getNumber('div[class*="stats"] div[class*="change"]') / 100
-      };
-    });
+    const stats = {
+      floor: getNumber(/floor[^0-9]*?([\d,.]+)/i) * 1e9,
+      buyNow: getNumber(/floor[^0-9]*?([\d,.]+)/i) * 1e9,
+      listed: getNumber(/listed[^0-9]*?([\d,.]+)/i),
+      totalSupply: getNumber(/supply[^0-9]*?([\d,.]+)/i),
+      volume24h: getNumber(/24h volume[^0-9]*?([\d,.]+)/i) * 1e9,
+      volumeAll: getNumber(/all volume[^0-9]*?([\d,.]+)/i) * 1e9,
+      sales24h: getNumber(/24h sales[^0-9]*?([\d,.]+)/i),
+      priceChange24h: getNumber(/change[^0-9%]*?([-\d,.]+)/i) / 100
+    };
 
     await browser.close();
     return stats;
   } catch (error) {
     console.error('Error fetching Tensor stats:', error);
+    if (browser) await browser.close();
     throw error;
   }
 }
