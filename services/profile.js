@@ -52,7 +52,8 @@ export async function updateUserProfile(channel, userId, client) {
       
       // Use chain balance if available, otherwise use cached
       const balance = chainBalance || cachedBalance;
-      totalBuxBalance += balance;
+      // Divide by 1e9 to get correct decimal places and remove decimals
+      totalBuxBalance += Math.floor(balance / 1e9);
     }
 
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
