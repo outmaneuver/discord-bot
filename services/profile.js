@@ -342,7 +342,12 @@ async function fetchTensorStats(collection) {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--single-process'
+        '--single-process',
+        '--disable-gpu',
+        '--disable-software-rasterizer',
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins,site-per-process',
+        '--no-zygote'
       ],
       executablePath: '/app/.apt/usr/bin/google-chrome',
       ignoreHTTPSErrors: true,
@@ -355,46 +360,65 @@ async function fetchTensorStats(collection) {
     await page.setViewport({ width: 1920, height: 1080 });
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36');
     
-    // Navigate to page and wait for network idle
+    // Enable request interception
+    await page.setRequestInterception(true);
+    page.on('request', (request) => {
+      if (['image', 'stylesheet', 'font'].includes(request.resourceType())) {
+        request.abort();
+      } else {
+        request.continue();
+      }
+    });
+
+    // Navigate to page
     await page.goto(`https://www.tensor.trade/trade/${slug}`, {
-      waitUntil: ['networkidle0', 'domcontentloaded'],
+      waitUntil: 'networkidle0',
       timeout: 30000
     });
 
-    // Wait for any content to load
-    await page.waitForSelector('body', { timeout: 5000 });
+    // Wait and retry up to 3 times
+    let content = null;
+    for (let i = 0; i < 3; i++) {
+      try {
+        // Wait for dynamic content
+        await page.waitForFunction(() => {
+          const text = document.body.innerText;
+          return text.includes('Floor') || text.includes('Volume');
+        }, { timeout: 10000 });
 
-    // Get page content
-    const content = await page.evaluate(() => {
-      // Helper function to get number from text
-      const getNumber = (text) => {
-        if (!text) return 0;
-        const match = text.match(/[\d,.]+/);
-        return match ? parseFloat(match[0].replace(/,/g, '')) : 0;
-      };
+        // Get page content
+        content = await page.evaluate(() => {
+          const text = document.body.innerText;
+          console.log('Page text:', text);
 
-      // Get all text content
-      const text = document.body.innerText;
-      console.log('Page text:', text);
+          // Helper function to get number from text
+          const getNumber = (pattern) => {
+            const match = text.match(pattern);
+            if (!match) return 0;
+            const num = parseFloat(match[1].replace(/[^\d.]/g, ''));
+            return isNaN(num) ? 0 : num;
+          };
 
-      // Find numbers after keywords
-      const findNumber = (keyword) => {
-        const regex = new RegExp(`${keyword}[^0-9]*([0-9,.]+)`, 'i');
-        const match = text.match(regex);
-        return match ? getNumber(match[1]) : 0;
-      };
+          return {
+            floor: getNumber(/Floor[^\d]*([\d,.]+)/i),
+            buyNow: getNumber(/Floor[^\d]*([\d,.]+)/i),
+            listed: getNumber(/Listed[^\d]*([\d,.]+)/i),
+            totalSupply: getNumber(/Supply[^\d]*([\d,.]+)/i),
+            volume24h: getNumber(/24h Volume[^\d]*([\d,.]+)/i),
+            volumeAll: getNumber(/All Volume[^\d]*([\d,.]+)/i),
+            sales24h: getNumber(/24h Sales[^\d]*([\d,.]+)/i),
+            priceChange24h: getNumber(/Change[^\d%-]*([-\d,.]+)/i) / 100
+          };
+        });
 
-      return {
-        floor: findNumber('Floor'),
-        buyNow: findNumber('Floor'),
-        listed: findNumber('Listed'),
-        totalSupply: findNumber('Supply'),
-        volume24h: findNumber('24h Volume'),
-        volumeAll: findNumber('All Volume'),
-        sales24h: findNumber('24h Sales'),
-        priceChange24h: findNumber('Change') / 100
-      };
-    });
+        if (content.floor > 0 || content.listed > 0) break;
+        await page.reload({ waitUntil: 'networkidle0' });
+      } catch (error) {
+        console.error(`Attempt ${i + 1} failed:`, error);
+        if (i === 2) throw error;
+        await page.reload({ waitUntil: 'networkidle0' });
+      }
+    }
 
     // Convert SOL to lamports
     content.floor *= 1e9;
