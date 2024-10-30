@@ -338,42 +338,27 @@ async function fetchTensorStats(collection) {
     const slug = slugMap[collection] || collection;
     
     browser = await puppeteer.launch({
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--single-process',
-        '--disable-gpu',
-        '--disable-software-rasterizer',
-        '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process'
-      ],
+      args: ['--no-sandbox'],
       executablePath: '/app/.apt/usr/bin/google-chrome',
+      ignoreHTTPSErrors: true,
       headless: true
     });
     
     page = await browser.newPage();
+    await page.setDefaultNavigationTimeout(30000);
     
-    // Set viewport and user agent
-    await page.setViewport({ width: 1920, height: 1080 });
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36');
-    
-    // Navigate and wait for network idle
+    // Navigate to page
     await page.goto(`https://www.tensor.trade/trade/${slug}`, {
-      waitUntil: ['networkidle0', 'domcontentloaded'],
-      timeout: 60000
+      waitUntil: 'networkidle0'
     });
 
-    // Wait for specific element that indicates stats are loaded
-    await page.waitForSelector('div[class*="price"], div[class*="floor"]', { timeout: 30000 });
-
-    // Get text content
-    const text = await page.evaluate(() => document.body.innerText);
-    console.log('Page text:', text);
+    // Get page content
+    const content = await page.content();
+    console.log('Page content:', content);
 
     // Extract numbers using regex
     const getNumber = (regex, defaultValue = 0) => {
-      const match = text.match(regex);
+      const match = content.match(regex);
       if (!match) return defaultValue;
       const num = parseFloat(match[1].replace(/[^\d.]/g, ''));
       return isNaN(num) ? defaultValue : num;
@@ -390,13 +375,12 @@ async function fetchTensorStats(collection) {
       priceChange24h: getNumber(/Change[^0-9%]*?([-\d,.]+)/i) / 100
     };
 
+    await browser.close();
     return stats;
   } catch (error) {
+    if (browser) await browser.close();
     console.error('Error fetching Tensor stats:', error);
     throw error;
-  } finally {
-    if (page) await page.close().catch(console.error);
-    if (browser) await browser.close().catch(console.error);
   }
 }
 
