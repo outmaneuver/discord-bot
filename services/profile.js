@@ -337,13 +337,16 @@ async function fetchTensorStats(collection) {
 
     const slug = slugMap[collection] || collection;
     
-    // Use exact Chrome path from Heroku buildpack
     browser = await puppeteer.launch({
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--single-process'
+        '--single-process',
+        '--disable-gpu',
+        '--disable-software-rasterizer',
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins,site-per-process'
       ],
       executablePath: '/app/.apt/usr/bin/google-chrome',
       headless: true
@@ -351,17 +354,18 @@ async function fetchTensorStats(collection) {
     
     page = await browser.newPage();
     
-    // Set a reasonable timeout
-    await page.setDefaultNavigationTimeout(30000);
+    // Set viewport and user agent
+    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36');
     
-    // Navigate to the page
-    await page.goto(`https://www.tensor.trade/trade/${slug}`);
-    
-    // Wait for content to load
-    await page.waitForFunction(() => {
-      const text = document.body.innerText;
-      return text.includes('Floor') && text.includes('Volume');
-    }, { timeout: 20000 });
+    // Navigate and wait for network idle
+    await page.goto(`https://www.tensor.trade/trade/${slug}`, {
+      waitUntil: ['networkidle0', 'domcontentloaded'],
+      timeout: 60000
+    });
+
+    // Wait for specific element that indicates stats are loaded
+    await page.waitForSelector('div[class*="price"], div[class*="floor"]', { timeout: 30000 });
 
     // Get text content
     const text = await page.evaluate(() => document.body.innerText);
