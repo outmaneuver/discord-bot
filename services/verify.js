@@ -124,9 +124,27 @@ async function verifyHolder(data, userId, client) {
   }
 }
 
+// Add caching and rate limiting
+const CACHE_TTL = 60 * 5; // 5 minutes
+const RPC_DELAY = 100; // 100ms between RPC calls
+
+// Helper function to add delay between RPC calls
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 async function verifyWallet(userId, walletAddress) {
   try {
     console.log('Verifying wallet:', { userId, walletAddress });
+
+    // Check cache first
+    const cacheKey = `verify:${walletAddress}`;
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      console.log('Using cached verification result');
+      return JSON.parse(cached);
+    }
+
+    // Add delay before RPC call
+    await delay(RPC_DELAY);
 
     // Get token accounts for wallet
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
@@ -172,21 +190,16 @@ async function verifyWallet(userId, walletAddress) {
     // Store wallet in Redis
     await redis.sadd(`wallets:${userId}`, walletAddress);
 
+    // Add delay before BUX balance check
+    await delay(RPC_DELAY);
+
     // Get BUX balance
     const buxBalance = await getBUXBalance(walletAddress);
 
     // Calculate daily reward based on holdings
     const dailyReward = calculateDailyReward(nftCounts);
 
-    console.log('Verification results:', {
-      userId,
-      walletAddress,
-      nftCounts,
-      buxBalance,
-      dailyReward
-    });
-
-    return {
+    const result = {
       userId,
       walletAddress,
       nftCounts,
@@ -194,6 +207,13 @@ async function verifyWallet(userId, walletAddress) {
       dailyReward,
       success: true
     };
+
+    // Cache the result
+    await redis.setex(cacheKey, CACHE_TTL, JSON.stringify(result));
+
+    console.log('Verification results:', result);
+
+    return result;
 
   } catch (error) {
     console.error('Error verifying wallet:', error);
