@@ -20,13 +20,10 @@ router.post('/verify', async (req, res) => {
       walletAddress,
     });
 
-    // Verify the wallet
+    // Verify the wallet first
     const result = await verifyWallet(req.session.user.id, walletAddress);
     
-    // Update Discord roles
-    await updateDiscordRoles(req.session.user.id, global.discordClient);
-    
-    // Add formatted response for frontend
+    // Format response before role update
     const formattedResponse = `
       **Wallet Verification Successful!**
       
@@ -48,13 +45,19 @@ router.post('/verify', async (req, res) => {
       **Daily reward - ${result.dailyReward || 0} BUX**
     `;
 
-    // Return success response with formatted message
+    // Send success response immediately
     res.json({ 
       success: true,
       message: 'Wallet verified successfully',
       formattedResponse,
       data: result
     });
+
+    // Update Discord roles in background
+    updateDiscordRoles(req.session.user.id, global.discordClient)
+      .catch(error => {
+        console.error('Background role update failed:', error);
+      });
 
   } catch (error) {
     console.error('Error in verify endpoint:', error);
