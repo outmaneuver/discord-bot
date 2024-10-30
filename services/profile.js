@@ -29,7 +29,7 @@ export async function updateUserProfile(channel, userId, client) {
     // Get BUX balance from Redis
     let totalBuxBalance = 0;
     for (const wallet of walletData.walletAddresses) {
-      const buxBalance = parseInt(await redis.get(`wallet:${wallet}:bux`) || '0');
+      const buxBalance = parseInt(await redis.get(`bux:${wallet}`) || '0');
       totalBuxBalance += buxBalance;
     }
 
@@ -45,10 +45,14 @@ export async function updateUserProfile(channel, userId, client) {
       .map(role => role.name)
       .join('\n');
 
-    const dailyReward = await calculateDailyReward(roleUpdateResult.nftCounts, totalBuxBalance);
+    // Use NFT counts from role update result
+    const nftCounts = roleUpdateResult.nftCounts;
+    console.log('NFT counts:', nftCounts);
+
+    const dailyReward = await calculateDailyReward(nftCounts, totalBuxBalance);
 
     const [timerData, timeUntilNext] = await Promise.all([
-      startOrUpdateDailyTimer(userId, roleUpdateResult.nftCounts, totalBuxBalance),
+      startOrUpdateDailyTimer(userId, nftCounts, totalBuxBalance),
       getTimeUntilNextClaim(userId)
     ]);
 
@@ -65,23 +69,23 @@ export async function updateUserProfile(channel, userId, client) {
         { 
           name: 'Main Collections', 
           value: [
-            `Fcked Catz: ${roleUpdateResult.nftCounts.fcked_catz}`,
-            `CelebCatz: ${roleUpdateResult.nftCounts.celebcatz}`,
-            `Money Monsters: ${roleUpdateResult.nftCounts.money_monsters}`,
-            `Money Monsters 3D: ${roleUpdateResult.nftCounts.money_monsters3d}`,
-            `AI Bitbots: ${roleUpdateResult.nftCounts.ai_bitbots}`
+            `Fcked Catz: ${nftCounts.fcked_catz}`,
+            `CelebCatz: ${nftCounts.celebcatz}`,
+            `Money Monsters: ${nftCounts.money_monsters}`,
+            `Money Monsters 3D: ${nftCounts.money_monsters3d}`,
+            `AI Bitbots: ${nftCounts.ai_bitbots}`
           ].join('\n') || 'No NFTs'
         },
         { name: '\u200B', value: '─'.repeat(40) },
         {
           name: 'A.I. Collabs',
           value: [
-            `A.I. Warriors: ${roleUpdateResult.nftCounts.warriors}`,
-            `A.I. Squirrels: ${roleUpdateResult.nftCounts.squirrels}`,
-            `A.I. Energy Apes: ${roleUpdateResult.nftCounts.energy_apes}`,
-            `RJCTD Bots: ${roleUpdateResult.nftCounts.rjctd_bots}`,
-            `Candy Bots: ${roleUpdateResult.nftCounts.candy_bots}`,
-            `Doodle Bots: ${roleUpdateResult.nftCounts.doodle_bots}`
+            `A.I. Warriors: ${nftCounts.warriors}`,
+            `A.I. Squirrels: ${nftCounts.squirrels}`,
+            `A.I. Energy Apes: ${nftCounts.energy_apes}`,
+            `RJCTD Bots: ${nftCounts.rjctd_bots}`,
+            `Candy Bots: ${nftCounts.candy_bots}`,
+            `Doodle Bots: ${nftCounts.doodle_bots}`
           ].join('\n') || 'No A.I. Collab NFTs'
         },
         { name: '\u200B', value: '─'.repeat(40) },
