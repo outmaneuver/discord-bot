@@ -364,3 +364,10 @@ export async function updateDiscordRoles(userId, client) {
     throw error;
   }
 }
+
+// Export all required functions
+export { redis };
+export { getBUXBalance };
+export { checkNFTOwnership };
+export { assignRoles };
+export { updateDiscordRoles };
