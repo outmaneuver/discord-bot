@@ -208,7 +208,6 @@ async function updateUserProfile(channel, userId, client) {
             'Money Monsters 3D': nftCounts.money_monsters3d.size,
             'AI Bitbots': nftCounts.ai_bitbots.size
           })
-            .filter(([_, count]) => count > 0)
             .map(([collection, count]) => `${collection}: ${count}`)
             .join('\n') || 'No NFTs'
         },
@@ -223,7 +222,6 @@ async function updateUserProfile(channel, userId, client) {
             'Candy Bots': nftCounts.candy_bots.size,
             'Doodle Bots': nftCounts.doodle_bots.size
           })
-            .filter(([_, count]) => count > 0)
             .map(([collection, count]) => `${collection}: ${count}`)
             .join('\n') || 'No A.I. Collab NFTs'
         },
