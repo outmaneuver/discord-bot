@@ -333,30 +333,11 @@ async function fetchTensorStats(collection) {
     };
 
     const slug = slugMap[collection] || collection;
-    const response = await fetch('https://graphql.tensor.trade/graphql', {
-      method: 'POST',
+    const response = await fetch(`https://api.tensor.so/api/v2/collections/${slug}`, {
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        query: `
-          query GetCollectionStats {
-            allCollections(filter: { slug: "${slug}" }) {
-              stats {
-                floor
-                listed
-                buyNow
-                volume24h
-                volumeAll
-                sales24h
-                totalSupply
-                floorChange24h
-              }
-            }
-          }
-        `
-      })
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+      }
     });
 
     if (!response.ok) {
@@ -368,17 +349,16 @@ async function fetchTensorStats(collection) {
 
     const data = await response.json();
     console.log('Tensor response:', data);  // Debug log
-    const stats = data.data.allCollections[0].stats;
 
     return {
-      floor: stats.floor || 0,
-      buyNowPrice: stats.buyNow || 0,
-      listedCount: stats.listed || 0,
-      totalSupply: stats.totalSupply || 0,
-      volume24hr: stats.volume24h || 0,
-      volumeAll: stats.volumeAll || 0,
-      sales24hr: stats.sales24h || 0,
-      priceChange24hr: stats.floorChange24h || 0
+      floor: data.stats.floor || 0,
+      buyNowPrice: data.stats.buyNow || 0,
+      listedCount: data.stats.listed || 0,
+      totalSupply: data.stats.totalSupply || 0,
+      volume24hr: data.stats.volume24h || 0,
+      volumeAll: data.stats.volumeAll || 0,
+      sales24hr: data.stats.sales24h || 0,
+      priceChange24hr: data.stats.floorChange24h || 0
     };
   } catch (error) {
     console.error('Error fetching Tensor stats:', error);
