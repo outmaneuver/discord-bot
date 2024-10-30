@@ -355,14 +355,14 @@ async function fetchTensorStats(collection) {
     await page.setViewport({ width: 1920, height: 1080 });
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36');
     
-    // Navigate to page
+    // Navigate to page and wait for network idle
     await page.goto(`https://www.tensor.trade/trade/${slug}`, {
-      waitUntil: 'networkidle0',
+      waitUntil: ['networkidle0', 'domcontentloaded'],
       timeout: 30000
     });
 
-    // Wait for page to load
-    await page.waitForTimeout(5000);
+    // Wait for any content to load
+    await page.waitForSelector('body', { timeout: 5000 });
 
     // Get page content
     const content = await page.evaluate(() => {
