@@ -43,28 +43,24 @@ export async function updateUserProfile(channel, userId, client) {
     // Get cached NFT data for each wallet
     for (const walletAddress of walletData.walletAddresses) {
       // Get cached NFT data
-      const cachedNFTs = await redis.hgetall(`wallet:${walletAddress}:nfts`);
+      const cachedNFTs = await redis.hgetall(`nfts:${walletAddress}`);
       if (cachedNFTs) {
-        Object.entries(cachedNFTs).forEach(([collection, mints]) => {
-          const mintArray = JSON.parse(mints);
-          mintArray.forEach(mint => {
-            if (hashlists.fckedCatz?.has(mint)) nftCounts.fcked_catz.add(mint);
-            if (hashlists.celebCatz?.has(mint)) nftCounts.celebcatz.add(mint);
-            if (hashlists.moneyMonsters?.has(mint)) nftCounts.money_monsters.add(mint);
-            if (hashlists.moneyMonsters3d?.has(mint)) nftCounts.money_monsters3d.add(mint);
-            if (hashlists.aiBitbots?.has(mint)) nftCounts.ai_bitbots.add(mint);
-            if (hashlists.warriors?.has(mint)) nftCounts.warriors.add(mint);
-            if (hashlists.squirrels?.has(mint)) nftCounts.squirrels.add(mint);
-            if (hashlists.rjctdBots?.has(mint)) nftCounts.rjctd_bots.add(mint);
-            if (hashlists.energyApes?.has(mint)) nftCounts.energy_apes.add(mint);
-            if (hashlists.doodleBots?.has(mint)) nftCounts.doodle_bots.add(mint);
-            if (hashlists.candyBots?.has(mint)) nftCounts.candy_bots.add(mint);
-          });
-        });
+        // Process each collection's NFTs
+        if (cachedNFTs.fcked_catz) nftCounts.fcked_catz = new Set([...nftCounts.fcked_catz, ...JSON.parse(cachedNFTs.fcked_catz)]);
+        if (cachedNFTs.celebcatz) nftCounts.celebcatz = new Set([...nftCounts.celebcatz, ...JSON.parse(cachedNFTs.celebcatz)]);
+        if (cachedNFTs.money_monsters) nftCounts.money_monsters = new Set([...nftCounts.money_monsters, ...JSON.parse(cachedNFTs.money_monsters)]);
+        if (cachedNFTs.money_monsters3d) nftCounts.money_monsters3d = new Set([...nftCounts.money_monsters3d, ...JSON.parse(cachedNFTs.money_monsters3d)]);
+        if (cachedNFTs.ai_bitbots) nftCounts.ai_bitbots = new Set([...nftCounts.ai_bitbots, ...JSON.parse(cachedNFTs.ai_bitbots)]);
+        if (cachedNFTs.warriors) nftCounts.warriors = new Set([...nftCounts.warriors, ...JSON.parse(cachedNFTs.warriors)]);
+        if (cachedNFTs.squirrels) nftCounts.squirrels = new Set([...nftCounts.squirrels, ...JSON.parse(cachedNFTs.squirrels)]);
+        if (cachedNFTs.rjctd_bots) nftCounts.rjctd_bots = new Set([...nftCounts.rjctd_bots, ...JSON.parse(cachedNFTs.rjctd_bots)]);
+        if (cachedNFTs.energy_apes) nftCounts.energy_apes = new Set([...nftCounts.energy_apes, ...JSON.parse(cachedNFTs.energy_apes)]);
+        if (cachedNFTs.doodle_bots) nftCounts.doodle_bots = new Set([...nftCounts.doodle_bots, ...JSON.parse(cachedNFTs.doodle_bots)]);
+        if (cachedNFTs.candy_bots) nftCounts.candy_bots = new Set([...nftCounts.candy_bots, ...JSON.parse(cachedNFTs.candy_bots)]);
       }
 
       // Get cached BUX balance
-      const buxBalance = parseInt(await redis.get(`wallet:${walletAddress}:bux`) || '0');
+      const buxBalance = parseInt(await redis.get(`bux:${walletAddress}`) || '0');
       totalBuxBalance += buxBalance;
     }
 
