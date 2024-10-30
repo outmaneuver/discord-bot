@@ -13,20 +13,20 @@ export async function calculateDailyReward(nftCounts, buxBalance) {
 
     // Add rewards based on NFT holdings
     if (nftCounts && typeof nftCounts === 'object') {
-      // Main collections
-      reward += (nftCounts.fcked_catz?.size || 0) * 2;      // 2 BUX per FCatz
-      reward += (nftCounts.celebcatz?.size || 0) * 8;       // 8 BUX per CelebCatz
-      reward += (nftCounts.money_monsters?.size || 0) * 2;   // 2 BUX per MM
-      reward += (nftCounts.money_monsters3d?.size || 0) * 4; // 4 BUX per MM3D
-      reward += (nftCounts.ai_bitbots?.size || 0) * 2;      // 2 BUX per AI Bitbot
+      // Main collections with updated rewards
+      reward += (nftCounts.fcked_catz?.size || 0) * 5;      // 5 BUX per FCatz
+      reward += (nftCounts.celebcatz?.size || 0) * 15;      // 15 BUX per CelebCatz
+      reward += (nftCounts.money_monsters?.size || 0) * 5;   // 5 BUX per MM
+      reward += (nftCounts.money_monsters3d?.size || 0) * 10; // 10 BUX per MM3D
+      reward += (nftCounts.ai_bitbots?.size || 0) * 3;      // 3 BUX per AI Bitbot
 
-      // AI Collabs
-      reward += (nftCounts.warriors?.size || 0) * 2;        // 2 BUX per Warriors
-      reward += (nftCounts.squirrels?.size || 0) * 2;       // 2 BUX per Squirrels
-      reward += (nftCounts.rjctd_bots?.size || 0) * 2;      // 2 BUX per RJCTD
-      reward += (nftCounts.energy_apes?.size || 0) * 2;     // 2 BUX per Energy Apes
-      reward += (nftCounts.doodle_bots?.size || 0) * 2;     // 2 BUX per Doodle Bots
-      reward += (nftCounts.candy_bots?.size || 0) * 2;      // 2 BUX per Candy Bots
+      // AI Collabs - 1 BUX each
+      reward += (nftCounts.warriors?.size || 0) * 1;        // 1 BUX per Warriors
+      reward += (nftCounts.squirrels?.size || 0) * 1;       // 1 BUX per Squirrels
+      reward += (nftCounts.rjctd_bots?.size || 0) * 1;      // 1 BUX per RJCTD
+      reward += (nftCounts.energy_apes?.size || 0) * 1;     // 1 BUX per Energy Apes
+      reward += (nftCounts.doodle_bots?.size || 0) * 1;     // 1 BUX per Doodle Bots
+      reward += (nftCounts.candy_bots?.size || 0) * 1;      // 1 BUX per Candy Bots
     }
 
     // Add rewards based on BUX balance
