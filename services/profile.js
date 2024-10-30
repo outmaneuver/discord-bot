@@ -342,30 +342,39 @@ async function fetchTensorStats(collection) {
         '--disable-dev-shm-usage',
         '--single-process',
         '--disable-gpu',
-        '--disable-software-rasterizer'
+        '--disable-software-rasterizer',
+        '--no-zygote',
+        '--disable-accelerated-2d-canvas'
       ],
       executablePath: '/app/.apt/usr/bin/google-chrome',
       headless: true,
-      timeout: 60000
+      timeout: 0
     });
     
     const page = await browser.newPage();
-    await page.setDefaultNavigationTimeout(60000);
+    await page.setDefaultNavigationTimeout(0);
     
-    // Navigate and wait for any content
-    await page.goto(`https://www.tensor.trade/trade/${slug}`);
-    await page.waitForSelector('body', { timeout: 30000 });
-    
-    // Wait a bit for dynamic content
-    await page.waitForTimeout(5000);
+    // Set viewport
+    await page.setViewport({
+      width: 1920,
+      height: 1080
+    });
 
-    // Get page content
-    const content = await page.content();
-    console.log('Page content:', content);
+    // Navigate with waitUntil: domcontentloaded
+    await page.goto(`https://www.tensor.trade/trade/${slug}`, {
+      waitUntil: 'domcontentloaded'
+    });
 
-    // Extract numbers from content using regex
+    // Wait for network idle
+    await page.waitForNetworkIdle();
+
+    // Get text content
+    const text = await page.evaluate(() => document.body.innerText);
+    console.log('Page text:', text);
+
+    // Extract numbers using regex
     const getNumber = (regex, defaultValue = 0) => {
-      const match = content.match(regex);
+      const match = text.match(regex);
       if (!match) return defaultValue;
       const num = parseFloat(match[1].replace(/[^\d.]/g, ''));
       return isNaN(num) ? defaultValue : num;
