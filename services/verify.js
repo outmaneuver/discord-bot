@@ -168,6 +168,11 @@ export async function getBUXBalance(walletAddress) {
       { programId: TOKEN_PROGRAM_ID }
     );
 
+    console.log('Raw token accounts:', JSON.stringify(tokenAccounts.value.map(acc => ({
+      mint: acc.account.data.parsed.info.mint,
+      amount: acc.account.data.parsed.info.tokenAmount.amount
+    })), null, 2));
+
     console.log('Token accounts found:', tokenAccounts.value.length);
     
     let buxBalance = 0;
