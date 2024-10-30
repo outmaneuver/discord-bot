@@ -6,7 +6,6 @@ import { startOrUpdateDailyTimer, getTimeUntilNextClaim, calculateDailyReward } 
 export async function getWalletData(userId) {
   try {
     const wallets = await redis.smembers(`wallets:${userId}`);
-    console.log(`Retrieved wallets for user ${userId}:`, wallets);
     return { walletAddresses: wallets || [] };
   } catch (error) {
     console.error('Error getting wallet data:', error);
@@ -20,19 +19,17 @@ export async function updateUserProfile(channel, userId, client) {
     if (!walletData || walletData.walletAddresses.length === 0) {
       throw new Error('No wallets connected');
     }
-    console.log(`Processing profile for user ${userId} with wallets:`, walletData.walletAddresses);
+
+    // Get NFT counts from updateDiscordRoles
+    const roleUpdate = await updateDiscordRoles(userId, client);
+    const nftCounts = roleUpdate.nftCounts;
 
     // Get BUX balance from Redis
     let totalBuxBalance = 0;
     for (const wallet of walletData.walletAddresses) {
-      const buxBalance = parseInt(await redis.get(`wallet:${wallet}:bux`) || '0');
+      const buxBalance = parseInt(await redis.get(`bux:${wallet}`) || '0');
       totalBuxBalance += buxBalance;
     }
-
-    // Update Discord roles and get NFT counts
-    const roleUpdateResult = await updateDiscordRoles(userId, client);
-    const nftCounts = roleUpdateResult.nftCounts;
-    console.log('NFT counts from role update:', nftCounts);
 
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
     if (!guild) throw new Error('Guild not found');
@@ -47,20 +44,18 @@ export async function updateUserProfile(channel, userId, client) {
       .join('\n');
 
     const dailyReward = await calculateDailyReward(nftCounts, totalBuxBalance);
-
     const [timerData, timeUntilNext] = await Promise.all([
       startOrUpdateDailyTimer(userId, nftCounts, totalBuxBalance),
       getTimeUntilNextClaim(userId)
     ]);
 
-    // Create and send embed
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
       .setTitle(`${member.user.username}'s BUX DAO Profile`)
       .addFields(
         { 
           name: 'Connected Wallets', 
-          value: walletData.walletAddresses.join('\n') || 'No wallets connected' 
+          value: walletData.walletAddresses.join('\n')
         },
         { name: '\u200B', value: '─'.repeat(40) },
         { 
@@ -71,7 +66,7 @@ export async function updateUserProfile(channel, userId, client) {
             `Money Monsters: ${nftCounts.money_monsters}`,
             `Money Monsters 3D: ${nftCounts.money_monsters3d}`,
             `AI Bitbots: ${nftCounts.ai_bitbots}`
-          ].join('\n') || 'No NFTs'
+          ].join('\n')
         },
         { name: '\u200B', value: '─'.repeat(40) },
         {
@@ -83,12 +78,12 @@ export async function updateUserProfile(channel, userId, client) {
             `RJCTD Bots: ${nftCounts.rjctd_bots}`,
             `Candy Bots: ${nftCounts.candy_bots}`,
             `Doodle Bots: ${nftCounts.doodle_bots}`
-          ].join('\n') || 'No A.I. Collab NFTs'
+          ].join('\n')
         },
         { name: '\u200B', value: '─'.repeat(40) },
         {
           name: 'Server Roles',
-          value: roles || 'No roles'
+          value: roles
         },
         { name: '\u200B', value: '─'.repeat(40) },
         { 
