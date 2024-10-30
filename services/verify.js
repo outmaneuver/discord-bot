@@ -142,10 +142,10 @@ export async function checkNFTOwnership(walletAddress) {
       ai_bitbots: new Set(),
       warriors: new Set(),
       squirrels: new Set(),
-      rjctdBots: new Set(),
-      energyApes: new Set(),
-      doodleBots: new Set(),
-      candyBots: new Set()
+      rjctd_bots: new Set(),
+      energy_apes: new Set(),
+      doodle_bots: new Set(),
+      candy_bots: new Set()
     };
 
     // Check each token against hashlists - no RPC calls
@@ -155,33 +155,33 @@ export async function checkNFTOwnership(walletAddress) {
       
       if (amount > 0) {
         // Check against each hashlist
-        if (hashlists.fckedCatz.has(mint)) nftCounts.fcked_catz.add(mint);
-        if (hashlists.celebCatz.has(mint)) nftCounts.celebcatz.add(mint);
-        if (hashlists.moneyMonsters.has(mint)) nftCounts.money_monsters.add(mint);
-        if (hashlists.moneyMonsters3d.has(mint)) nftCounts.money_monsters3d.add(mint);
-        if (hashlists.aiBitbots.has(mint)) nftCounts.ai_bitbots.add(mint);
-        if (hashlists.warriors.has(mint)) nftCounts.warriors.add(mint);
-        if (hashlists.squirrels.has(mint)) nftCounts.squirrels.add(mint);
-        if (hashlists.rjctdBots.has(mint)) nftCounts.rjctd_bots.add(mint);
-        if (hashlists.energyApes.has(mint)) nftCounts.energy_apes.add(mint);
-        if (hashlists.doodleBots.has(mint)) nftCounts.doodle_bots.add(mint);
-        if (hashlists.candyBots.has(mint)) nftCounts.candy_bots.add(mint);
+        if (hashlists.fckedCatz?.has(mint)) nftCounts.fcked_catz.add(mint);
+        if (hashlists.celebCatz?.has(mint)) nftCounts.celebcatz.add(mint);
+        if (hashlists.moneyMonsters?.has(mint)) nftCounts.money_monsters.add(mint);
+        if (hashlists.moneyMonsters3d?.has(mint)) nftCounts.money_monsters3d.add(mint);
+        if (hashlists.aiBitbots?.has(mint)) nftCounts.ai_bitbots.add(mint);
+        if (hashlists.warriors?.has(mint)) nftCounts.warriors.add(mint);
+        if (hashlists.squirrels?.has(mint)) nftCounts.squirrels.add(mint);
+        if (hashlists.rjctdBots?.has(mint)) nftCounts.rjctd_bots.add(mint);
+        if (hashlists.energyApes?.has(mint)) nftCounts.energy_apes.add(mint);
+        if (hashlists.doodleBots?.has(mint)) nftCounts.doodle_bots.add(mint);
+        if (hashlists.candyBots?.has(mint)) nftCounts.candy_bots.add(mint);
       }
     }
 
     // Convert Sets to Arrays for response
     return {
-      fcked_catz: Array.from(nftCounts.fcked_catz),
-      celebcatz: Array.from(nftCounts.celebcatz),
-      money_monsters: Array.from(nftCounts.money_monsters),
-      money_monsters3d: Array.from(nftCounts.money_monsters3d),
-      ai_bitbots: Array.from(nftCounts.ai_bitbots),
-      warriors: Array.from(nftCounts.warriors),
-      squirrels: Array.from(nftCounts.squirrels),
-      rjctd_bots: Array.from(nftCounts.rjctd_bots),
-      energy_apes: Array.from(nftCounts.energy_apes),
-      doodle_bots: Array.from(nftCounts.doodle_bots),
-      candy_bots: Array.from(nftCounts.candy_bots)
+      fcked_catz: Array.from(nftCounts.fcked_catz || new Set()),
+      celebcatz: Array.from(nftCounts.celebcatz || new Set()),
+      money_monsters: Array.from(nftCounts.money_monsters || new Set()),
+      money_monsters3d: Array.from(nftCounts.money_monsters3d || new Set()),
+      ai_bitbots: Array.from(nftCounts.ai_bitbots || new Set()),
+      warriors: Array.from(nftCounts.warriors || new Set()),
+      squirrels: Array.from(nftCounts.squirrels || new Set()),
+      rjctd_bots: Array.from(nftCounts.rjctd_bots || new Set()),
+      energy_apes: Array.from(nftCounts.energy_apes || new Set()),
+      doodle_bots: Array.from(nftCounts.doodle_bots || new Set()),
+      candy_bots: Array.from(nftCounts.candy_bots || new Set())
     };
 
   } catch (error) {
