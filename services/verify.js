@@ -170,34 +170,51 @@ export async function getBUXBalance(walletAddress) {
       return parseInt(cachedBalance);
     }
 
-    try {
-      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-        new PublicKey(walletAddress),
-        { programId: TOKEN_PROGRAM_ID }
-      );
+    // List of backup RPC endpoints
+    const rpcEndpoints = [
+      'https://api.mainnet-beta.solana.com',
+      'https://solana-api.projectserum.com',
+      'https://rpc.ankr.com/solana'
+    ];
 
-      let buxBalance = 0;
-      for (const acc of tokenAccounts.value) {
-        const mint = acc.account.data.parsed.info.mint;
-        if (mint === process.env.BUX_TOKEN_MINT) {
-          const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
-          buxBalance += amount;
+    let lastError = null;
+    
+    // Try each endpoint until one works
+    for (const endpoint of rpcEndpoints) {
+      try {
+        const tempConnection = new Connection(endpoint);
+        const tokenAccounts = await tempConnection.getParsedTokenAccountsByOwner(
+          new PublicKey(walletAddress),
+          { programId: TOKEN_PROGRAM_ID }
+        );
+
+        let buxBalance = 0;
+        for (const acc of tokenAccounts.value) {
+          const mint = acc.account.data.parsed.info.mint;
+          if (mint === process.env.BUX_TOKEN_MINT) {
+            const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+            buxBalance += amount;
+          }
         }
+        
+        // Cache successful result
+        await redis.set(`bux:${walletAddress}`, buxBalance.toString());
+        console.log('Stored new BUX balance in Redis:', buxBalance);
+        
+        return buxBalance;
+      } catch (error) {
+        console.error(`RPC error with endpoint ${endpoint}:`, error);
+        lastError = error;
+        // Continue to next endpoint
       }
-      
-      // Cache the balance
-      await redis.set(`bux:${walletAddress}`, buxBalance.toString());
-      console.log('Stored new BUX balance in Redis:', buxBalance);
-      
-      return buxBalance;
-    } catch (rpcError) {
-      console.error('RPC error getting BUX balance:', rpcError);
-      // If RPC fails, return cached balance or 0
-      return parseInt(cachedBalance || '0');
     }
+
+    // If all endpoints fail, return cached balance or 0
+    console.error('All RPC endpoints failed:', lastError);
+    return parseInt(cachedBalance || '0');
   } catch (error) {
     console.error('Error getting BUX balance:', error);
-    return 0;
+    return parseInt(cachedBalance || '0');
   }
 }
 
