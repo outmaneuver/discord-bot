@@ -57,9 +57,26 @@ let hashlistsData = {
 async function loadHashlist(filename) {
   try {
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
-    const filePath = path.join(__dirname, 'config', 'hashlists', filename);
+    let filePath;
+    
+    // Handle AI collabs subdirectory
+    if (filename.startsWith('ai_collabs/')) {
+      filePath = path.join(__dirname, 'config', 'hashlists', filename);
+    } else {
+      filePath = path.join(__dirname, 'config', 'hashlists', filename);
+    }
+    
+    console.log('Loading hashlist:', filePath);
     const data = await fs.readFile(filePath, 'utf8');
-    return new Set(JSON.parse(data));
+    const jsonData = JSON.parse(data);
+    
+    // Handle different JSON structures
+    const addresses = Array.isArray(jsonData) ? jsonData : 
+                     jsonData.mints || jsonData.addresses || 
+                     Object.keys(jsonData);
+                     
+    console.log(`Loaded ${addresses.length} addresses from ${filename}`);
+    return new Set(addresses);
   } catch (error) {
     console.error(`Error loading hashlist ${filename}:`, error);
     return new Set();
@@ -124,22 +141,44 @@ async function startApp() {
     await redis.connect();
     console.log('Redis connected successfully');
 
-    // Load all hashlists
+    // Load all hashlists with proper paths
+    console.log('Loading hashlists...');
+    
+    // Main collections
     hashlistsData.fckedCatz = await loadHashlist('fcked_catz.json');
     hashlistsData.celebCatz = await loadHashlist('celebcatz.json');
     hashlistsData.moneyMonsters = await loadHashlist('money_monsters.json');
     hashlistsData.moneyMonsters3d = await loadHashlist('money_monsters3d.json');
     hashlistsData.aiBitbots = await loadHashlist('ai_bitbots.json');
+    
+    // Top holders
     hashlistsData.mmTop10 = await loadHashlist('MM_top10.json');
     hashlistsData.mm3dTop10 = await loadHashlist('MM3D_top10.json');
     
-    // Load AI Collabs hashlists
+    // AI Collabs with proper paths
     hashlistsData.warriors = await loadHashlist('ai_collabs/warriors.json');
     hashlistsData.squirrels = await loadHashlist('ai_collabs/squirrels.json');
     hashlistsData.rjctdBots = await loadHashlist('ai_collabs/rjctd_bots.json');
     hashlistsData.energyApes = await loadHashlist('ai_collabs/energy_apes.json');
     hashlistsData.doodleBots = await loadHashlist('ai_collabs/doodle_bot.json');
     hashlistsData.candyBots = await loadHashlist('ai_collabs/candy_bots.json');
+
+    // Log loaded hashlist sizes
+    console.log('Loaded hashlist sizes:', {
+      fckedCatz: hashlistsData.fckedCatz.size,
+      celebCatz: hashlistsData.celebCatz.size,
+      moneyMonsters: hashlistsData.moneyMonsters.size,
+      moneyMonsters3d: hashlistsData.moneyMonsters3d.size,
+      aiBitbots: hashlistsData.aiBitbots.size,
+      warriors: hashlistsData.warriors.size,
+      squirrels: hashlistsData.squirrels.size,
+      rjctdBots: hashlistsData.rjctdBots.size,
+      energyApes: hashlistsData.energyApes.size,
+      doodleBots: hashlistsData.doodleBots.size,
+      candyBots: hashlistsData.candyBots.size,
+      mmTop10: hashlistsData.mmTop10.size,
+      mm3dTop10: hashlistsData.mm3dTop10.size
+    });
 
     // Update hashlists in verify service
     updateHashlists(hashlistsData);
