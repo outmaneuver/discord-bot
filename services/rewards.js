@@ -6,23 +6,39 @@ const redis = new Redis(process.env.REDIS_URL, {
   }
 });
 
-export async function calculateDailyReward(userId, nftCounts, buxBalance) {
-  // Base reward
-  let reward = 10;
+export async function calculateDailyReward(nftCounts, buxBalance) {
+  try {
+    // Base reward
+    let reward = 10;
 
-  // Add rewards based on NFT holdings
-  reward += nftCounts.fcked_catz.length * 2;
-  reward += nftCounts.celebcatz.length * 3;
-  reward += nftCounts.money_monsters.length * 2;
-  reward += nftCounts.money_monsters3d.length * 3;
-  reward += nftCounts.ai_bitbots.length * 2;
+    // Add rewards based on NFT holdings
+    if (nftCounts && typeof nftCounts === 'object') {
+      // Main collections
+      reward += (nftCounts.fcked_catz?.size || 0) * 2;      // 2 BUX per FCatz
+      reward += (nftCounts.celebcatz?.size || 0) * 8;       // 8 BUX per CelebCatz
+      reward += (nftCounts.money_monsters?.size || 0) * 2;   // 2 BUX per MM
+      reward += (nftCounts.money_monsters3d?.size || 0) * 4; // 4 BUX per MM3D
+      reward += (nftCounts.ai_bitbots?.size || 0) * 2;      // 2 BUX per AI Bitbot
 
-  // Add rewards based on BUX balance
-  if (buxBalance >= 1000) reward += 5;
-  if (buxBalance >= 10000) reward += 10;
-  if (buxBalance >= 100000) reward += 20;
+      // AI Collabs
+      reward += (nftCounts.warriors?.size || 0) * 2;        // 2 BUX per Warriors
+      reward += (nftCounts.squirrels?.size || 0) * 2;       // 2 BUX per Squirrels
+      reward += (nftCounts.rjctd_bots?.size || 0) * 2;      // 2 BUX per RJCTD
+      reward += (nftCounts.energy_apes?.size || 0) * 2;     // 2 BUX per Energy Apes
+      reward += (nftCounts.doodle_bots?.size || 0) * 2;     // 2 BUX per Doodle Bots
+      reward += (nftCounts.candy_bots?.size || 0) * 2;      // 2 BUX per Candy Bots
+    }
 
-  return reward;
+    // Add rewards based on BUX balance
+    if (buxBalance >= 1000) reward += 5;
+    if (buxBalance >= 10000) reward += 10;
+    if (buxBalance >= 100000) reward += 20;
+
+    return reward;
+  } catch (error) {
+    console.error('Error calculating daily reward:', error);
+    return 10; // Return base reward on error
+  }
 }
 
 export async function startOrUpdateDailyTimer(userId, nftCounts, buxBalance) {
@@ -45,7 +61,7 @@ export async function startOrUpdateDailyTimer(userId, nftCounts, buxBalance) {
   const timeDiff = now - parseInt(lastCheck);
   if (timeDiff >= 24 * 60 * 60 * 1000) {
     // 24 hours passed, add reward to claim balance
-    const reward = await calculateDailyReward(userId, nftCounts, buxBalance);
+    const reward = await calculateDailyReward(nftCounts, buxBalance);
     const currentClaim = parseInt(await redis.get(claimKey) || '0');
     await redis.set(claimKey, currentClaim + reward);
     await redis.set(key, now);
