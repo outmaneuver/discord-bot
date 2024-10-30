@@ -126,16 +126,103 @@ async function verifyHolder(data, userId, client) {
 
 async function verifyWallet(userId, walletAddress) {
   try {
+    console.log('Verifying wallet:', { userId, walletAddress });
+
+    // Get token accounts for wallet
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      new PublicKey(walletAddress),
+      { programId: TOKEN_PROGRAM_ID }
+    );
+
+    // Initialize NFT counts
+    const nftCounts = {
+      fcked_catz: 0,
+      celebcatz: 0,
+      money_monsters: 0,
+      money_monsters3d: 0,
+      ai_bitbots: 0,
+      warriors: 0,
+      squirrels: 0,
+      rjctd_bots: 0,
+      energy_apes: 0,
+      doodle_bots: 0,
+      candy_bots: 0
+    };
+
+    // Check each token account against hashlists
+    for (const acc of tokenAccounts.value) {
+      const mint = acc.account.data.parsed.info.mint;
+      const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+      
+      if (amount > 0) {
+        if (hashlists.fckedCatz.has(mint)) nftCounts.fcked_catz++;
+        if (hashlists.celebCatz.has(mint)) nftCounts.celebcatz++;
+        if (hashlists.moneyMonsters.has(mint)) nftCounts.money_monsters++;
+        if (hashlists.moneyMonsters3d.has(mint)) nftCounts.money_monsters3d++;
+        if (hashlists.aiBitbots.has(mint)) nftCounts.ai_bitbots++;
+        if (hashlists.warriors.has(mint)) nftCounts.warriors++;
+        if (hashlists.squirrels.has(mint)) nftCounts.squirrels++;
+        if (hashlists.rjctdBots.has(mint)) nftCounts.rjctd_bots++;
+        if (hashlists.energyApes.has(mint)) nftCounts.energy_apes++;
+        if (hashlists.doodleBots.has(mint)) nftCounts.doodle_bots++;
+        if (hashlists.candyBots.has(mint)) nftCounts.candy_bots++;
+      }
+    }
+
+    // Store wallet in Redis
     await redis.sadd(`wallets:${userId}`, walletAddress);
+
+    // Get BUX balance
+    const buxBalance = await getBUXBalance(walletAddress);
+
+    // Calculate daily reward based on holdings
+    const dailyReward = calculateDailyReward(nftCounts);
+
+    console.log('Verification results:', {
+      userId,
+      walletAddress,
+      nftCounts,
+      buxBalance,
+      dailyReward
+    });
+
     return {
       userId,
       walletAddress,
+      nftCounts,
+      buxBalance,
+      dailyReward,
       success: true
     };
+
   } catch (error) {
     console.error('Error verifying wallet:', error);
     throw error;
   }
+}
+
+// Helper function to calculate daily reward
+function calculateDailyReward(nftCounts) {
+  let reward = 0;
+  
+  // Add reward for each NFT type
+  reward += nftCounts.fcked_catz * 10;
+  reward += nftCounts.celebcatz * 15;
+  reward += nftCounts.money_monsters * 20;
+  reward += nftCounts.money_monsters3d * 25;
+  reward += nftCounts.ai_bitbots * 30;
+  
+  // AI collabs reward
+  const aiCollabs = nftCounts.warriors + 
+                   nftCounts.squirrels + 
+                   nftCounts.rjctd_bots +
+                   nftCounts.energy_apes + 
+                   nftCounts.doodle_bots +
+                   nftCounts.candy_bots;
+                   
+  reward += aiCollabs * 5;
+
+  return reward;
 }
 
 async function updateDiscordRoles(userId, client) {
