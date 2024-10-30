@@ -43,18 +43,36 @@ export async function updateUserProfile(channel, userId, client) {
     // Get cached NFT data for each wallet
     for (const walletAddress of walletData.walletAddresses) {
       // Get cached NFT data
-      const collections = ['fcked_catz', 'celebcatz', 'money_monsters', 'money_monsters3d', 'ai_bitbots', 
-                         'warriors', 'squirrels', 'rjctd_bots', 'energy_apes', 'doodle_bots', 'candy_bots'];
-      
-      for (const collection of collections) {
-        const nfts = await redis.smembers(`nfts:${walletAddress}:${collection}`);
-        if (nfts && nfts.length > 0) {
-          nfts.forEach(mint => nftCounts[collection].add(mint));
-        }
+      const walletNFTs = await redis.hgetall(`wallet:${walletAddress}:nfts`);
+      if (walletNFTs) {
+        Object.entries(walletNFTs).forEach(([collection, mints]) => {
+          try {
+            const mintArray = JSON.parse(mints);
+            if (Array.isArray(mintArray)) {
+              mintArray.forEach(mint => {
+                switch(collection) {
+                  case 'fcked_catz': nftCounts.fcked_catz.add(mint); break;
+                  case 'celebcatz': nftCounts.celebcatz.add(mint); break;
+                  case 'money_monsters': nftCounts.money_monsters.add(mint); break;
+                  case 'money_monsters3d': nftCounts.money_monsters3d.add(mint); break;
+                  case 'ai_bitbots': nftCounts.ai_bitbots.add(mint); break;
+                  case 'warriors': nftCounts.warriors.add(mint); break;
+                  case 'squirrels': nftCounts.squirrels.add(mint); break;
+                  case 'rjctd_bots': nftCounts.rjctd_bots.add(mint); break;
+                  case 'energy_apes': nftCounts.energy_apes.add(mint); break;
+                  case 'doodle_bots': nftCounts.doodle_bots.add(mint); break;
+                  case 'candy_bots': nftCounts.candy_bots.add(mint); break;
+                }
+              });
+            }
+          } catch (error) {
+            console.error(`Error parsing mints for ${collection}:`, error);
+          }
+        });
       }
 
       // Get cached BUX balance
-      const buxBalance = parseInt(await redis.get(`bux:${walletAddress}`) || '0');
+      const buxBalance = parseInt(await redis.get(`wallet:${walletAddress}:bux`) || '0');
       totalBuxBalance += buxBalance;
     }
 
