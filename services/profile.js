@@ -1,8 +1,7 @@
-import { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import { updateDiscordRoles, checkNFTOwnership, getBUXBalance, hashlists } from './verify.js';
 import { redis } from '../config/redis.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim } from './rewards.js';
-import ms from 'ms';
 import { connection } from '../config/solana.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { PublicKey } from '@solana/web3.js';
@@ -10,13 +9,11 @@ import { PublicKey } from '@solana/web3.js';
 // Add caching for NFT data
 const NFT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-// Update getCachedNFTData function to properly handle NFT data
+// Helper functions
 async function getCachedNFTData(walletAddress) {
   try {
-    // Get cached data
     const cached = await redis.hgetall(`wallet:${walletAddress}:nfts`);
     if (cached && Object.keys(cached).length > 0) {
-      console.log('Using cached NFT data for wallet:', walletAddress);
       return {
         fcked_catz: JSON.parse(cached.fcked_catz || '[]'),
         celebcatz: JSON.parse(cached.celebcatz || '[]'),
@@ -27,10 +24,8 @@ async function getCachedNFTData(walletAddress) {
       };
     }
     
-    console.log('Cache miss - checking NFT ownership for wallet:', walletAddress);
     const data = await checkNFTOwnership(walletAddress);
     
-    // Cache the results
     const pipeline = redis.pipeline();
     pipeline.hset(`wallet:${walletAddress}:nfts`, {
       fcked_catz: JSON.stringify(data.fcked_catz),
@@ -48,12 +43,10 @@ async function getCachedNFTData(walletAddress) {
     console.error('Error getting cached NFT data:', error);
     throw error;
   }
-};
+}
 
-// Define functions without export keyword
 async function getWalletData(userId) {
   try {
-    // Get wallet addresses from Redis - use the correct key format
     const wallets = await redis.smembers(`wallets:${userId}`);
     console.log(`Retrieved wallets for user ${userId}:`, wallets);
     return { walletAddresses: wallets || [] };
@@ -65,7 +58,6 @@ async function getWalletData(userId) {
 
 async function addWallet(userId, walletAddress) {
   try {
-    // Use the correct key format
     await redis.sadd(`wallets:${userId}`, walletAddress);
     return true;
   } catch (error) {
@@ -76,7 +68,6 @@ async function addWallet(userId, walletAddress) {
 
 async function removeWallet(userId, walletAddress) {
   try {
-    // Use the correct key format
     await redis.srem(`wallets:${userId}`, walletAddress);
     return true;
   } catch (error) {
@@ -87,14 +78,12 @@ async function removeWallet(userId, walletAddress) {
 
 async function updateUserProfile(channel, userId, client) {
   try {
-    // Get wallet data
     const walletData = await getWalletData(userId);
     if (!walletData || !walletData.walletAddresses.length === 0) {
       throw new Error('No wallets connected');
     }
     console.log(`Processing profile for user ${userId} with wallets:`, walletData.walletAddresses);
 
-    // Initialize NFT counts with empty Sets
     const nftCounts = {
       fcked_catz: new Set(),
       celebcatz: new Set(),
@@ -111,22 +100,18 @@ async function updateUserProfile(channel, userId, client) {
 
     let totalBuxBalance = 0;
 
-    // Process each wallet
     for (const walletAddress of walletData.walletAddresses) {
-      // Get token accounts for wallet - single RPC call
       const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
         new PublicKey(walletAddress),
         { programId: TOKEN_PROGRAM_ID }
       );
 
-      // Get BUX balance
       for (const acc of tokenAccounts.value) {
         if (acc.account.data.parsed.info.mint === process.env.BUX_TOKEN_MINT) {
           totalBuxBalance += parseInt(acc.account.data.parsed.info.tokenAmount.amount);
         }
       }
 
-      // Get all token mints from wallet
       const walletMints = new Set();
       for (const acc of tokenAccounts.value) {
         const mint = acc.account.data.parsed.info.mint;
@@ -136,7 +121,6 @@ async function updateUserProfile(channel, userId, client) {
         }
       }
 
-      // Check mints against hashlists - no RPC calls
       for (const mint of walletMints) {
         if (hashlists.fckedCatz?.has(mint)) nftCounts.fcked_catz.add(mint);
         if (hashlists.celebCatz?.has(mint)) nftCounts.celebcatz.add(mint);
@@ -161,21 +145,18 @@ async function updateUserProfile(channel, userId, client) {
       console.log('No role updates needed for user:', userId);
     }
 
-    // Get guild and member after role update
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
     if (!guild) throw new Error('Guild not found');
 
     const member = await guild.members.fetch(userId);
     if (!member) throw new Error('Member not found');
 
-    // Get updated roles after potential changes
     const roles = member.roles.cache
       .filter(role => role.name !== '@everyone')
       .sort((a, b) => b.position - a.position)
       .map(role => role.name)
       .join('\n');
 
-    // Calculate daily reward
     const dailyReward = calculateDailyReward({
       fcked_catz: nftCounts.fcked_catz.size,
       celebcatz: nftCounts.celebcatz.size,
@@ -185,7 +166,6 @@ async function updateUserProfile(channel, userId, client) {
       warriors: nftCounts.warriors.size
     });
 
-    // Get timer data
     const [timerData, timeUntilNext] = await Promise.all([
       startOrUpdateDailyTimer(userId, {
         fcked_catz: nftCounts.fcked_catz.size,
@@ -198,7 +178,6 @@ async function updateUserProfile(channel, userId, client) {
       getTimeUntilNextClaim(userId)
     ]);
 
-    // Create embed with updated roles
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
       .setTitle(`${member.user.username}'s BUX DAO Profile`)
@@ -258,7 +237,6 @@ async function updateUserProfile(channel, userId, client) {
         }
       );
 
-    // Send message
     await channel.send({ embeds: [embed] });
 
   } catch (error) {
@@ -267,12 +245,10 @@ async function updateUserProfile(channel, userId, client) {
   }
 }
 
-// Fix calculateDailyReward function
 function calculateDailyReward(nftCounts) {
   try {
     let reward = 0;
     
-    // Make sure we're working with numbers
     const counts = {
       fcked_catz: nftCounts.fcked_catz || 0,
       celebcatz: nftCounts.celebcatz || 0,
@@ -282,7 +258,6 @@ function calculateDailyReward(nftCounts) {
       warriors: nftCounts.warriors || 0
     };
     
-    // Calculate rewards
     reward += counts.fcked_catz * 2;      // 2 BUX per FCatz
     reward += counts.celebcatz * 8;       // 8 BUX per CelebCatz
     reward += counts.money_monsters * 2;   // 2 BUX per MM
@@ -297,10 +272,8 @@ function calculateDailyReward(nftCounts) {
   }
 }
 
-// Fix my.nfts command handler in aggregateWalletData
 async function aggregateWalletData(walletData) {
   try {
-    // Initialize with Sets to prevent duplicates
     const nftSets = {
       fcked_catz: new Set(),
       celebcatz: new Set(),
@@ -311,21 +284,17 @@ async function aggregateWalletData(walletData) {
     };
     let totalBuxBalance = 0;
 
-    // Get NFTs from all wallets
     for (const walletAddress of walletData.walletAddresses) {
       const nftData = await checkNFTOwnership(walletAddress);
       
-      // Add NFTs to Sets
       Object.entries(nftData).forEach(([collection, nfts]) => {
         nfts.forEach(nft => nftSets[collection].add(nft));
       });
 
-      // Get BUX balance
       const balance = await getBUXBalance(walletAddress);
       totalBuxBalance += balance;
     }
 
-    // Convert Sets to arrays
     const nftCounts = {
       fcked_catz: Array.from(nftSets.fcked_catz),
       celebcatz: Array.from(nftSets.celebcatz),
@@ -334,16 +303,6 @@ async function aggregateWalletData(walletData) {
       ai_bitbots: Array.from(nftSets.ai_bitbots),
       warriors: Array.from(nftSets.warriors)
     };
-
-    console.log('Aggregated NFT counts:', {
-      fcked_catz: nftCounts.fcked_catz.length,
-      celebcatz: nftCounts.celebcatz.length,
-      money_monsters: nftCounts.money_monsters.length,
-      money_monsters3d: nftCounts.money_monsters3d.length,
-      ai_bitbots: nftCounts.ai_bitbots.length,
-      warriors: nftCounts.warriors.length,
-      timestamp: new Date().toISOString()
-    });
 
     return {
       nftCounts,
@@ -355,7 +314,6 @@ async function aggregateWalletData(walletData) {
   }
 }
 
-// Add formatNFTCounts function
 function formatNFTCounts(nftCounts) {
   return Object.entries(nftCounts)
     .filter(([_, nfts]) => nfts.length > 0)
@@ -363,7 +321,7 @@ function formatNFTCounts(nftCounts) {
     .join('\n') || 'No NFTs found';
 }
 
-// Export all functions at the top
+// Export all functions
 export {
   getWalletData,
   addWallet,
