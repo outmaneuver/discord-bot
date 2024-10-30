@@ -8,6 +8,8 @@ import session from 'express-session';
 import authRouter from './routes/auth.js';
 import RedisStore from 'connect-redis';
 import { redis } from './config/redis.js';
+import { config } from './config/config.js';
+import { promises as fs } from 'fs';
 
 import { 
   verifyHolder, 
