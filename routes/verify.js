@@ -42,7 +42,7 @@ router.post('/verify', async (req, res) => {
                       (result.nftCounts?.doodle_bots || 0) + 
                       (result.nftCounts?.candy_bots || 0)}
 
-      Daily reward - ${result.dailyReward || 0} BUX
+      **Daily reward - ${result.dailyReward || 0} BUX**
     `;
 
     // Return success response with formatted message
