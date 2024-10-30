@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Initialize hashlists with empty Sets
-export let hashlists = {
+export const hashlists = {
   fckedCatz: new Set(),
   celebCatz: new Set(),
   moneyMonsters: new Set(),
