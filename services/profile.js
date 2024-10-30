@@ -329,30 +329,26 @@ async function fetchTensorStats(collection) {
         'Content-Type': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
         'Origin': 'https://www.tensor.trade',
-        'Referer': 'https://www.tensor.trade/'
+        'Referer': 'https://www.tensor.trade/',
+        'Accept': 'application/json'
       },
       body: JSON.stringify({
         query: `
-          query CollectionStats($slug: String!) {
-            collection(slug: $slug) {
-              stats {
-                floor
-                listed
-                buyNow
-                volume24h
-                volumeAll
-                sales24h
-                totalSupply
-                changes {
-                  floor24h
-                }
+          {
+            statsV2(slug: "${collection}") {
+              floor
+              listed
+              buyNow
+              volume24h
+              volumeAll
+              sales24h
+              totalSupply
+              changes {
+                floor24h
               }
             }
           }
-        `,
-        variables: {
-          slug: collection
-        }
+        `
       })
     });
 
@@ -362,7 +358,7 @@ async function fetchTensorStats(collection) {
 
     const data = await response.json();
     console.log('Tensor response:', data);  // Debug log
-    const stats = data.data.collection.stats;
+    const stats = data.data.statsV2;
 
     return {
       floor: stats.floor,
