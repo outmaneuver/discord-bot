@@ -1,5 +1,6 @@
 import { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } from 'discord.js';
-import { updateDiscordRoles, checkNFTOwnership, getBUXBalance, redis } from './verify.js';
+import { updateDiscordRoles, checkNFTOwnership, getBUXBalance } from './verify.js';
+import { redis } from '../config/redis.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim } from './rewards.js';
 import ms from 'ms';
 

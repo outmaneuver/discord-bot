@@ -3,6 +3,30 @@ import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { PublicKey } from '@solana/web3.js';
 import { redis } from '../config/redis.js';
 
+// Export redis so it can be imported by other modules
+export { redis };
+
+// Add getBUXBalance function and export it
+export async function getBUXBalance(walletAddress) {
+  try {
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      new PublicKey(walletAddress),
+      { programId: TOKEN_PROGRAM_ID }
+    );
+
+    let buxBalance = 0;
+    for (const acc of tokenAccounts.value) {
+      if (acc.account.data.parsed.info.mint === process.env.BUX_TOKEN_MINT) {
+        buxBalance += parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+      }
+    }
+    return buxBalance;
+  } catch (error) {
+    console.error('Error getting BUX balance:', error);
+    return 0;
+  }
+}
+
 // Initialize hashlists with hardcoded data
 let hashlists = {
   fckedCatz: new Set([
