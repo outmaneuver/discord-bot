@@ -332,51 +332,35 @@ async function fetchTensorStats(collection) {
     };
 
     const slug = slugMap[collection] || collection;
-    
-    // First get collection ID from search
-    const searchResponse = await fetch(`https://api.tensor.so/api/v1/search?q=${slug}`, {
+    const response = await fetch(`https://api.tensor.so/api/v2/collections?sortBy=volume24h&limit=100`, {
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
       }
     });
 
-    if (!searchResponse.ok) {
-      throw new Error(`Search error! status: ${searchResponse.status}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const searchData = await searchResponse.json();
-    console.log('Search response:', searchData); // Debug log
+    const data = await response.json();
+    console.log('Tensor response:', data); // Debug log
 
-    const collectionId = searchData.collections?.[0]?.id;
-    if (!collectionId) {
+    // Find our collection in the list
+    const collectionData = data.collections?.find(c => c.slug === slug);
+    if (!collectionData) {
       throw new Error('Collection not found');
     }
 
-    // Then get stats using collection ID
-    const statsResponse = await fetch(`https://api.tensor.so/api/v1/stats/${collectionId}`, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
-      }
-    });
-
-    if (!statsResponse.ok) {
-      throw new Error(`Stats error! status: ${statsResponse.status}`);
-    }
-
-    const data = await statsResponse.json();
-    console.log('Stats response:', data); // Debug log
-
     return {
-      floor: data.floor_price || 0,
-      buyNowPrice: data.floor_price || 0,
-      listedCount: data.listed_count || 0,
-      totalSupply: data.total_supply || 0,
-      volume24hr: data.volume_24h || 0,
-      volumeAll: data.volume_all || 0,
-      sales24hr: data.sales_24h || 0,
-      priceChange24hr: data.floor_change_24h || 0
+      floor: collectionData.floorPrice || 0,
+      buyNowPrice: collectionData.floorPrice || 0,
+      listedCount: collectionData.listedCount || 0,
+      totalSupply: collectionData.totalSupply || 0,
+      volume24hr: collectionData.volume24h || 0,
+      volumeAll: collectionData.volumeAll || 0,
+      sales24hr: collectionData.sales24h || 0,
+      priceChange24hr: collectionData.floorChange24h || 0
     };
   } catch (error) {
     console.error('Error fetching Tensor stats:', error);
