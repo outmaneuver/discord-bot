@@ -1,5 +1,5 @@
 import express from 'express';
-import { verifyWallet } from '../services/verify.js';
+import { verifyWallet, updateDiscordRoles } from '../services/verify.js';
 
 const router = express.Router();
 
@@ -22,6 +22,9 @@ router.post('/verify', async (req, res) => {
 
     // Verify the wallet
     const result = await verifyWallet(req.session.user.id, walletAddress);
+    
+    // Update Discord roles
+    await updateDiscordRoles(req.session.user.id, global.discordClient);
     
     // Add formatted response for frontend
     const formattedResponse = `

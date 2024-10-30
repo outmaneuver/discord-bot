@@ -231,6 +231,9 @@ async function startApp() {
     await client.login(config.discord.token);
     console.log('Discord bot logged in');
 
+    // After creating Discord client
+    global.discordClient = client;
+
   } catch (error) {
     console.error('Error starting application:', error);
     process.exit(1);
