@@ -21,23 +21,8 @@ export async function updateUserProfile(channel, userId, client) {
     }
 
     // Get NFT counts from updateDiscordRoles
-    const roleUpdateResult = await updateDiscordRoles(userId, client);
-    console.log('Role update result:', roleUpdateResult);
-
-    // Get NFT counts from the result object
-    const nftCounts = {
-      fcked_catz: roleUpdateResult.nftCounts.fcked_catz,
-      celebcatz: roleUpdateResult.nftCounts.celebcatz,
-      money_monsters: roleUpdateResult.nftCounts.money_monsters,
-      money_monsters3d: roleUpdateResult.nftCounts.money_monsters3d,
-      ai_bitbots: roleUpdateResult.nftCounts.ai_bitbots,
-      warriors: roleUpdateResult.nftCounts.warriors,
-      squirrels: roleUpdateResult.nftCounts.squirrels,
-      rjctd_bots: roleUpdateResult.nftCounts.rjctd_bots,
-      energy_apes: roleUpdateResult.nftCounts.energy_apes,
-      doodle_bots: roleUpdateResult.nftCounts.doodle_bots,
-      candy_bots: roleUpdateResult.nftCounts.candy_bots
-    };
+    const roleUpdate = await updateDiscordRoles(userId, client);
+    const nftCounts = roleUpdate.nftCounts;
 
     // Get BUX balance from Redis
     let totalBuxBalance = 0;
