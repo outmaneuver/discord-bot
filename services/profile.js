@@ -1,51 +1,13 @@
 import { EmbedBuilder } from 'discord.js';
-import { updateDiscordRoles, checkNFTOwnership, getBUXBalance, hashlists } from './verify.js';
+import { updateDiscordRoles, hashlists } from './verify.js';
 import { redis } from '../config/redis.js';
-import { startOrUpdateDailyTimer, getTimeUntilNextClaim } from './rewards.js';
+import { startOrUpdateDailyTimer, getTimeUntilNextClaim, calculateDailyReward } from './rewards.js';
 import { connection } from '../config/solana.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { PublicKey } from '@solana/web3.js';
 
-// Add caching for NFT data
-const NFT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-// Helper functions
-async function getCachedNFTData(walletAddress) {
-  try {
-    const cached = await redis.hgetall(`wallet:${walletAddress}:nfts`);
-    if (cached && Object.keys(cached).length > 0) {
-      return {
-        fcked_catz: JSON.parse(cached.fcked_catz || '[]'),
-        celebcatz: JSON.parse(cached.celebcatz || '[]'),
-        money_monsters: JSON.parse(cached.money_monsters || '[]'),
-        money_monsters3d: JSON.parse(cached.money_monsters3d || '[]'),
-        ai_bitbots: JSON.parse(cached.ai_bitbots || '[]'),
-        warriors: JSON.parse(cached.warriors || '[]')
-      };
-    }
-    
-    const data = await checkNFTOwnership(walletAddress);
-    
-    const pipeline = redis.pipeline();
-    pipeline.hset(`wallet:${walletAddress}:nfts`, {
-      fcked_catz: JSON.stringify(data.fcked_catz),
-      celebcatz: JSON.stringify(data.celebcatz),
-      money_monsters: JSON.stringify(data.money_monsters),
-      money_monsters3d: JSON.stringify(data.money_monsters3d),
-      ai_bitbots: JSON.stringify(data.ai_bitbots),
-      warriors: JSON.stringify(data.warriors)
-    });
-    pipeline.expire(`wallet:${walletAddress}:nfts`, NFT_CACHE_TTL / 1000);
-    await pipeline.exec();
-    
-    return data;
-  } catch (error) {
-    console.error('Error getting cached NFT data:', error);
-    throw error;
-  }
-}
-
-async function getWalletData(userId) {
+// Only export what's needed
+export async function getWalletData(userId) {
   try {
     const wallets = await redis.smembers(`wallets:${userId}`);
     console.log(`Retrieved wallets for user ${userId}:`, wallets);
@@ -56,27 +18,7 @@ async function getWalletData(userId) {
   }
 }
 
-async function addWallet(userId, walletAddress) {
-  try {
-    await redis.sadd(`wallets:${userId}`, walletAddress);
-    return true;
-  } catch (error) {
-    console.error('Error adding wallet:', error);
-    return false;
-  }
-}
-
-async function removeWallet(userId, walletAddress) {
-  try {
-    await redis.srem(`wallets:${userId}`, walletAddress);
-    return true;
-  } catch (error) {
-    console.error('Error removing wallet:', error);
-    return false;
-  }
-}
-
-async function updateUserProfile(channel, userId, client) {
+export async function updateUserProfile(channel, userId, client) {
   try {
     const walletData = await getWalletData(userId);
     if (!walletData || !walletData.walletAddresses.length === 0) {
@@ -244,90 +186,3 @@ async function updateUserProfile(channel, userId, client) {
     await channel.send('An error occurred while processing your command. Please try again later.');
   }
 }
-
-function calculateDailyReward(nftCounts) {
-  try {
-    let reward = 0;
-    
-    const counts = {
-      fcked_catz: nftCounts.fcked_catz || 0,
-      celebcatz: nftCounts.celebcatz || 0,
-      money_monsters: nftCounts.money_monsters || 0,
-      money_monsters3d: nftCounts.money_monsters3d || 0,
-      ai_bitbots: nftCounts.ai_bitbots || 0,
-      warriors: nftCounts.warriors || 0
-    };
-    
-    reward += counts.fcked_catz * 2;      // 2 BUX per FCatz
-    reward += counts.celebcatz * 8;       // 8 BUX per CelebCatz
-    reward += counts.money_monsters * 2;   // 2 BUX per MM
-    reward += counts.money_monsters3d * 4; // 4 BUX per MM3D
-    reward += counts.ai_bitbots * 1;      // 1 BUX per AI Bitbot
-    reward += counts.warriors * 2;         // 2 BUX per Warriors NFT
-
-    return reward;
-  } catch (error) {
-    console.error('Error calculating daily reward:', error);
-    return 0;
-  }
-}
-
-async function aggregateWalletData(walletData) {
-  try {
-    const nftSets = {
-      fcked_catz: new Set(),
-      celebcatz: new Set(),
-      money_monsters: new Set(),
-      money_monsters3d: new Set(),
-      ai_bitbots: new Set(),
-      warriors: new Set()
-    };
-    let totalBuxBalance = 0;
-
-    for (const walletAddress of walletData.walletAddresses) {
-      const nftData = await checkNFTOwnership(walletAddress);
-      
-      Object.entries(nftData).forEach(([collection, nfts]) => {
-        nfts.forEach(nft => nftSets[collection].add(nft));
-      });
-
-      const balance = await getBUXBalance(walletAddress);
-      totalBuxBalance += balance;
-    }
-
-    const nftCounts = {
-      fcked_catz: Array.from(nftSets.fcked_catz),
-      celebcatz: Array.from(nftSets.celebcatz),
-      money_monsters: Array.from(nftSets.money_monsters),
-      money_monsters3d: Array.from(nftSets.money_monsters3d),
-      ai_bitbots: Array.from(nftSets.ai_bitbots),
-      warriors: Array.from(nftSets.warriors)
-    };
-
-    return {
-      nftCounts,
-      buxBalance: totalBuxBalance
-    };
-  } catch (error) {
-    console.error('Error in aggregateWalletData:', error);
-    throw error;
-  }
-}
-
-function formatNFTCounts(nftCounts) {
-  return Object.entries(nftCounts)
-    .filter(([_, nfts]) => nfts.length > 0)
-    .map(([collection, nfts]) => `${collection}: ${nfts.length}`)
-    .join('\n') || 'No NFTs found';
-}
-
-// Export all functions
-export {
-  getWalletData,
-  addWallet,
-  removeWallet,
-  updateUserProfile,
-  formatNFTCounts,
-  aggregateWalletData,
-  getCachedNFTData
-};

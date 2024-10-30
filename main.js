@@ -4,37 +4,22 @@ import express from 'express';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import { 
-  EmbedBuilder, 
-  ButtonBuilder, 
-  ActionRowBuilder, 
-  ButtonStyle 
-} from 'discord.js';
 import session from 'express-session';
 import authRouter from './routes/auth.js';
 import RedisStore from 'connect-redis';
 import { redis } from './config/redis.js';
-import fs from 'fs/promises';
 
 import { 
   verifyHolder, 
-  updateDiscordRoles, 
+  updateDiscordRoles,
   updateHashlists,
   getBUXBalance 
 } from './services/verify.js';
 
 import { 
   updateUserProfile, 
-  getWalletData, 
-  aggregateWalletData, 
-  formatNFTCounts 
+  getWalletData
 } from './services/profile.js';
-
-import { config } from './config/config.js';
-import {
-  startOrUpdateDailyTimer,
-  getTimeUntilNextClaim
-} from './services/rewards.js';
 
 // Initialize hashlists with all collections
 let hashlists = {
