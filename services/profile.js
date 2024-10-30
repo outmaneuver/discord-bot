@@ -2,6 +2,7 @@ import { EmbedBuilder } from 'discord.js';
 import { updateDiscordRoles, getBUXBalance } from './verify.js';
 import { redis } from '../config/redis.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim, calculateDailyReward } from './rewards.js';
+import puppeteer from 'puppeteer';
 
 export async function getWalletData(userId) {
   try {
@@ -332,36 +333,36 @@ async function fetchTensorStats(collection) {
     };
 
     const slug = slugMap[collection] || collection;
-    const response = await fetch(`https://api.tensor.so/api/v2/collections?sortBy=volume24h&limit=100`, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
-      }
+    
+    // Launch browser
+    const browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    const page = await browser.newPage();
+    
+    // Go to collection page
+    await page.goto(`https://www.tensor.trade/trade/${slug}`, {
+      waitUntil: 'networkidle0'
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    // Wait for stats to load
+    await page.waitForSelector('[data-floor-price]');
 
-    const data = await response.json();
-    console.log('Tensor response:', data); // Debug log
+    // Extract stats
+    const stats = await page.evaluate(() => ({
+      floor: parseFloat(document.querySelector('[data-floor-price]').textContent) * 1e9,
+      buyNow: parseFloat(document.querySelector('[data-floor-price]').textContent) * 1e9,
+      listed: parseInt(document.querySelector('[data-listed-count]').textContent),
+      totalSupply: parseInt(document.querySelector('[data-total-supply]').textContent),
+      volume24h: parseFloat(document.querySelector('[data-volume-24h]').textContent) * 1e9,
+      volumeAll: parseFloat(document.querySelector('[data-volume-all]').textContent) * 1e9,
+      sales24h: parseInt(document.querySelector('[data-sales-24h]').textContent),
+      priceChange24h: parseFloat(document.querySelector('[data-price-change]').textContent) / 100
+    }));
 
-    // Find our collection in the list
-    const collectionData = data.collections?.find(c => c.slug === slug);
-    if (!collectionData) {
-      throw new Error('Collection not found');
-    }
+    await browser.close();
 
-    return {
-      floor: collectionData.floorPrice || 0,
-      buyNowPrice: collectionData.floorPrice || 0,
-      listedCount: collectionData.listedCount || 0,
-      totalSupply: collectionData.totalSupply || 0,
-      volume24hr: collectionData.volume24h || 0,
-      volumeAll: collectionData.volumeAll || 0,
-      sales24hr: collectionData.sales24h || 0,
-      priceChange24hr: collectionData.floorChange24h || 0
-    };
+    return stats;
   } catch (error) {
     console.error('Error fetching Tensor stats:', error);
     throw error;
@@ -385,7 +386,7 @@ export async function displayCatzInfo(channel) {
         },
         { 
           name: 'BUY NOW',
-          value: `${(stats.buyNowPrice/1e9).toFixed(3)} SOL`,
+          value: `${(stats.buyNow/1e9).toFixed(3)} SOL`,
           inline: true
         },
         {
@@ -395,12 +396,12 @@ export async function displayCatzInfo(channel) {
         },
         {
           name: 'LISTED/SUPPLY',
-          value: `${stats.listedCount}/${stats.totalSupply} (${((stats.listedCount/stats.totalSupply)*100).toFixed(2)}%)`,
+          value: `${stats.listed}/${stats.totalSupply} (${((stats.listed/stats.totalSupply)*100).toFixed(2)}%)`,
           inline: true
         },
         {
           name: 'VOLUME (24H)',
-          value: `${(stats.volume24hr/1e9).toFixed(2)} SOL`,
+          value: `${(stats.volume24h/1e9).toFixed(2)} SOL`,
           inline: true
         },
         {
@@ -410,12 +411,12 @@ export async function displayCatzInfo(channel) {
         },
         {
           name: 'SALES (24H)',
-          value: `${stats.sales24hr || 0}`,
+          value: `${stats.sales24h || 0}`,
           inline: true
         },
         {
           name: 'PRICE Δ (24H)',
-          value: `${stats.priceChange24hr ? (stats.priceChange24hr * 100).toFixed(2) + '%' : '0%'}`,
+          value: `${stats.priceChange24h ? (stats.priceChange24h * 100).toFixed(2) + '%' : '0%'}`,
           inline: true
         }
       )
@@ -444,7 +445,7 @@ export async function displayMMInfo(channel) {
         },
         { 
           name: 'BUY NOW',
-          value: `${(stats.buyNowPrice/1e9).toFixed(3)} SOL`,
+          value: `${(stats.buyNow/1e9).toFixed(3)} SOL`,
           inline: true
         },
         {
@@ -454,12 +455,12 @@ export async function displayMMInfo(channel) {
         },
         {
           name: 'LISTED/SUPPLY',
-          value: `${stats.listedCount}/${stats.totalSupply} (${((stats.listedCount/stats.totalSupply)*100).toFixed(2)}%)`,
+          value: `${stats.listed}/${stats.totalSupply} (${((stats.listed/stats.totalSupply)*100).toFixed(2)}%)`,
           inline: true
         },
         {
           name: 'VOLUME (24H)',
-          value: `${(stats.volume24hr/1e9).toFixed(2)} SOL`,
+          value: `${(stats.volume24h/1e9).toFixed(2)} SOL`,
           inline: true
         },
         {
@@ -469,12 +470,12 @@ export async function displayMMInfo(channel) {
         },
         {
           name: 'SALES (24H)',
-          value: `${stats.sales24hr || 0}`,
+          value: `${stats.sales24h || 0}`,
           inline: true
         },
         {
           name: 'PRICE Δ (24H)',
-          value: `${stats.priceChange24hr ? (stats.priceChange24hr * 100).toFixed(2) + '%' : '0%'}`,
+          value: `${stats.priceChange24h ? (stats.priceChange24h * 100).toFixed(2) + '%' : '0%'}`,
           inline: true
         }
       )
@@ -503,7 +504,7 @@ export async function displayMM3DInfo(channel) {
         },
         { 
           name: 'BUY NOW',
-          value: `${(stats.buyNowPrice/1e9).toFixed(3)} SOL`,
+          value: `${(stats.buyNow/1e9).toFixed(3)} SOL`,
           inline: true
         },
         {
@@ -513,12 +514,12 @@ export async function displayMM3DInfo(channel) {
         },
         {
           name: 'LISTED/SUPPLY',
-          value: `${stats.listedCount}/${stats.totalSupply} (${((stats.listedCount/stats.totalSupply)*100).toFixed(2)}%)`,
+          value: `${stats.listed}/${stats.totalSupply} (${((stats.listed/stats.totalSupply)*100).toFixed(2)}%)`,
           inline: true
         },
         {
           name: 'VOLUME (24H)',
-          value: `${(stats.volume24hr/1e9).toFixed(2)} SOL`,
+          value: `${(stats.volume24h/1e9).toFixed(2)} SOL`,
           inline: true
         },
         {
@@ -528,12 +529,12 @@ export async function displayMM3DInfo(channel) {
         },
         {
           name: 'SALES (24H)',
-          value: `${stats.sales24hr || 0}`,
+          value: `${stats.sales24h || 0}`,
           inline: true
         },
         {
           name: 'PRICE Δ (24H)',
-          value: `${stats.priceChange24hr ? (stats.priceChange24hr * 100).toFixed(2) + '%' : '0%'}`,
+          value: `${stats.priceChange24h ? (stats.priceChange24h * 100).toFixed(2) + '%' : '0%'}`,
           inline: true
         }
       )
@@ -562,7 +563,7 @@ export async function displayCelebInfo(channel) {
         },
         { 
           name: 'BUY NOW',
-          value: `${(stats.buyNowPrice/1e9).toFixed(3)} SOL`,
+          value: `${(stats.buyNow/1e9).toFixed(3)} SOL`,
           inline: true
         },
         {
@@ -572,12 +573,12 @@ export async function displayCelebInfo(channel) {
         },
         {
           name: 'LISTED/SUPPLY',
-          value: `${stats.listedCount}/${stats.totalSupply} (${((stats.listedCount/stats.totalSupply)*100).toFixed(2)}%)`,
+          value: `${stats.listed}/${stats.totalSupply} (${((stats.listed/stats.totalSupply)*100).toFixed(2)}%)`,
           inline: true
         },
         {
           name: 'VOLUME (24H)',
-          value: `${(stats.volume24hr/1e9).toFixed(2)} SOL`,
+          value: `${(stats.volume24h/1e9).toFixed(2)} SOL`,
           inline: true
         },
         {
@@ -587,12 +588,12 @@ export async function displayCelebInfo(channel) {
         },
         {
           name: 'SALES (24H)',
-          value: `${stats.sales24hr || 0}`,
+          value: `${stats.sales24h || 0}`,
           inline: true
         },
         {
           name: 'PRICE Δ (24H)',
-          value: `${stats.priceChange24hr ? (stats.priceChange24hr * 100).toFixed(2) + '%' : '0%'}`,
+          value: `${stats.priceChange24h ? (stats.priceChange24h * 100).toFixed(2) + '%' : '0%'}`,
           inline: true
         }
       )
@@ -621,7 +622,7 @@ export async function displayBitbotsInfo(channel) {
         },
         { 
           name: 'BUY NOW',
-          value: `${(stats.buyNowPrice/1e9).toFixed(3)} SOL`,
+          value: `${(stats.buyNow/1e9).toFixed(3)} SOL`,
           inline: true
         },
         {
@@ -631,12 +632,12 @@ export async function displayBitbotsInfo(channel) {
         },
         {
           name: 'LISTED/SUPPLY',
-          value: `${stats.listedCount}/${stats.totalSupply} (${((stats.listedCount/stats.totalSupply)*100).toFixed(2)}%)`,
+          value: `${stats.listed}/${stats.totalSupply} (${((stats.listed/stats.totalSupply)*100).toFixed(2)}%)`,
           inline: true
         },
         {
           name: 'VOLUME (24H)',
-          value: `${(stats.volume24hr/1e9).toFixed(2)} SOL`,
+          value: `${(stats.volume24h/1e9).toFixed(2)} SOL`,
           inline: true
         },
         {
@@ -646,12 +647,12 @@ export async function displayBitbotsInfo(channel) {
         },
         {
           name: 'SALES (24H)',
-          value: `${stats.sales24hr || 0}`,
+          value: `${stats.sales24h || 0}`,
           inline: true
         },
         {
           name: 'PRICE Δ (24H)',
-          value: `${stats.priceChange24hr ? (stats.priceChange24hr * 100).toFixed(2) + '%' : '0%'}`,
+          value: `${stats.priceChange24h ? (stats.priceChange24h * 100).toFixed(2) + '%' : '0%'}`,
           inline: true
         }
       )

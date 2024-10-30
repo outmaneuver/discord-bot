@@ -30,6 +30,7 @@
     "node-fetch": "^3.3.2",
     "passport": "^0.6.0",
     "passport-discord": "^0.1.4",
+    "puppeteer": "^23.6.1",
     "redis": "^4.6.10",
     "ws": "^8.18.0"
   },
