@@ -1,5 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
-import { updateDiscordRoles } from './verify.js';
+import { updateDiscordRoles, getBUXBalance } from './verify.js';
 import { redis } from '../config/redis.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim, calculateDailyReward } from './rewards.js';
 
