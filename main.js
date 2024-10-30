@@ -87,22 +87,22 @@ redis.on('ready', async () => {
 // Main application startup function
 async function startApp() {
   try {
-    // Start server first
+    // Get port from environment
     const port = process.env.PORT || 3000;
     const app = express();
     
-    // Initialize Express app
+    // Initialize Express app with middleware first
     app.use(cors());
     app.use(express.json());
     console.log('Express app created');
 
-    // Configure session with Redis store
+    // Configure Redis store
     const redisStore = new RedisStore({
       client: redis,
       prefix: 'session:'
     });
 
-    // Update session middleware configuration
+    // Add session middleware
     app.use(session({
       store: redisStore,
       secret: process.env.SESSION_SECRET || 'your-secret-key',
@@ -117,15 +117,14 @@ async function startApp() {
       }
     }));
 
-    // Add auth routes
+    // Add routes and middleware
     app.use('/auth', authRouter);
-
-    // Serve static files
+    
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
     app.use(express.static(path.join(__dirname, 'public')));
     app.use('/holder-verify', express.static(path.join(__dirname, 'public')));
 
-    // Add verify endpoint
+    // Add API endpoints
     app.post('/holder-verify/verify', async (req, res) => {
       try {
         const { walletAddress } = req.body;
@@ -173,19 +172,6 @@ Your roles have been updated! 🎉`;
       }
     });
 
-    // Add helper function to calculate daily reward
-    function calculateDailyReward(nftCounts) {
-      let reward = 0;
-      reward += nftCounts.fcked_catz.length * 2;      // 2 BUX per FCatz
-      reward += nftCounts.celebcatz.length * 8;       // 8 BUX per CelebCatz
-      reward += nftCounts.money_monsters.length * 2;   // 2 BUX per MM
-      reward += nftCounts.money_monsters3d.length * 4; // 4 BUX per MM3D
-      reward += nftCounts.ai_bitbots.length * 1;      // 1 BUX per AI Bitbot
-      reward += nftCounts.warriors.length * 2;      // 2 BUX per Warriors NFT
-      return reward;
-    }
-
-    // Route handler for verification page
     app.get(['/holder-verify', '/holder-verify/'], (req, res) => {
       try {
         res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -195,7 +181,6 @@ Your roles have been updated! 🎉`;
       }
     });
 
-    // Add store-wallet endpoint
     app.post('/store-wallet', async (req, res) => {
       try {
         const { walletAddress } = req.body;
@@ -229,17 +214,22 @@ Your roles have been updated! 🎉`;
       }
     });
 
-    // Error handler for 404s
+    // Error handler
     app.use((req, res) => {
       res.status(404).send('Page not found');
     });
 
-    // Start server first
-    const server = app.listen(port, () => {
-      console.log(`Server running on port ${port}`);
+    // Start server with Promise
+    await new Promise((resolve, reject) => {
+      const server = app.listen(port, () => {
+        console.log(`Server running on port ${port}`);
+        resolve(server);
+      }).on('error', reject);
     });
 
-    // Initialize Discord client after server is started
+    console.log('Server started successfully');
+
+    // Initialize Discord client
     const client = new Client({
       intents: [
         GatewayIntentBits.Guilds,
@@ -252,9 +242,8 @@ Your roles have been updated! 🎉`;
         GatewayIntentBits.DirectMessageReactions
       ]
     });
-    console.log('Discord client created');
 
-    // Start Discord client after server is running
+    // Login to Discord
     await client.login(config.discord.token);
     console.log('Discord bot logged in');
 
