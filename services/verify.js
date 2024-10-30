@@ -309,7 +309,7 @@ export async function updateDiscordRoles(userId, client) {
       candy_bots: new Set()
     };
 
-    // Get token accounts for each wallet - single RPC call per wallet
+    // Process each wallet
     for (const wallet of wallets) {
       const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
         new PublicKey(wallet),
@@ -346,12 +346,14 @@ export async function updateDiscordRoles(userId, client) {
     const currentRoles = new Set(member.roles.cache.map(role => role.id));
     const newRoles = new Set(currentRoles);
 
-    // Add roles based on NFT holdings
+    // Main collections
     if (nftCounts.fcked_catz.size > 0) newRoles.add(ROLES.FCKED_CATZ);
     if (nftCounts.celebcatz.size > 0) newRoles.add(ROLES.CELEBCATZ);
     if (nftCounts.money_monsters.size > 0) newRoles.add(ROLES.MONEY_MONSTERS);
     if (nftCounts.money_monsters3d.size > 0) newRoles.add(ROLES.MONEY_MONSTERS_3D);
     if (nftCounts.ai_bitbots.size > 0) newRoles.add(ROLES.AI_BITBOTS);
+
+    // AI Collabs - make sure to add all roles
     if (nftCounts.warriors.size > 0) newRoles.add(ROLES.WARRIORS);
     if (nftCounts.squirrels.size > 0) newRoles.add(ROLES.SQUIRRELS);
     if (nftCounts.rjctd_bots.size > 0) newRoles.add(ROLES.RJCTD_BOTS);
@@ -362,7 +364,10 @@ export async function updateDiscordRoles(userId, client) {
     // Update roles if they've changed
     if (!setsAreEqual(currentRoles, newRoles)) {
       await member.roles.set(Array.from(newRoles));
-      console.log('Updated roles for user:', userId);
+      console.log('Updated roles for user:', userId, {
+        added: [...newRoles].filter(r => !currentRoles.has(r)),
+        removed: [...currentRoles].filter(r => !newRoles.has(r))
+      });
       return true;
     }
 
