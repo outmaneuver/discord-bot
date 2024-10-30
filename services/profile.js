@@ -2,7 +2,7 @@ import { EmbedBuilder } from 'discord.js';
 import { updateDiscordRoles, getBUXBalance } from './verify.js';
 import { redis } from '../config/redis.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim, calculateDailyReward } from './rewards.js';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 
 export async function getWalletData(userId) {
   try {
@@ -337,9 +337,16 @@ async function fetchTensorStats(collection) {
 
     const slug = slugMap[collection] || collection;
     
+    // Use puppeteer-core instead of puppeteer
     browser = await puppeteer.launch({
-      args: ['--no-sandbox'],
-      headless: 'new'
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--single-process'
+      ],
+      executablePath: process.env.CHROME_BIN || '/usr/bin/chromium-browser',
+      headless: true
     });
     
     page = await browser.newPage();
@@ -358,6 +365,7 @@ async function fetchTensorStats(collection) {
 
     // Get text content
     const text = await page.evaluate(() => document.body.innerText);
+    console.log('Page text:', text);
 
     // Extract numbers using regex
     const getNumber = (regex, defaultValue = 0) => {
