@@ -342,7 +342,7 @@ async function fetchTensorStats(collection) {
       body: JSON.stringify({
         query: `
           query GetCollectionStats {
-            collection(slug: "${slug}") {
+            allCollections(filter: { slug: "${slug}" }) {
               stats {
                 floor
                 listed
@@ -368,7 +368,7 @@ async function fetchTensorStats(collection) {
 
     const data = await response.json();
     console.log('Tensor response:', data);  // Debug log
-    const stats = data.data.collection.stats;
+    const stats = data.data.allCollections[0].stats;
 
     return {
       floor: stats.floor || 0,
