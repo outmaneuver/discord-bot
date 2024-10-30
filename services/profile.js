@@ -352,28 +352,37 @@ async function fetchTensorStats(collection) {
       waitUntil: 'networkidle0'
     });
 
-    // Get page content
-    const content = await page.content();
-    console.log('Page content:', content);
+    // Wait for stats to load and extract them directly
+    const stats = await page.evaluate(() => {
+      // Helper function to get number from element
+      const getNumber = (selector, defaultValue = 0) => {
+        const el = document.querySelector(selector);
+        if (!el) return defaultValue;
+        const text = el.textContent.trim();
+        const match = text.match(/[\d,.]+/);
+        if (!match) return defaultValue;
+        return parseFloat(match[0].replace(/,/g, ''));
+      };
 
-    // Extract numbers using regex
-    const getNumber = (regex, defaultValue = 0) => {
-      const match = content.match(regex);
-      if (!match) return defaultValue;
-      const num = parseFloat(match[1].replace(/[^\d.]/g, ''));
-      return isNaN(num) ? defaultValue : num;
-    };
+      // Get stats from DOM
+      return {
+        floor: getNumber('[data-price]', 0),
+        buyNow: getNumber('[data-price]', 0),
+        listed: getNumber('[data-listed]', 0),
+        totalSupply: getNumber('[data-supply]', 0),
+        volume24h: getNumber('[data-volume-24h]', 0),
+        volumeAll: getNumber('[data-volume-all]', 0),
+        sales24h: getNumber('[data-sales]', 0),
+        priceChange24h: getNumber('[data-change]', 0)
+      };
+    });
 
-    const stats = {
-      floor: getNumber(/Floor[^0-9]*?([\d,.]+)/i) * 1e9,
-      buyNow: getNumber(/Floor[^0-9]*?([\d,.]+)/i) * 1e9,
-      listed: getNumber(/Listed[^0-9]*?([\d,.]+)/i),
-      totalSupply: getNumber(/Supply[^0-9]*?([\d,.]+)/i),
-      volume24h: getNumber(/24h Volume[^0-9]*?([\d,.]+)/i) * 1e9,
-      volumeAll: getNumber(/All Volume[^0-9]*?([\d,.]+)/i) * 1e9,
-      sales24h: getNumber(/24h Sales[^0-9]*?([\d,.]+)/i),
-      priceChange24h: getNumber(/Change[^0-9%]*?([-\d,.]+)/i) / 100
-    };
+    // Convert SOL to lamports
+    stats.floor *= 1e9;
+    stats.buyNow *= 1e9;
+    stats.volume24h *= 1e9;
+    stats.volumeAll *= 1e9;
+    stats.priceChange24h /= 100;
 
     await browser.close();
     return stats;
