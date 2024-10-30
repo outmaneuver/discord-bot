@@ -354,35 +354,27 @@ async function fetchTensorStats(collection) {
       timeout: 60000
     });
 
-    // Wait for stats to load and get page content
-    await page.waitForSelector('.collection-stats', { timeout: 30000 });
-    const html = await page.content();
-    console.log('Page HTML:', html); // Debug log
+    // Wait for stats to load
+    await page.waitForSelector('div[class*="stats"]', { timeout: 30000 });
 
-    // Extract stats using more general selectors
+    // Extract stats using more specific selectors
     const stats = await page.evaluate(() => {
-      const getNumber = (text) => {
-        const match = text.match(/[\d,.]+/);
-        return match ? parseFloat(match[0].replace(/,/g, '')) : 0;
+      const getNumber = (selector) => {
+        const el = document.querySelector(selector);
+        if (!el) return 0;
+        const text = el.textContent.replace(/[^\d.]/g, '');
+        return text ? parseFloat(text) : 0;
       };
 
-      const floorPrice = document.querySelector('.collection-stats .floor-price')?.textContent || '0';
-      const listed = document.querySelector('.collection-stats .listed-count')?.textContent || '0';
-      const supply = document.querySelector('.collection-stats .total-supply')?.textContent || '0';
-      const volume24h = document.querySelector('.collection-stats .volume-24h')?.textContent || '0';
-      const volumeAll = document.querySelector('.collection-stats .volume-all')?.textContent || '0';
-      const sales24h = document.querySelector('.collection-stats .sales-24h')?.textContent || '0';
-      const priceChange = document.querySelector('.collection-stats .price-change')?.textContent || '0';
-
       return {
-        floor: getNumber(floorPrice) * 1e9,
-        buyNow: getNumber(floorPrice) * 1e9,
-        listed: getNumber(listed),
-        totalSupply: getNumber(supply),
-        volume24h: getNumber(volume24h) * 1e9,
-        volumeAll: getNumber(volumeAll) * 1e9,
-        sales24h: getNumber(sales24h),
-        priceChange24h: getNumber(priceChange) / 100
+        floor: getNumber('div[class*="stats"] div[class*="floor"]') * 1e9,
+        buyNow: getNumber('div[class*="stats"] div[class*="floor"]') * 1e9,
+        listed: getNumber('div[class*="stats"] div[class*="listed"]'),
+        totalSupply: getNumber('div[class*="stats"] div[class*="supply"]'),
+        volume24h: getNumber('div[class*="stats"] div[class*="volume24h"]') * 1e9,
+        volumeAll: getNumber('div[class*="stats"] div[class*="volumeAll"]') * 1e9,
+        sales24h: getNumber('div[class*="stats"] div[class*="sales"]'),
+        priceChange24h: getNumber('div[class*="stats"] div[class*="change"]') / 100
       };
     });
 
