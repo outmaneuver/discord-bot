@@ -24,14 +24,21 @@ import {
   getTimeUntilNextClaim
 } from './services/rewards.js';
 
-// Initialize hashlists with hardcoded data
+// Initialize hashlists with all collections
 let hashlists = {
   fckedCatz: new Set(),
   celebCatz: new Set(),
   moneyMonsters: new Set(),
   moneyMonsters3d: new Set(),
   aiBitbots: new Set(),
-  warriors: new Set()
+  warriors: new Set(),
+  squirrels: new Set(),
+  rjctdBots: new Set(),
+  energyApes: new Set(),
+  doodleBots: new Set(),
+  candyBots: new Set(),
+  mmTop10: new Set(),
+  mm3dTop10: new Set()
 };
 
 // Initialize application
@@ -108,21 +115,42 @@ async function startApp() {
       }
     }
 
-    // Load hashlists after Redis is ready
+    // Load all hashlists after Redis is ready
     hashlists.fckedCatz = await loadHashlist('fcked_catz.json');
     hashlists.celebCatz = await loadHashlist('celebcatz.json');
     hashlists.moneyMonsters = await loadHashlist('money_monsters.json');
     hashlists.moneyMonsters3d = await loadHashlist('money_monsters3d.json');
     hashlists.aiBitbots = await loadHashlist('ai_bitbots.json');
+    hashlists.mmTop10 = await loadHashlist('MM_top10.json');
+    hashlists.mm3dTop10 = await loadHashlist('MM3D_top10.json');
+    
+    // Load AI Collabs hashlists
     hashlists.warriors = await loadHashlist('ai_collabs/warriors.json');
+    hashlists.squirrels = await loadHashlist('ai_collabs/squirrels.json');
+    hashlists.rjctdBots = await loadHashlist('ai_collabs/rjctd_bots.json');
+    hashlists.energyApes = await loadHashlist('ai_collabs/energy_apes.json');
+    hashlists.doodleBots = await loadHashlist('ai_collabs/doodle_bot.json');
+    hashlists.candyBots = await loadHashlist('ai_collabs/candy_bots.json');
     
     console.log('Loaded hashlists:', {
+      // Main collections
       fckedCatz: hashlists.fckedCatz.size,
       celebCatz: hashlists.celebCatz.size,
       moneyMonsters: hashlists.moneyMonsters.size,
       moneyMonsters3d: hashlists.moneyMonsters3d.size,
       aiBitbots: hashlists.aiBitbots.size,
-      warriors: hashlists.warriors.size
+      
+      // Top holders
+      mmTop10: hashlists.mmTop10.size,
+      mm3dTop10: hashlists.mm3dTop10.size,
+      
+      // AI Collabs
+      warriors: hashlists.warriors.size,
+      squirrels: hashlists.squirrels.size,
+      rjctdBots: hashlists.rjctdBots.size,
+      energyApes: hashlists.energyApes.size,
+      doodleBots: hashlists.doodleBots.size,
+      candyBots: hashlists.candyBots.size
     });
 
     // Configure Redis store
