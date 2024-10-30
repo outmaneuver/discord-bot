@@ -299,3 +299,26 @@ export async function updateDiscordRoles(userId, client) {
     throw error;
   }
 }
+
+// Add verifyHolder function and export it
+export async function verifyHolder(data, userId, client) {
+  try {
+    const { walletAddress } = data;
+    console.log('Verifying holder:', { userId, walletAddress });
+
+    // Check NFT ownership
+    const nftCounts = await checkNFTOwnership(walletAddress);
+
+    // Update Discord roles
+    await updateDiscordRoles(userId, client);
+
+    return {
+      success: true,
+      nftCounts,
+      message: 'Verification successful'
+    };
+  } catch (error) {
+    console.error('Error verifying holder:', error);
+    throw error;
+  }
+}
