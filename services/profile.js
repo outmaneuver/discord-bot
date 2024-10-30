@@ -292,17 +292,342 @@ export async function displayHelp(channel) {
     .setTitle('BUX DAO Bot Commands')
     .addFields(
       {
-        name: 'Available Commands',
+        name: 'Profile Commands',
         value: [
           '`=my.profile` - Display your full profile',
           '`=my.wallet` - Show your connected wallets',
           '`=my.nfts` - Display your NFT holdings',
           '`=my.roles` - Show your server roles',
-          '`=my.bux` - Show your BUX balance and rewards',
-          '`=help` - Show this help message'
+          '`=my.bux` - Show your BUX balance and rewards'
         ].join('\n')
+      },
+      {
+        name: 'Collection Stats',
+        value: [
+          '`=info.catz` - Show FCKED CATZ stats',
+          '`=info.celeb` - Show CelebCatz stats',
+          '`=info.mm` - Show Money Monsters stats',
+          '`=info.mm3d` - Show Money Monsters 3D stats',
+          '`=info.bitbots` - Show AI Bitbots stats'
+        ].join('\n')
+      },
+      {
+        name: 'Other Commands',
+        value: '`=help` - Show this help message'
       }
     );
   
   await channel.send({ embeds: [embed] });
+}
+
+// Update the fetchTensorStats function
+async function fetchTensorStats(collection) {
+  try {
+    // Use Tensor's public API endpoint
+    const response = await fetch(`https://api.tensor.so/api/v2/collections/${collection}/stats`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching Tensor stats:', error);
+    throw error;
+  }
+}
+
+export async function displayCatzInfo(channel) {
+  try {
+    // Fetch real-time data from Tensor
+    const stats = await fetchTensorStats('fcked_catz');
+    
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle('FCKED CATZ')
+      .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/fcked_catz_pfp_1646574386909.png')
+      .addFields(
+        { 
+          name: 'FLOOR',
+          value: `${(stats.floor/1e9).toFixed(3)} SOL`,
+          inline: true
+        },
+        { 
+          name: 'BUY NOW',
+          value: `${(stats.buyNowPrice/1e9).toFixed(3)} SOL`,
+          inline: true
+        },
+        {
+          name: '\u200B',
+          value: '\u200B',
+          inline: true
+        },
+        {
+          name: 'LISTED/SUPPLY',
+          value: `${stats.listedCount}/${stats.totalSupply} (${((stats.listedCount/stats.totalSupply)*100).toFixed(2)}%)`,
+          inline: true
+        },
+        {
+          name: 'VOLUME (24H)',
+          value: `${(stats.volume24hr/1e9).toFixed(2)} SOL`,
+          inline: true
+        },
+        {
+          name: 'VOLUME (ALL)',
+          value: `${(stats.volumeAll/1e9).toFixed(2)} SOL`,
+          inline: true
+        },
+        {
+          name: 'SALES (24H)',
+          value: `${stats.sales24hr || 0}`,
+          inline: true
+        },
+        {
+          name: 'PRICE Δ (24H)',
+          value: `${stats.priceChange24hr ? (stats.priceChange24hr * 100).toFixed(2) + '%' : '0%'}`,
+          inline: true
+        }
+      )
+      .setFooter({ text: 'Data from Tensor.Trade' });
+
+    await channel.send({ embeds: [embed] });
+  } catch (error) {
+    console.error('Error displaying Catz info:', error);
+    await channel.send('An error occurred while fetching collection information.');
+  }
+}
+
+export async function displayMMInfo(channel) {
+  try {
+    const stats = await fetchTensorStats('money_monsters');
+    
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle('MONEY MONSTERS')
+      .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/money_monsters_pfp_1646574386909.png')
+      .addFields(
+        { 
+          name: 'FLOOR',
+          value: `${(stats.floor/1e9).toFixed(3)} SOL`,
+          inline: true
+        },
+        { 
+          name: 'BUY NOW',
+          value: `${(stats.buyNowPrice/1e9).toFixed(3)} SOL`,
+          inline: true
+        },
+        {
+          name: '\u200B',
+          value: '\u200B',
+          inline: true
+        },
+        {
+          name: 'LISTED/SUPPLY',
+          value: `${stats.listedCount}/${stats.totalSupply} (${((stats.listedCount/stats.totalSupply)*100).toFixed(2)}%)`,
+          inline: true
+        },
+        {
+          name: 'VOLUME (24H)',
+          value: `${(stats.volume24hr/1e9).toFixed(2)} SOL`,
+          inline: true
+        },
+        {
+          name: 'VOLUME (ALL)',
+          value: `${(stats.volumeAll/1e9).toFixed(2)} SOL`,
+          inline: true
+        },
+        {
+          name: 'SALES (24H)',
+          value: `${stats.sales24hr || 0}`,
+          inline: true
+        },
+        {
+          name: 'PRICE Δ (24H)',
+          value: `${stats.priceChange24hr ? (stats.priceChange24hr * 100).toFixed(2) + '%' : '0%'}`,
+          inline: true
+        }
+      )
+      .setFooter({ text: 'Data from Tensor.Trade' });
+
+    await channel.send({ embeds: [embed] });
+  } catch (error) {
+    console.error('Error displaying MM info:', error);
+    await channel.send('An error occurred while fetching collection information.');
+  }
+}
+
+export async function displayMM3DInfo(channel) {
+  try {
+    const stats = await fetchTensorStats('money_monsters3d');
+    
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle('MONEY MONSTERS 3D')
+      .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/money_monsters3d_pfp_1646574386909.png')
+      .addFields(
+        { 
+          name: 'FLOOR',
+          value: `${(stats.floor/1e9).toFixed(3)} SOL`,
+          inline: true
+        },
+        { 
+          name: 'BUY NOW',
+          value: `${(stats.buyNowPrice/1e9).toFixed(3)} SOL`,
+          inline: true
+        },
+        {
+          name: '\u200B',
+          value: '\u200B',
+          inline: true
+        },
+        {
+          name: 'LISTED/SUPPLY',
+          value: `${stats.listedCount}/${stats.totalSupply} (${((stats.listedCount/stats.totalSupply)*100).toFixed(2)}%)`,
+          inline: true
+        },
+        {
+          name: 'VOLUME (24H)',
+          value: `${(stats.volume24hr/1e9).toFixed(2)} SOL`,
+          inline: true
+        },
+        {
+          name: 'VOLUME (ALL)',
+          value: `${(stats.volumeAll/1e9).toFixed(2)} SOL`,
+          inline: true
+        },
+        {
+          name: 'SALES (24H)',
+          value: `${stats.sales24hr || 0}`,
+          inline: true
+        },
+        {
+          name: 'PRICE Δ (24H)',
+          value: `${stats.priceChange24hr ? (stats.priceChange24hr * 100).toFixed(2) + '%' : '0%'}`,
+          inline: true
+        }
+      )
+      .setFooter({ text: 'Data from Tensor.Trade' });
+
+    await channel.send({ embeds: [embed] });
+  } catch (error) {
+    console.error('Error displaying MM3D info:', error);
+    await channel.send('An error occurred while fetching collection information.');
+  }
+}
+
+export async function displayCelebInfo(channel) {
+  try {
+    const stats = await fetchTensorStats('celebcatz');
+    
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle('CELEBCATZ')
+      .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/celebcatz_pfp_1646574386909.png')
+      .addFields(
+        { 
+          name: 'FLOOR',
+          value: `${(stats.floor/1e9).toFixed(3)} SOL`,
+          inline: true
+        },
+        { 
+          name: 'BUY NOW',
+          value: `${(stats.buyNowPrice/1e9).toFixed(3)} SOL`,
+          inline: true
+        },
+        {
+          name: '\u200B',
+          value: '\u200B',
+          inline: true
+        },
+        {
+          name: 'LISTED/SUPPLY',
+          value: `${stats.listedCount}/${stats.totalSupply} (${((stats.listedCount/stats.totalSupply)*100).toFixed(2)}%)`,
+          inline: true
+        },
+        {
+          name: 'VOLUME (24H)',
+          value: `${(stats.volume24hr/1e9).toFixed(2)} SOL`,
+          inline: true
+        },
+        {
+          name: 'VOLUME (ALL)',
+          value: `${(stats.volumeAll/1e9).toFixed(2)} SOL`,
+          inline: true
+        },
+        {
+          name: 'SALES (24H)',
+          value: `${stats.sales24hr || 0}`,
+          inline: true
+        },
+        {
+          name: 'PRICE Δ (24H)',
+          value: `${stats.priceChange24hr ? (stats.priceChange24hr * 100).toFixed(2) + '%' : '0%'}`,
+          inline: true
+        }
+      )
+      .setFooter({ text: 'Data from Tensor.Trade' });
+
+    await channel.send({ embeds: [embed] });
+  } catch (error) {
+    console.error('Error displaying CelebCatz info:', error);
+    await channel.send('An error occurred while fetching collection information.');
+  }
+}
+
+export async function displayBitbotsInfo(channel) {
+  try {
+    const stats = await fetchTensorStats('ai_bitbots');
+    
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle('AI BITBOTS')
+      .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/ai_bitbots_pfp_1646574386909.png')
+      .addFields(
+        { 
+          name: 'FLOOR',
+          value: `${(stats.floor/1e9).toFixed(3)} SOL`,
+          inline: true
+        },
+        { 
+          name: 'BUY NOW',
+          value: `${(stats.buyNowPrice/1e9).toFixed(3)} SOL`,
+          inline: true
+        },
+        {
+          name: '\u200B',
+          value: '\u200B',
+          inline: true
+        },
+        {
+          name: 'LISTED/SUPPLY',
+          value: `${stats.listedCount}/${stats.totalSupply} (${((stats.listedCount/stats.totalSupply)*100).toFixed(2)}%)`,
+          inline: true
+        },
+        {
+          name: 'VOLUME (24H)',
+          value: `${(stats.volume24hr/1e9).toFixed(2)} SOL`,
+          inline: true
+        },
+        {
+          name: 'VOLUME (ALL)',
+          value: `${(stats.volumeAll/1e9).toFixed(2)} SOL`,
+          inline: true
+        },
+        {
+          name: 'SALES (24H)',
+          value: `${stats.sales24hr || 0}`,
+          inline: true
+        },
+        {
+          name: 'PRICE Δ (24H)',
+          value: `${stats.priceChange24hr ? (stats.priceChange24hr * 100).toFixed(2) + '%' : '0%'}`,
+          inline: true
+        }
+      )
+      .setFooter({ text: 'Data from Tensor.Trade' });
+
+    await channel.send({ embeds: [embed] });
+  } catch (error) {
+    console.error('Error displaying Bitbots info:', error);
+    await channel.send('An error occurred while fetching collection information.');
+  }
 }

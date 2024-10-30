@@ -26,7 +26,12 @@ import {
   displayNFTs,
   displayRoles,
   displayBuxInfo,
-  displayHelp
+  displayHelp,
+  displayCatzInfo,
+  displayMMInfo,
+  displayMM3DInfo,
+  displayCelebInfo,
+  displayBitbotsInfo
 } from './services/profile.js';
 
 // Initialize hashlists with all collections
@@ -187,6 +192,26 @@ async function startApp() {
 
             case 'help':
               await displayHelp(message.channel);
+              break;
+
+            case 'info.catz':
+              await displayCatzInfo(message.channel);
+              break;
+
+            case 'info.mm':
+              await displayMMInfo(message.channel);
+              break;
+
+            case 'info.mm3d':
+              await displayMM3DInfo(message.channel);
+              break;
+
+            case 'info.celeb':
+              await displayCelebInfo(message.channel);
+              break;
+
+            case 'info.bitbots':
+              await displayBitbotsInfo(message.channel);
               break;
           }
         }
