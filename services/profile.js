@@ -339,6 +339,14 @@ async function aggregateWalletData(walletData) {
   }
 }
 
+// Add formatNFTCounts function
+function formatNFTCounts(nftCounts) {
+  return Object.entries(nftCounts)
+    .filter(([_, nfts]) => nfts.length > 0)
+    .map(([collection, nfts]) => `${collection}: ${nfts.length}`)
+    .join('\n') || 'No NFTs found';
+}
+
 // Export all functions at the top
 export {
   getWalletData,
