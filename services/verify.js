@@ -380,17 +380,107 @@ export async function verifyHolder(data, userId, client) {
     const { walletAddress } = data;
     console.log('Verifying holder:', { userId, walletAddress });
 
-    // Check NFT ownership
-    const nftCounts = await checkNFTOwnership(walletAddress);
+    // Store wallet address in Redis
+    await redis.sadd(`wallets:${userId}`, walletAddress);
 
-    // Update Discord roles
-    await updateDiscordRoles(userId, client);
+    // Get token accounts for wallet - single RPC call
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      new PublicKey(walletAddress),
+      { programId: TOKEN_PROGRAM_ID }
+    );
+
+    // Get all token mints from wallet
+    const walletMints = new Set();
+    for (const acc of tokenAccounts.value) {
+      const mint = acc.account.data.parsed.info.mint;
+      const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+      if (amount > 0) {
+        walletMints.add(mint);
+      }
+    }
+
+    // Initialize NFT counts with empty Sets
+    const nftCounts = {
+      fcked_catz: new Set(),
+      celebcatz: new Set(),
+      money_monsters: new Set(),
+      money_monsters3d: new Set(),
+      ai_bitbots: new Set(),
+      warriors: new Set(),
+      squirrels: new Set(),
+      rjctd_bots: new Set(),
+      energy_apes: new Set(),
+      doodle_bots: new Set(),
+      candy_bots: new Set()
+    };
+
+    // Check mints against hashlists - no RPC calls
+    for (const mint of walletMints) {
+      if (hashlists.fckedCatz?.has(mint)) nftCounts.fcked_catz.add(mint);
+      if (hashlists.celebCatz?.has(mint)) nftCounts.celebcatz.add(mint);
+      if (hashlists.moneyMonsters?.has(mint)) nftCounts.money_monsters.add(mint);
+      if (hashlists.moneyMonsters3d?.has(mint)) nftCounts.money_monsters3d.add(mint);
+      if (hashlists.aiBitbots?.has(mint)) nftCounts.ai_bitbots.add(mint);
+      if (hashlists.warriors?.has(mint)) nftCounts.warriors.add(mint);
+      if (hashlists.squirrels?.has(mint)) nftCounts.squirrels.add(mint);
+      if (hashlists.rjctdBots?.has(mint)) nftCounts.rjctd_bots.add(mint);
+      if (hashlists.energyApes?.has(mint)) nftCounts.energy_apes.add(mint);
+      if (hashlists.doodleBots?.has(mint)) nftCounts.doodle_bots.add(mint);
+      if (hashlists.candyBots?.has(mint)) nftCounts.candy_bots.add(mint);
+    }
+
+    // Convert Sets to Arrays for response
+    const nftResponse = {
+      fcked_catz: Array.from(nftCounts.fcked_catz),
+      celebcatz: Array.from(nftCounts.celebcatz),
+      money_monsters: Array.from(nftCounts.money_monsters),
+      money_monsters3d: Array.from(nftCounts.money_monsters3d),
+      ai_bitbots: Array.from(nftCounts.ai_bitbots),
+      warriors: Array.from(nftCounts.warriors),
+      squirrels: Array.from(nftCounts.squirrels),
+      rjctd_bots: Array.from(nftCounts.rjctd_bots),
+      energy_apes: Array.from(nftCounts.energy_apes),
+      doodle_bots: Array.from(nftCounts.doodle_bots),
+      candy_bots: Array.from(nftCounts.candy_bots)
+    };
+
+    // Update Discord roles using the same NFT data
+    const guildId = process.env.GUILD_ID;
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) throw new Error('Guild not found');
+
+    const member = await guild.members.fetch(userId);
+    if (!member) throw new Error('Member not found');
+
+    // Update roles based on NFT holdings
+    const currentRoles = new Set(member.roles.cache.map(role => role.id));
+    const newRoles = new Set(currentRoles);
+
+    // Add roles based on NFT holdings
+    if (nftCounts.fcked_catz.size > 0) newRoles.add(ROLES.FCKED_CATZ);
+    if (nftCounts.celebcatz.size > 0) newRoles.add(ROLES.CELEBCATZ);
+    if (nftCounts.money_monsters.size > 0) newRoles.add(ROLES.MONEY_MONSTERS);
+    if (nftCounts.money_monsters3d.size > 0) newRoles.add(ROLES.MONEY_MONSTERS_3D);
+    if (nftCounts.ai_bitbots.size > 0) newRoles.add(ROLES.AI_BITBOTS);
+    if (nftCounts.warriors.size > 0) newRoles.add(ROLES.WARRIORS);
+    if (nftCounts.squirrels.size > 0) newRoles.add(ROLES.SQUIRRELS);
+    if (nftCounts.rjctd_bots.size > 0) newRoles.add(ROLES.RJCTD_BOTS);
+    if (nftCounts.energy_apes.size > 0) newRoles.add(ROLES.ENERGY_APES);
+    if (nftCounts.doodle_bots.size > 0) newRoles.add(ROLES.DOODLE_BOTS);
+    if (nftCounts.candy_bots.size > 0) newRoles.add(ROLES.CANDY_BOTS);
+
+    // Update roles if they've changed
+    if (!setsAreEqual(currentRoles, newRoles)) {
+      await member.roles.set(Array.from(newRoles));
+      console.log('Updated roles for user:', userId);
+    }
 
     return {
       success: true,
-      nftCounts,
+      nftCounts: nftResponse,
       message: 'Verification successful'
     };
+
   } catch (error) {
     console.error('Error verifying holder:', error);
     throw error;
