@@ -229,9 +229,23 @@ export async function displayBuxInfo(channel, userId, client) {
     const walletData = await getWalletData(userId);
     let totalBuxBalance = 0;
     
+    // Try to get cached balances first
     for (const wallet of walletData.walletAddresses) {
-      const chainBalance = await getBUXBalance(wallet);
-      totalBuxBalance += Math.floor((chainBalance || 0) / 1e9);
+      const cachedBalance = parseInt(await redis.get(`bux:${wallet}`) || '0');
+      totalBuxBalance += Math.floor(cachedBalance / 1e9);
+    }
+
+    // Only try chain balance if no cached balance
+    if (totalBuxBalance === 0) {
+      for (const wallet of walletData.walletAddresses) {
+        try {
+          const chainBalance = await getBUXBalance(wallet);
+          totalBuxBalance += Math.floor((chainBalance || 0) / 1e9);
+        } catch (error) {
+          console.error('Error getting chain balance:', error);
+          // Continue to next wallet
+        }
+      }
     }
 
     const roleUpdate = await updateDiscordRoles(userId, client);
