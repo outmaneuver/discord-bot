@@ -152,14 +152,23 @@ async function updateUserProfile(channel, userId, client) {
       }
     }
 
-    // Get guild and member
+    // Update Discord roles before creating embed
+    console.log('Updating roles for user:', userId);
+    const rolesUpdated = await updateDiscordRoles(userId, client);
+    if (rolesUpdated) {
+      console.log('Roles were updated for user:', userId);
+    } else {
+      console.log('No role updates needed for user:', userId);
+    }
+
+    // Get guild and member after role update
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
     if (!guild) throw new Error('Guild not found');
 
     const member = await guild.members.fetch(userId);
     if (!member) throw new Error('Member not found');
 
-    // Get roles
+    // Get updated roles after potential changes
     const roles = member.roles.cache
       .filter(role => role.name !== '@everyone')
       .sort((a, b) => b.position - a.position)
@@ -189,7 +198,7 @@ async function updateUserProfile(channel, userId, client) {
       getTimeUntilNextClaim(userId)
     ]);
 
-    // Create embed
+    // Create embed with updated roles
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
       .setTitle(`${member.user.username}'s BUX DAO Profile`)
