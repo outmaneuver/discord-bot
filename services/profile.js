@@ -22,7 +22,13 @@ export async function updateUserProfile(channel, userId, client) {
 
     // Get NFT counts from updateDiscordRoles
     const roleUpdate = await updateDiscordRoles(userId, client);
-    const nftCounts = roleUpdate.nftCounts;
+    console.log('Role update result:', roleUpdate);
+
+    // Extract nftCounts from roleUpdate
+    const nftCounts = roleUpdate?.nftCounts;
+    if (!nftCounts) {
+      throw new Error('Failed to get NFT counts');
+    }
 
     // Get BUX balance from Redis
     let totalBuxBalance = 0;
@@ -61,23 +67,23 @@ export async function updateUserProfile(channel, userId, client) {
         { 
           name: 'Main Collections', 
           value: [
-            `Fcked Catz: ${nftCounts.fcked_catz}`,
-            `CelebCatz: ${nftCounts.celebcatz}`,
-            `Money Monsters: ${nftCounts.money_monsters}`,
-            `Money Monsters 3D: ${nftCounts.money_monsters3d}`,
-            `AI Bitbots: ${nftCounts.ai_bitbots}`
+            `Fcked Catz: ${nftCounts.fcked_catz || 0}`,
+            `CelebCatz: ${nftCounts.celebcatz || 0}`,
+            `Money Monsters: ${nftCounts.money_monsters || 0}`,
+            `Money Monsters 3D: ${nftCounts.money_monsters3d || 0}`,
+            `AI Bitbots: ${nftCounts.ai_bitbots || 0}`
           ].join('\n')
         },
         { name: '\u200B', value: '─'.repeat(40) },
         {
           name: 'A.I. Collabs',
           value: [
-            `A.I. Warriors: ${nftCounts.warriors}`,
-            `A.I. Squirrels: ${nftCounts.squirrels}`,
-            `A.I. Energy Apes: ${nftCounts.energy_apes}`,
-            `RJCTD Bots: ${nftCounts.rjctd_bots}`,
-            `Candy Bots: ${nftCounts.candy_bots}`,
-            `Doodle Bots: ${nftCounts.doodle_bots}`
+            `A.I. Warriors: ${nftCounts.warriors || 0}`,
+            `A.I. Squirrels: ${nftCounts.squirrels || 0}`,
+            `A.I. Energy Apes: ${nftCounts.energy_apes || 0}`,
+            `RJCTD Bots: ${nftCounts.rjctd_bots || 0}`,
+            `Candy Bots: ${nftCounts.candy_bots || 0}`,
+            `Doodle Bots: ${nftCounts.doodle_bots || 0}`
           ].join('\n')
         },
         { name: '\u200B', value: '─'.repeat(40) },
