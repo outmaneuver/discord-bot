@@ -87,7 +87,26 @@ redis.on('ready', async () => {
 // Main application startup function
 async function startApp() {
   try {
-    // Initialize Discord client first
+    // Get port from environment first
+    const port = process.env.PORT || 3000;
+    const app = express();
+    
+    // Initialize Express app with middleware
+    app.use(cors());
+    app.use(express.json());
+    console.log('Express app created');
+
+    // Start server first
+    const server = await new Promise((resolve, reject) => {
+      const server = app.listen(port, '0.0.0.0', () => {
+        console.log(`Server running on port ${port}`);
+        resolve(server);
+      }).on('error', reject);
+    });
+
+    console.log('Server started successfully');
+
+    // Initialize Discord client after server is running
     const client = new Client({
       intents: [
         GatewayIntentBits.Guilds,
@@ -104,15 +123,6 @@ async function startApp() {
     // Login to Discord
     await client.login(config.discord.token);
     console.log('Discord bot logged in');
-
-    // Get port from environment
-    const port = process.env.PORT || 3000;
-    const app = express();
-    
-    // Initialize Express app with middleware
-    app.use(cors());
-    app.use(express.json());
-    console.log('Express app created');
 
     // Configure Redis store
     const redisStore = new RedisStore({
@@ -236,16 +246,6 @@ Your roles have been updated! 🎉`;
     app.use((req, res) => {
       res.status(404).send('Page not found');
     });
-
-    // Start server with Promise
-    await new Promise((resolve, reject) => {
-      const server = app.listen(port, () => {
-        console.log(`Server running on port ${port}`);
-        resolve(server);
-      }).on('error', reject);
-    });
-
-    console.log('Server started successfully');
 
   } catch (error) {
     console.error('Error starting application:', error);
