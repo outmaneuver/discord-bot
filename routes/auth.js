@@ -75,8 +75,45 @@ router.get('/status', (req, res) => {
   });
 });
 
-// Fix the verify endpoint path to match frontend
-router.post('/holder-verify/verify', async (req, res) => {
+// Add OAuth token function
+async function getOAuthToken(code) {
+  const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+    method: 'POST',
+    body: new URLSearchParams({
+      client_id: config.discord.clientId,
+      client_secret: config.discord.clientSecret,
+      code,
+      grant_type: 'authorization_code',
+      redirect_uri: 'https://buxdao-verify-d1faffc83da7.herokuapp.com/auth/callback',
+      scope: 'identify guilds',
+    }),
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+  });
+
+  if (!tokenResponse.ok) {
+    throw new Error(`Failed to get token: ${await tokenResponse.text()}`);
+  }
+
+  return tokenResponse.json();
+}
+
+// Add user data function
+async function getDiscordUser(accessToken) {
+  const userResponse = await fetch('https://discord.com/api/users/@me', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!userResponse.ok) {
+    throw new Error(`Failed to get user data: ${await userResponse.text()}`);
+  }
+
+  return userResponse.json();
+}
+
+// Fix verify endpoint path
+router.post('/verify', async (req, res) => {
   try {
     if (!req.session.user) {
       return res.status(401).json({ error: 'Not authenticated' });
