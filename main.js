@@ -210,7 +210,7 @@ async function startApp() {
               await displayCelebInfo(message.channel);
               break;
 
-            case 'info.bitbots':
+            case 'info.bots':
               await displayBitbotsInfo(message.channel);
               break;
           }

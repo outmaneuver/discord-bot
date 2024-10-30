@@ -304,11 +304,11 @@ export async function displayHelp(channel) {
       {
         name: 'Collection Stats',
         value: [
-          '`=info.catz` - Show FCKED CATZ stats',
-          '`=info.celeb` - Show CelebCatz stats',
+          '`=info.catz` - Show Fcked Catz stats',
+          '`=info.celeb` - Show Celeb Catz stats',
           '`=info.mm` - Show Money Monsters stats',
           '`=info.mm3d` - Show Money Monsters 3D stats',
-          '`=info.bitbots` - Show AI Bitbots stats'
+          '`=info.bots` - Show AI Bitbots stats'
         ].join('\n')
       },
       {
@@ -343,7 +343,7 @@ export async function displayCatzInfo(channel) {
     
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
-      .setTitle('FCKED CATZ')
+      .setTitle('Fcked Catz')
       .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/fcked_catz_pfp_1646574386909.png')
       .addFields(
         { 
@@ -520,7 +520,7 @@ export async function displayCelebInfo(channel) {
     
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
-      .setTitle('CELEBCATZ')
+      .setTitle('Celeb Catz')
       .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/celebcatz_pfp_1646574386909.png')
       .addFields(
         { 
