@@ -131,8 +131,8 @@ async function startApp() {
       }
     }));
 
-    // Mount auth routes at root level
-    app.use('/', authRouter);
+    // Mount auth routes at /auth
+    app.use('/auth', authRouter);
     
     // Serve static files
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
