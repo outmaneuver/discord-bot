@@ -72,23 +72,35 @@ async function startApp() {
 
     console.log('Server started successfully');
 
-    // Wait for Redis to be ready
-    await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Redis connection timeout'));
-      }, 10000);
+    // Wait for Redis to be ready with retries
+    let retries = 5;
+    while (retries > 0) {
+      try {
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('Redis connection attempt timeout'));
+          }, 5000);
 
-      redis.on('ready', () => {
-        clearTimeout(timeout);
-        resolve();
-      });
+          redis.on('ready', () => {
+            clearTimeout(timeout);
+            resolve();
+          });
 
-      redis.on('error', (err) => {
-        clearTimeout(timeout);
-        reject(err);
-      });
-    });
-    console.log('Redis connected');
+          redis.on('error', (err) => {
+            clearTimeout(timeout);
+            reject(err);
+          });
+        });
+        console.log('Redis connected successfully');
+        break;
+      } catch (error) {
+        retries--;
+        console.log(`Redis connection attempt failed, ${retries} retries left:`, error.message);
+        if (retries === 0) throw new Error('Redis connection failed after all retries');
+        // Wait 2 seconds before retrying
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
 
     // Load hashlists after Redis is ready
     hashlists.fckedCatz = await loadHashlist('fcked_catz.json');
