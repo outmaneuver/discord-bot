@@ -24,20 +24,26 @@ export async function updateUserProfile(channel, userId, client) {
     const roleUpdateResult = await updateDiscordRoles(userId, client);
     console.log('Role update result:', roleUpdateResult);
 
-    // Get NFT counts from the result object
-    const nftCounts = roleUpdateResult?.nftCounts || {
-      fcked_catz: 0,
-      celebcatz: 0,
-      money_monsters: 0,
-      money_monsters3d: 0,
-      ai_bitbots: 0,
-      warriors: 0,
-      squirrels: 0,
-      rjctd_bots: 0,
-      energy_apes: 0,
-      doodle_bots: 0,
-      candy_bots: 0
-    };
+    // Get NFT counts from Redis if updateDiscordRoles returns false
+    let nftCounts;
+    if (roleUpdateResult === false) {
+      const nftData = await redis.hgetall(`nfts:${userId}`);
+      nftCounts = {
+        fcked_catz: parseInt(nftData?.fcked_catz || '0'),
+        celebcatz: parseInt(nftData?.celebcatz || '0'),
+        money_monsters: parseInt(nftData?.money_monsters || '0'),
+        money_monsters3d: parseInt(nftData?.money_monsters3d || '0'),
+        ai_bitbots: parseInt(nftData?.ai_bitbots || '0'),
+        warriors: parseInt(nftData?.warriors || '0'),
+        squirrels: parseInt(nftData?.squirrels || '0'),
+        rjctd_bots: parseInt(nftData?.rjctd_bots || '0'),
+        energy_apes: parseInt(nftData?.energy_apes || '0'),
+        doodle_bots: parseInt(nftData?.doodle_bots || '0'),
+        candy_bots: parseInt(nftData?.candy_bots || '0')
+      };
+    } else {
+      nftCounts = roleUpdateResult.nftCounts;
+    }
 
     // Get BUX balance from Redis
     let totalBuxBalance = 0;
