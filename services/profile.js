@@ -22,21 +22,18 @@ export async function updateUserProfile(channel, userId, client) {
 
     // Get NFT counts from updateDiscordRoles
     const roleUpdateResult = await updateDiscordRoles(userId, client);
-    console.log('Role update result:', roleUpdateResult);
-
-    // Extract nftCounts from the result
-    const nftCounts = {
-      fcked_catz: roleUpdateResult.nftCounts.fcked_catz.size,
-      celebcatz: roleUpdateResult.nftCounts.celebcatz.size,
-      money_monsters: roleUpdateResult.nftCounts.money_monsters.size,
-      money_monsters3d: roleUpdateResult.nftCounts.money_monsters3d.size,
-      ai_bitbots: roleUpdateResult.nftCounts.ai_bitbots.size,
-      warriors: roleUpdateResult.nftCounts.warriors.size,
-      squirrels: roleUpdateResult.nftCounts.squirrels.size,
-      rjctd_bots: roleUpdateResult.nftCounts.rjctd_bots.size,
-      energy_apes: roleUpdateResult.nftCounts.energy_apes.size,
-      doodle_bots: roleUpdateResult.nftCounts.doodle_bots.size,
-      candy_bots: roleUpdateResult.nftCounts.candy_bots.size
+    const nftCounts = roleUpdateResult?.nftCounts || {
+      fcked_catz: new Set(),
+      celebcatz: new Set(),
+      money_monsters: new Set(),
+      money_monsters3d: new Set(),
+      ai_bitbots: new Set(),
+      warriors: new Set(),
+      squirrels: new Set(),
+      rjctd_bots: new Set(),
+      energy_apes: new Set(),
+      doodle_bots: new Set(),
+      candy_bots: new Set()
     };
 
     // Get BUX balance from Redis
@@ -76,23 +73,23 @@ export async function updateUserProfile(channel, userId, client) {
         { 
           name: 'Main Collections', 
           value: [
-            `Fcked Catz: ${nftCounts.fcked_catz}`,
-            `CelebCatz: ${nftCounts.celebcatz}`,
-            `Money Monsters: ${nftCounts.money_monsters}`,
-            `Money Monsters 3D: ${nftCounts.money_monsters3d}`,
-            `AI Bitbots: ${nftCounts.ai_bitbots}`
+            `Fcked Catz: ${nftCounts.fcked_catz.size}`,
+            `CelebCatz: ${nftCounts.celebcatz.size}`,
+            `Money Monsters: ${nftCounts.money_monsters.size}`,
+            `Money Monsters 3D: ${nftCounts.money_monsters3d.size}`,
+            `AI Bitbots: ${nftCounts.ai_bitbots.size}`
           ].join('\n')
         },
         { name: '\u200B', value: '─'.repeat(40) },
         {
           name: 'A.I. Collabs',
           value: [
-            `A.I. Warriors: ${nftCounts.warriors}`,
-            `A.I. Squirrels: ${nftCounts.squirrels}`,
-            `A.I. Energy Apes: ${nftCounts.energy_apes}`,
-            `RJCTD Bots: ${nftCounts.rjctd_bots}`,
-            `Candy Bots: ${nftCounts.candy_bots}`,
-            `Doodle Bots: ${nftCounts.doodle_bots}`
+            `A.I. Warriors: ${nftCounts.warriors.size}`,
+            `A.I. Squirrels: ${nftCounts.squirrels.size}`,
+            `A.I. Energy Apes: ${nftCounts.energy_apes.size}`,
+            `RJCTD Bots: ${nftCounts.rjctd_bots.size}`,
+            `Candy Bots: ${nftCounts.candy_bots.size}`,
+            `Doodle Bots: ${nftCounts.doodle_bots.size}`
           ].join('\n')
         },
         { name: '\u200B', value: '─'.repeat(40) },
