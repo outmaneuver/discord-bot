@@ -361,14 +361,12 @@ async function fetchTensorStats(collection) {
       timeout: 30000
     });
 
-    // Wait for specific elements
-    await Promise.race([
-      page.waitForSelector('div[class*="price"]', { timeout: 20000 }),
-      page.waitForSelector('div[class*="floor"]', { timeout: 20000 }),
-      page.waitForSelector('div[class*="volume"]', { timeout: 20000 })
-    ]);
+    // Wait for any content to load
+    await page.waitForXPath("//div[contains(text(), 'Floor') or contains(text(), 'Listed') or contains(text(), 'Volume')]", {
+      timeout: 20000
+    });
 
-    // Get page content
+    // Get page content using XPath
     const content = await page.evaluate(() => {
       // Helper function to get number from text
       const getNumber = (text) => {
@@ -377,22 +375,25 @@ async function fetchTensorStats(collection) {
         return match ? parseFloat(match[0].replace(/,/g, '')) : 0;
       };
 
-      // Find elements containing stats
-      const priceElements = Array.from(document.querySelectorAll('div[class*="price"]'));
-      const floorElements = Array.from(document.querySelectorAll('div[class*="floor"]'));
-      const volumeElements = Array.from(document.querySelectorAll('div[class*="volume"]'));
-      const listedElements = Array.from(document.querySelectorAll('div[class*="listed"]'));
-      const supplyElements = Array.from(document.querySelectorAll('div[class*="supply"]'));
-      const salesElements = Array.from(document.querySelectorAll('div[class*="sales"]'));
-      const changeElements = Array.from(document.querySelectorAll('div[class*="change"]'));
+      // Helper function to get text from XPath
+      const getTextFromXPath = (xpath) => {
+        const element = document.evaluate(
+          xpath,
+          document,
+          null,
+          XPathResult.FIRST_ORDERED_NODE_TYPE,
+          null
+        ).singleNodeValue;
+        return element ? element.textContent : '';
+      };
 
-      // Get text content from first matching element
-      const floorText = floorElements[0]?.textContent || priceElements[0]?.textContent || '';
-      const listedText = listedElements[0]?.textContent || '';
-      const supplyText = supplyElements[0]?.textContent || '';
-      const volumeText = volumeElements[0]?.textContent || '';
-      const salesText = salesElements[0]?.textContent || '';
-      const changeText = changeElements[0]?.textContent || '';
+      // Get stats using XPath
+      const floorText = getTextFromXPath("//div[contains(text(), 'Floor')]/following-sibling::div");
+      const listedText = getTextFromXPath("//div[contains(text(), 'Listed')]/following-sibling::div");
+      const supplyText = getTextFromXPath("//div[contains(text(), 'Supply')]/following-sibling::div");
+      const volumeText = getTextFromXPath("//div[contains(text(), 'Volume')]/following-sibling::div");
+      const salesText = getTextFromXPath("//div[contains(text(), 'Sales')]/following-sibling::div");
+      const changeText = getTextFromXPath("//div[contains(text(), 'Change')]/following-sibling::div");
 
       return {
         floor: getNumber(floorText),
