@@ -156,6 +156,13 @@ export { redis };
 export async function getBUXBalance(walletAddress) {
   try {
     console.log('Getting BUX balance for wallet:', walletAddress);
+    console.log('Using BUX token mint:', process.env.BUX_TOKEN_MINT);
+    
+    if (!process.env.BUX_TOKEN_MINT) {
+      console.error('BUX_TOKEN_MINT not found in environment variables');
+      return 0;
+    }
+
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
       new PublicKey(walletAddress),
       { programId: TOKEN_PROGRAM_ID }
@@ -165,18 +172,30 @@ export async function getBUXBalance(walletAddress) {
     
     let buxBalance = 0;
     for (const acc of tokenAccounts.value) {
-      const mint = acc.account.data.parsed.info.mint;
-      console.log('Checking token mint:', mint);
-      console.log('Expected BUX mint:', process.env.BUX_TOKEN_MINT);
-      
-      if (acc.account.data.parsed.info.mint === process.env.BUX_TOKEN_MINT) {
-        const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
-        console.log('Found BUX token, amount:', amount);
-        buxBalance += amount;
+      try {
+        const mint = acc.account.data.parsed.info.mint;
+        const amount = acc.account.data.parsed.info.tokenAmount.amount;
+        console.log(`Found token: mint=${mint}, amount=${amount}`);
+        
+        if (mint === process.env.BUX_TOKEN_MINT) {
+          const parsedAmount = parseInt(amount);
+          console.log('Found BUX token, parsed amount:', parsedAmount);
+          buxBalance += parsedAmount;
+        }
+      } catch (err) {
+        console.error('Error parsing token account:', err);
       }
     }
     
     console.log('Final BUX balance:', buxBalance);
+    
+    // Store in Redis
+    await redis.set(`bux:${walletAddress}`, buxBalance.toString());
+    console.log('Stored BUX balance in Redis:', {
+      key: `bux:${walletAddress}`,
+      value: buxBalance.toString()
+    });
+    
     return buxBalance;
   } catch (error) {
     console.error('Error getting BUX balance:', error);
