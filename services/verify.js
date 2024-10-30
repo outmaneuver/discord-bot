@@ -584,9 +584,8 @@ export async function verifyWallet(userId, walletAddress) {
   }
 }
 
-// Keep existing exports
+// Export everything else in one statement
 export {
-  verifyHolder,
   updateDiscordRoles,
   updateHashlists,
   getBUXBalance,
