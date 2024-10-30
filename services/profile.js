@@ -2,6 +2,9 @@ import { EmbedBuilder } from 'discord.js';
 import { updateDiscordRoles, hashlists } from './verify.js';
 import { redis } from '../config/redis.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim, calculateDailyReward } from './rewards.js';
+import { connection } from '../config/solana.js';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { PublicKey } from '@solana/web3.js';
 
 // Only export what's needed
 export async function getWalletData(userId) {
@@ -18,11 +21,13 @@ export async function getWalletData(userId) {
 export async function updateUserProfile(channel, userId, client) {
   try {
     const walletData = await getWalletData(userId);
-    if (!walletData || !walletData.walletAddresses.length === 0) {
+    if (!walletData || walletData.walletAddresses.length === 0) {
       throw new Error('No wallets connected');
     }
     console.log(`Processing profile for user ${userId} with wallets:`, walletData.walletAddresses);
 
+    // Get NFT counts and BUX balance
+    let totalBuxBalance = 0;
     const nftCounts = {
       fcked_catz: new Set(),
       celebcatz: new Set(),
@@ -37,13 +42,27 @@ export async function updateUserProfile(channel, userId, client) {
       candy_bots: new Set()
     };
 
-    // Get cached NFT data for each wallet
+    // Process each wallet
     for (const walletAddress of walletData.walletAddresses) {
-      const cachedData = await redis.hgetall(`wallet:${walletAddress}:nfts`);
-      if (cachedData) {
-        Object.entries(cachedData).forEach(([collection, mints]) => {
-          const mintArray = JSON.parse(mints);
-          mintArray.forEach(mint => {
+      try {
+        // Get token accounts for wallet
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+          new PublicKey(walletAddress),
+          { programId: TOKEN_PROGRAM_ID }
+        );
+
+        // Process token accounts
+        for (const acc of tokenAccounts.value) {
+          const mint = acc.account.data.parsed.info.mint;
+          const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+
+          // Check BUX balance
+          if (mint === process.env.BUX_TOKEN_MINT && amount > 0) {
+            totalBuxBalance += amount;
+          }
+
+          // Check NFTs
+          if (amount > 0) {
             if (hashlists.fckedCatz?.has(mint)) nftCounts.fcked_catz.add(mint);
             if (hashlists.celebCatz?.has(mint)) nftCounts.celebcatz.add(mint);
             if (hashlists.moneyMonsters?.has(mint)) nftCounts.money_monsters.add(mint);
@@ -55,22 +74,16 @@ export async function updateUserProfile(channel, userId, client) {
             if (hashlists.energyApes?.has(mint)) nftCounts.energy_apes.add(mint);
             if (hashlists.doodleBots?.has(mint)) nftCounts.doodle_bots.add(mint);
             if (hashlists.candyBots?.has(mint)) nftCounts.candy_bots.add(mint);
-          });
-        });
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing wallet ${walletAddress}:`, error);
       }
     }
 
-    // Get cached BUX balance
-    const totalBuxBalance = parseInt(await redis.get(`wallet:${walletData.walletAddresses[0]}:bux`) || '0');
-
-    // Update Discord roles before creating embed
+    // Update Discord roles
     console.log('Updating roles for user:', userId);
-    const rolesUpdated = await updateDiscordRoles(userId, client);
-    if (rolesUpdated) {
-      console.log('Roles were updated for user:', userId);
-    } else {
-      console.log('No role updates needed for user:', userId);
-    }
+    await updateDiscordRoles(userId, client);
 
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
     if (!guild) throw new Error('Guild not found');
