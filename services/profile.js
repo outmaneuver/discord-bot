@@ -333,32 +333,37 @@ async function fetchTensorStats(collection) {
     };
 
     const slug = slugMap[collection] || collection;
-    const response = await fetch(`https://api.tensor.so/api/v2/collections/${slug}`, {
+    const response = await fetch(`https://www.tensor.trade/trade/${slug}`, {
       headers: {
-        'Accept': 'application/json',
+        'Accept': 'text/html',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
       }
     });
 
     if (!response.ok) {
-      console.log('Response status:', response.status);
-      const text = await response.text();
-      console.log('Response body:', text);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json();
-    console.log('Tensor response:', data);  // Debug log
+    const html = await response.text();
+    
+    // Extract stats from HTML using regex
+    const floorMatch = html.match(/floor price.*?(\d+\.?\d*)/i);
+    const listedMatch = html.match(/listed.*?(\d+)/i);
+    const volumeMatch = html.match(/volume \(24h\).*?(\d+\.?\d*)/i);
+    const volumeAllMatch = html.match(/volume \(all\).*?(\d+\.?\d*)/i);
+    const salesMatch = html.match(/sales \(24h\).*?(\d+)/i);
+    const supplyMatch = html.match(/total supply.*?(\d+)/i);
+    const changeMatch = html.match(/price change.*?([-+]?\d+\.?\d*)/i);
 
     return {
-      floor: data.stats.floor || 0,
-      buyNowPrice: data.stats.buyNow || 0,
-      listedCount: data.stats.listed || 0,
-      totalSupply: data.stats.totalSupply || 0,
-      volume24hr: data.stats.volume24h || 0,
-      volumeAll: data.stats.volumeAll || 0,
-      sales24hr: data.stats.sales24h || 0,
-      priceChange24hr: data.stats.floorChange24h || 0
+      floor: parseFloat(floorMatch?.[1] || 0) * 1e9,
+      buyNowPrice: parseFloat(floorMatch?.[1] || 0) * 1e9,
+      listedCount: parseInt(listedMatch?.[1] || 0),
+      totalSupply: parseInt(supplyMatch?.[1] || 0),
+      volume24hr: parseFloat(volumeMatch?.[1] || 0) * 1e9,
+      volumeAll: parseFloat(volumeAllMatch?.[1] || 0) * 1e9,
+      sales24hr: parseInt(salesMatch?.[1] || 0),
+      priceChange24hr: parseFloat(changeMatch?.[1] || 0) / 100
     };
   } catch (error) {
     console.error('Error fetching Tensor stats:', error);
