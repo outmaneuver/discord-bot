@@ -337,7 +337,7 @@ async function fetchTensorStats(collection) {
 
     const slug = slugMap[collection] || collection;
     
-    // Use puppeteer-core instead of puppeteer
+    // Use exact Chrome path from Heroku buildpack
     browser = await puppeteer.launch({
       args: [
         '--no-sandbox',
@@ -345,7 +345,7 @@ async function fetchTensorStats(collection) {
         '--disable-dev-shm-usage',
         '--single-process'
       ],
-      executablePath: process.env.CHROME_BIN || '/usr/bin/chromium-browser',
+      executablePath: '/app/.apt/usr/bin/google-chrome',
       headless: true
     });
     
