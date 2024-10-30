@@ -473,6 +473,10 @@ export async function verifyHolder(data, userId, client) {
     // Store wallet address in Redis
     await redis.sadd(`wallets:${userId}`, walletAddress);
 
+    // Get and store BUX balance in Redis
+    const buxBalance = await getBUXBalance(walletAddress);
+    await redis.set(`bux:${walletAddress}`, buxBalance.toString());
+    
     // Get token accounts for wallet - single RPC call
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
       new PublicKey(walletAddress),
@@ -523,10 +527,6 @@ export async function verifyHolder(data, userId, client) {
         await redis.sadd(`nfts:${walletAddress}:${collection}`, ...mints);
       }
     }
-
-    // Store BUX balance in Redis
-    const buxBalance = await getBUXBalance(walletAddress);
-    await redis.set(`bux:${walletAddress}`, buxBalance.toString());
 
     // Log stored data
     console.log('Stored data in Redis:', {
