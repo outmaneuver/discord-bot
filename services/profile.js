@@ -333,11 +333,30 @@ async function fetchTensorStats(collection) {
     };
 
     const slug = slugMap[collection] || collection;
-    const response = await fetch(`https://api.tensor.so/rest/v1/collections/${slug}/stats`, {
+    const response = await fetch('https://graphql.tensor.trade/graphql', {
+      method: 'POST',
       headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
-      }
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        query: `
+          query GetCollectionStats {
+            collection(slug: "${slug}") {
+              stats {
+                floor
+                listed
+                buyNow
+                volume24h
+                volumeAll
+                sales24h
+                totalSupply
+                floorChange24h
+              }
+            }
+          }
+        `
+      })
     });
 
     if (!response.ok) {
@@ -349,16 +368,17 @@ async function fetchTensorStats(collection) {
 
     const data = await response.json();
     console.log('Tensor response:', data);  // Debug log
+    const stats = data.data.collection.stats;
 
     return {
-      floor: data.floor_price || 0,
-      buyNowPrice: data.floor_price || 0,
-      listedCount: data.listed_count || 0,
-      totalSupply: data.total_supply || 0,
-      volume24hr: data.volume_24h || 0,
-      volumeAll: data.volume_all || 0,
-      sales24hr: data.sales_24h || 0,
-      priceChange24hr: data.floor_change_24h || 0
+      floor: stats.floor || 0,
+      buyNowPrice: stats.buyNow || 0,
+      listedCount: stats.listed || 0,
+      totalSupply: stats.totalSupply || 0,
+      volume24hr: stats.volume24h || 0,
+      volumeAll: stats.volumeAll || 0,
+      sales24hr: stats.sales24h || 0,
+      priceChange24hr: stats.floorChange24h || 0
     };
   } catch (error) {
     console.error('Error fetching Tensor stats:', error);
