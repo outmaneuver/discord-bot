@@ -323,9 +323,10 @@ export async function displayHelp(channel) {
 // Update the fetchTensorStats function
 async function fetchTensorStats(collection) {
   try {
-    const response = await fetch(`https://api.tensor.so/api/v2/markets?collection=${collection}&sortBy=PRICE_LOW_TO_HIGH&limit=1`, {
+    const response = await fetch(`https://api.tensor.so/api/v1/market/stats?collection=${collection}`, {
       headers: {
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'User-Agent': 'BuxDAO Discord Bot/1.0'
       }
     });
 
@@ -343,7 +344,7 @@ async function fetchTensorStats(collection) {
       volume24hr: data.volume_24h || 0,
       volumeAll: data.volume_all || 0,
       sales24hr: data.sales_24h || 0,
-      priceChange24hr: data.floor_price_24h_change || 0
+      priceChange24hr: data.floor_change_24h || 0
     };
   } catch (error) {
     console.error('Error fetching Tensor stats:', error);
