@@ -14,7 +14,7 @@ let hashlists = {
   aiBitbots: new Set(JSON.parse(await fs.readFile('./config/hashlists/ai_bitbots.json', 'utf8'))),
   mmTop10: new Set(JSON.parse(await fs.readFile('./config/hashlists/MM_top10.json', 'utf8'))),
   mm3dTop10: new Set(JSON.parse(await fs.readFile('./config/hashlists/MM3D_top10.json', 'utf8'))),
-  warriors: new Set(JSON.parse(await fs.readFile('./config/hashlists/ai_collabs/warriors.json', 'utf8'))),
+  warriors: new Set([]),
   squirrels: new Set(JSON.parse(await fs.readFile('./config/hashlists/ai_collabs/squirrels.json', 'utf8'))),
   rjctdBots: new Set(JSON.parse(await fs.readFile('./config/hashlists/ai_collabs/rjctd_bots.json', 'utf8'))),
   energyApes: new Set(JSON.parse(await fs.readFile('./config/hashlists/ai_collabs/energy_apes.json', 'utf8'))),
