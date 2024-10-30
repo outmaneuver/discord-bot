@@ -294,7 +294,7 @@ export async function updateDiscordRoles(userId, client) {
       return false;
     }
 
-    // Check NFTs for all wallets
+    // Get cached NFT data for all wallets
     const nftCounts = {
       fcked_catz: new Set(),
       celebcatz: new Set(),
@@ -309,11 +309,37 @@ export async function updateDiscordRoles(userId, client) {
       candy_bots: new Set()
     };
 
+    // Get token accounts for each wallet - single RPC call per wallet
     for (const wallet of wallets) {
-      const nfts = await checkNFTOwnership(wallet);
-      Object.entries(nfts).forEach(([collection, tokens]) => {
-        tokens.forEach(token => nftCounts[collection].add(token));
-      });
+      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+        new PublicKey(wallet),
+        { programId: TOKEN_PROGRAM_ID }
+      );
+
+      // Get all token mints from wallet
+      const walletMints = new Set();
+      for (const acc of tokenAccounts.value) {
+        const mint = acc.account.data.parsed.info.mint;
+        const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+        if (amount > 0) {
+          walletMints.add(mint);
+        }
+      }
+
+      // Check mints against hashlists - no RPC calls
+      for (const mint of walletMints) {
+        if (hashlists.fckedCatz?.has(mint)) nftCounts.fcked_catz.add(mint);
+        if (hashlists.celebCatz?.has(mint)) nftCounts.celebcatz.add(mint);
+        if (hashlists.moneyMonsters?.has(mint)) nftCounts.money_monsters.add(mint);
+        if (hashlists.moneyMonsters3d?.has(mint)) nftCounts.money_monsters3d.add(mint);
+        if (hashlists.aiBitbots?.has(mint)) nftCounts.ai_bitbots.add(mint);
+        if (hashlists.warriors?.has(mint)) nftCounts.warriors.add(mint);
+        if (hashlists.squirrels?.has(mint)) nftCounts.squirrels.add(mint);
+        if (hashlists.rjctdBots?.has(mint)) nftCounts.rjctd_bots.add(mint);
+        if (hashlists.energyApes?.has(mint)) nftCounts.energy_apes.add(mint);
+        if (hashlists.doodleBots?.has(mint)) nftCounts.doodle_bots.add(mint);
+        if (hashlists.candyBots?.has(mint)) nftCounts.candy_bots.add(mint);
+      }
     }
 
     // Update roles based on NFT holdings
