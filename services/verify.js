@@ -280,7 +280,7 @@ export async function assignRoles(nftCounts, discordId, accessToken) {
 
 export async function updateDiscordRoles(userId, client) {
   try {
-    const guildId = config.discord.guildId;
+    const guildId = process.env.GUILD_ID;
     const guild = client.guilds.cache.get(guildId);
     if (!guild) throw new Error('Guild not found');
 
@@ -294,7 +294,7 @@ export async function updateDiscordRoles(userId, client) {
       return false;
     }
 
-    // Get cached NFT data for all wallets
+    // Initialize NFT counts with empty Sets
     const nftCounts = {
       fcked_catz: new Set(),
       celebcatz: new Set(),
@@ -342,24 +342,44 @@ export async function updateDiscordRoles(userId, client) {
       }
     }
 
-    // Update roles based on NFT holdings
+    // Get current roles
     const currentRoles = new Set(member.roles.cache.map(role => role.id));
     const newRoles = new Set(currentRoles);
 
+    // Add roles based on NFT holdings
     // Main collections
-    if (nftCounts.fcked_catz.size > 0) newRoles.add(ROLES.FCKED_CATZ);
-    if (nftCounts.celebcatz.size > 0) newRoles.add(ROLES.CELEBCATZ);
-    if (nftCounts.money_monsters.size > 0) newRoles.add(ROLES.MONEY_MONSTERS);
-    if (nftCounts.money_monsters3d.size > 0) newRoles.add(ROLES.MONEY_MONSTERS_3D);
-    if (nftCounts.ai_bitbots.size > 0) newRoles.add(ROLES.AI_BITBOTS);
+    if (nftCounts.fcked_catz.size > 0) newRoles.add(process.env.ROLE_ID_FCKED_CATZ);
+    if (nftCounts.celebcatz.size > 0) newRoles.add(process.env.ROLE_ID_CELEBCATZ);
+    if (nftCounts.money_monsters.size > 0) newRoles.add(process.env.ROLE_ID_MONEY_MONSTERS);
+    if (nftCounts.money_monsters3d.size > 0) newRoles.add(process.env.ROLE_ID_MONEY_MONSTERS3D);
+    if (nftCounts.ai_bitbots.size > 0) newRoles.add(process.env.ROLE_ID_AI_BITBOTS);
 
     // AI Collabs - make sure to add all roles
-    if (nftCounts.warriors.size > 0) newRoles.add(ROLES.WARRIORS);
-    if (nftCounts.squirrels.size > 0) newRoles.add(ROLES.SQUIRRELS);
-    if (nftCounts.rjctd_bots.size > 0) newRoles.add(ROLES.RJCTD_BOTS);
-    if (nftCounts.energy_apes.size > 0) newRoles.add(ROLES.ENERGY_APES);
-    if (nftCounts.doodle_bots.size > 0) newRoles.add(ROLES.DOODLE_BOTS);
-    if (nftCounts.candy_bots.size > 0) newRoles.add(ROLES.CANDY_BOTS);
+    if (nftCounts.warriors.size > 0) newRoles.add(process.env.ROLE_ID_WARRIORS);
+    if (nftCounts.squirrels.size > 0) newRoles.add(process.env.ROLE_ID_SQUIRRELS);
+    if (nftCounts.rjctd_bots.size > 0) newRoles.add(process.env.ROLE_ID_RJCTD_BOTS);
+    if (nftCounts.energy_apes.size > 0) newRoles.add(process.env.ROLE_ID_ENERGY_APES);
+    if (nftCounts.doodle_bots.size > 0) newRoles.add(process.env.ROLE_ID_DOODLE_BOTS);
+    if (nftCounts.candy_bots.size > 0) newRoles.add(process.env.ROLE_ID_CANDY_BOTS);
+
+    // Log role changes
+    console.log('Role update for user:', userId, {
+      currentRoles: Array.from(currentRoles),
+      newRoles: Array.from(newRoles),
+      nftCounts: {
+        fcked_catz: nftCounts.fcked_catz.size,
+        celebcatz: nftCounts.celebcatz.size,
+        money_monsters: nftCounts.money_monsters.size,
+        money_monsters3d: nftCounts.money_monsters3d.size,
+        ai_bitbots: nftCounts.ai_bitbots.size,
+        warriors: nftCounts.warriors.size,
+        squirrels: nftCounts.squirrels.size,
+        rjctd_bots: nftCounts.rjctd_bots.size,
+        energy_apes: nftCounts.energy_apes.size,
+        doodle_bots: nftCounts.doodle_bots.size,
+        candy_bots: nftCounts.candy_bots.size
+      }
+    });
 
     // Update roles if they've changed
     if (!setsAreEqual(currentRoles, newRoles)) {
