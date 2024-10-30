@@ -23,10 +23,26 @@ router.post('/verify', async (req, res) => {
     // Verify the wallet
     const result = await verifyWallet(req.session.user.id, walletAddress);
     
-    // Return success response
+    // Add formatted response for frontend
+    const formattedResponse = `
+      **Wallet Verification Successful!**
+      Your wallet ${walletAddress.slice(0,4)}...${walletAddress.slice(-4)} has been verified.
+      
+      You can now use the following commands in Discord:
+      • =my.profile - View your full profile
+      • =my.wallet - View your connected wallets  
+      • =my.nfts - View your NFT holdings
+      • =my.roles - View your server roles
+      • =my.bux - View your BUX balance
+      
+      Type =help in Discord for a full list of commands.
+    `;
+
+    // Return success response with formatted message
     res.json({ 
       success: true,
       message: 'Wallet verified successfully',
+      formattedResponse,
       data: result
     });
 
