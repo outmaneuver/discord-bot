@@ -39,6 +39,11 @@
     "nodemon": "^3.1.7"
   },
   "engines": {
-    "node": ">=18.0.0"
-  }
+    "node": "18.x"
+  },
+  "buildpacks": [
+    {
+      "url": "jontewks/puppeteer"
+    }
+  ]
 }
