@@ -21,7 +21,12 @@ import {
 
 import { 
   updateUserProfile, 
-  getWalletData
+  getWalletData,
+  displayWallets,
+  displayNFTs,
+  displayRoles,
+  displayBuxInfo,
+  displayHelp
 } from './services/profile.js';
 
 // Initialize hashlists with all collections
