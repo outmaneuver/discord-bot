@@ -361,12 +361,10 @@ async function fetchTensorStats(collection) {
       timeout: 30000
     });
 
-    // Wait for any content to load
-    await page.waitForSelector('div:has-text("Floor"), div:has-text("Listed"), div:has-text("Volume")', {
-      timeout: 20000
-    });
+    // Wait for page to load
+    await page.waitForTimeout(5000);
 
-    // Get page content using modern selectors
+    // Get page content
     const content = await page.evaluate(() => {
       // Helper function to get number from text
       const getNumber = (text) => {
@@ -375,29 +373,26 @@ async function fetchTensorStats(collection) {
         return match ? parseFloat(match[0].replace(/,/g, '')) : 0;
       };
 
-      // Helper function to get text from selector
-      const getTextFromSelector = (selector) => {
-        const element = document.querySelector(selector);
-        return element ? element.textContent : '';
+      // Get all text content
+      const text = document.body.innerText;
+      console.log('Page text:', text);
+
+      // Find numbers after keywords
+      const findNumber = (keyword) => {
+        const regex = new RegExp(`${keyword}[^0-9]*([0-9,.]+)`, 'i');
+        const match = text.match(regex);
+        return match ? getNumber(match[1]) : 0;
       };
 
-      // Get stats using modern selectors
-      const floorText = getTextFromSelector('div:has-text("Floor") + div');
-      const listedText = getTextFromSelector('div:has-text("Listed") + div');
-      const supplyText = getTextFromSelector('div:has-text("Supply") + div');
-      const volumeText = getTextFromSelector('div:has-text("Volume") + div');
-      const salesText = getTextFromSelector('div:has-text("Sales") + div');
-      const changeText = getTextFromSelector('div:has-text("Change") + div');
-
       return {
-        floor: getNumber(floorText),
-        buyNow: getNumber(floorText),
-        listed: getNumber(listedText),
-        totalSupply: getNumber(supplyText),
-        volume24h: getNumber(volumeText),
-        volumeAll: getNumber(volumeText),
-        sales24h: getNumber(salesText),
-        priceChange24h: getNumber(changeText) / 100
+        floor: findNumber('Floor'),
+        buyNow: findNumber('Floor'),
+        listed: findNumber('Listed'),
+        totalSupply: findNumber('Supply'),
+        volume24h: findNumber('24h Volume'),
+        volumeAll: findNumber('All Volume'),
+        sales24h: findNumber('24h Sales'),
+        priceChange24h: findNumber('Change') / 100
       };
     });
 
