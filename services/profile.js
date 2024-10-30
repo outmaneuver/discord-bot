@@ -323,53 +323,27 @@ export async function displayHelp(channel) {
 // Update the fetchTensorStats function
 async function fetchTensorStats(collection) {
   try {
-    const response = await fetch(`https://api.tensor.so/graphql`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-        'Origin': 'https://tensor.trade',
-        'Referer': 'https://tensor.trade/',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        query: `
-          query GetCollectionStats($slug: String!) {
-            tensorCollectionStats(slug: $slug) {
-              buyNow
-              floor
-              listed
-              volume24h
-              volumeAll
-              sales24h
-              totalSupply
-              floorChange24h
-            }
-          }
-        `,
-        variables: {
-          slug: collection
-        }
-      })
-    });
+    const response = await fetch(`https://tensor-api.vercel.app/api/v1/collections/${collection}/stats`);
 
     if (!response.ok) {
+      console.log('Response status:', response.status);
+      const text = await response.text();
+      console.log('Response body:', text);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
     console.log('Tensor response:', data);  // Debug log
-    const stats = data.data.tensorCollectionStats;
 
     return {
-      floor: stats.floor,
-      buyNowPrice: stats.buyNow,
-      listedCount: stats.listed,
-      totalSupply: stats.totalSupply,
-      volume24hr: stats.volume24h,
-      volumeAll: stats.volumeAll,
-      sales24hr: stats.sales24h,
-      priceChange24hr: stats.floorChange24h
+      floor: data.floor || 0,
+      buyNowPrice: data.buyNow || data.floor || 0,
+      listedCount: data.listed || 0,
+      totalSupply: data.total_supply || 0,
+      volume24hr: data.volume_24h || 0,
+      volumeAll: data.volume_all || 0,
+      sales24hr: data.sales_24h || 0,
+      priceChange24hr: data.floor_change_24h || 0
     };
   } catch (error) {
     console.error('Error fetching Tensor stats:', error);
