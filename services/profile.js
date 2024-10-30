@@ -103,29 +103,25 @@ export async function updateUserProfile(channel, userId, client) {
         { name: '\u200B', value: '─'.repeat(40) },
         { 
           name: 'Main Collections', 
-          value: Object.entries({
-            'Fcked Catz': nftCounts.fcked_catz.size,
-            'CelebCatz': nftCounts.celebcatz.size,
-            'Money Monsters': nftCounts.money_monsters.size,
-            'Money Monsters 3D': nftCounts.money_monsters3d.size,
-            'AI Bitbots': nftCounts.ai_bitbots.size
-          })
-            .map(([collection, count]) => `${collection}: ${count}`)
-            .join('\n') || 'No NFTs'
+          value: [
+            `Fcked Catz: ${nftCounts.fcked_catz.size}`,
+            `CelebCatz: ${nftCounts.celebcatz.size}`,
+            `Money Monsters: ${nftCounts.money_monsters.size}`,
+            `Money Monsters 3D: ${nftCounts.money_monsters3d.size}`,
+            `AI Bitbots: ${nftCounts.ai_bitbots.size}`
+          ].join('\n') || 'No NFTs'
         },
         { name: '\u200B', value: '─'.repeat(40) },
         {
           name: 'A.I. Collabs',
-          value: Object.entries({
-            'A.I. Warriors': nftCounts.warriors.size,
-            'A.I. Squirrels': nftCounts.squirrels.size,
-            'A.I. Energy Apes': nftCounts.energy_apes.size,
-            'RJCTD Bots': nftCounts.rjctd_bots.size,
-            'Candy Bots': nftCounts.candy_bots.size,
-            'Doodle Bots': nftCounts.doodle_bots.size
-          })
-            .map(([collection, count]) => `${collection}: ${count}`)
-            .join('\n') || 'No A.I. Collab NFTs'
+          value: [
+            `A.I. Warriors: ${nftCounts.warriors.size}`,
+            `A.I. Squirrels: ${nftCounts.squirrels.size}`,
+            `A.I. Energy Apes: ${nftCounts.energy_apes.size}`,
+            `RJCTD Bots: ${nftCounts.rjctd_bots.size}`,
+            `Candy Bots: ${nftCounts.candy_bots.size}`,
+            `Doodle Bots: ${nftCounts.doodle_bots.size}`
+          ].join('\n') || 'No A.I. Collab NFTs'
         },
         { name: '\u200B', value: '─'.repeat(40) },
         {
