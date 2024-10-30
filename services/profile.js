@@ -22,9 +22,47 @@ export async function updateUserProfile(channel, userId, client) {
     }
     console.log(`Processing profile for user ${userId} with wallets:`, walletData.walletAddresses);
 
-    // Get NFT counts from updateDiscordRoles
-    const roleUpdateResult = await updateDiscordRoles(userId, client);
-    console.log('Role update result:', roleUpdateResult);
+    // Initialize NFT counts
+    const nftCounts = {
+      fcked_catz: new Set(),
+      celebcatz: new Set(),
+      money_monsters: new Set(),
+      money_monsters3d: new Set(),
+      ai_bitbots: new Set(),
+      warriors: new Set(),
+      squirrels: new Set(),
+      rjctd_bots: new Set(),
+      energy_apes: new Set(),
+      doodle_bots: new Set(),
+      candy_bots: new Set()
+    };
+
+    // Get cached NFT data for each wallet
+    for (const walletAddress of walletData.walletAddresses) {
+      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+        new PublicKey(walletAddress),
+        { programId: TOKEN_PROGRAM_ID }
+      );
+
+      // Get all token mints from wallet
+      for (const acc of tokenAccounts.value) {
+        const mint = acc.account.data.parsed.info.mint;
+        const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+        if (amount > 0) {
+          if (hashlists.fckedCatz?.has(mint)) nftCounts.fcked_catz.add(mint);
+          if (hashlists.celebCatz?.has(mint)) nftCounts.celebcatz.add(mint);
+          if (hashlists.moneyMonsters?.has(mint)) nftCounts.money_monsters.add(mint);
+          if (hashlists.moneyMonsters3d?.has(mint)) nftCounts.money_monsters3d.add(mint);
+          if (hashlists.aiBitbots?.has(mint)) nftCounts.ai_bitbots.add(mint);
+          if (hashlists.warriors?.has(mint)) nftCounts.warriors.add(mint);
+          if (hashlists.squirrels?.has(mint)) nftCounts.squirrels.add(mint);
+          if (hashlists.rjctdBots?.has(mint)) nftCounts.rjctd_bots.add(mint);
+          if (hashlists.energyApes?.has(mint)) nftCounts.energy_apes.add(mint);
+          if (hashlists.doodleBots?.has(mint)) nftCounts.doodle_bots.add(mint);
+          if (hashlists.candyBots?.has(mint)) nftCounts.candy_bots.add(mint);
+        }
+      }
+    }
 
     // Get BUX balance from Redis
     let totalBuxBalance = 0;
@@ -32,6 +70,10 @@ export async function updateUserProfile(channel, userId, client) {
       const buxBalance = parseInt(await redis.get(`bux:${wallet}`) || '0');
       totalBuxBalance += buxBalance;
     }
+
+    // Update Discord roles
+    console.log('Updating roles for user:', userId);
+    await updateDiscordRoles(userId, client);
 
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
     if (!guild) throw new Error('Guild not found');
@@ -44,10 +86,6 @@ export async function updateUserProfile(channel, userId, client) {
       .sort((a, b) => b.position - a.position)
       .map(role => role.name)
       .join('\n');
-
-    // Use NFT counts from role update result
-    const nftCounts = roleUpdateResult.nftCounts;
-    console.log('NFT counts:', nftCounts);
 
     const dailyReward = await calculateDailyReward(nftCounts, totalBuxBalance);
 
@@ -69,23 +107,23 @@ export async function updateUserProfile(channel, userId, client) {
         { 
           name: 'Main Collections', 
           value: [
-            `Fcked Catz: ${nftCounts.fcked_catz}`,
-            `CelebCatz: ${nftCounts.celebcatz}`,
-            `Money Monsters: ${nftCounts.money_monsters}`,
-            `Money Monsters 3D: ${nftCounts.money_monsters3d}`,
-            `AI Bitbots: ${nftCounts.ai_bitbots}`
+            `Fcked Catz: ${nftCounts.fcked_catz.size}`,
+            `CelebCatz: ${nftCounts.celebcatz.size}`,
+            `Money Monsters: ${nftCounts.money_monsters.size}`,
+            `Money Monsters 3D: ${nftCounts.money_monsters3d.size}`,
+            `AI Bitbots: ${nftCounts.ai_bitbots.size}`
           ].join('\n') || 'No NFTs'
         },
         { name: '\u200B', value: '─'.repeat(40) },
         {
           name: 'A.I. Collabs',
           value: [
-            `A.I. Warriors: ${nftCounts.warriors}`,
-            `A.I. Squirrels: ${nftCounts.squirrels}`,
-            `A.I. Energy Apes: ${nftCounts.energy_apes}`,
-            `RJCTD Bots: ${nftCounts.rjctd_bots}`,
-            `Candy Bots: ${nftCounts.candy_bots}`,
-            `Doodle Bots: ${nftCounts.doodle_bots}`
+            `A.I. Warriors: ${nftCounts.warriors.size}`,
+            `A.I. Squirrels: ${nftCounts.squirrels.size}`,
+            `A.I. Energy Apes: ${nftCounts.energy_apes.size}`,
+            `RJCTD Bots: ${nftCounts.rjctd_bots.size}`,
+            `Candy Bots: ${nftCounts.candy_bots.size}`,
+            `Doodle Bots: ${nftCounts.doodle_bots.size}`
           ].join('\n') || 'No A.I. Collab NFTs'
         },
         { name: '\u200B', value: '─'.repeat(40) },
