@@ -112,8 +112,8 @@ async function getDiscordUser(accessToken) {
   return userResponse.json();
 }
 
-// Fix verify endpoint path
-router.post('/verify', async (req, res) => {
+// Fix verify endpoint path to match frontend
+router.post('/holder-verify/verify', async (req, res) => {
   try {
     if (!req.session.user) {
       return res.status(401).json({ error: 'Not authenticated' });
