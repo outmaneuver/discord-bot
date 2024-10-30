@@ -2,9 +2,6 @@ import { EmbedBuilder } from 'discord.js';
 import { updateDiscordRoles, hashlists } from './verify.js';
 import { redis } from '../config/redis.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim, calculateDailyReward } from './rewards.js';
-import { connection } from '../config/solana.js';
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { PublicKey } from '@solana/web3.js';
 
 // Only export what's needed
 export async function getWalletData(userId) {
@@ -40,43 +37,31 @@ export async function updateUserProfile(channel, userId, client) {
       candy_bots: new Set()
     };
 
-    let totalBuxBalance = 0;
-
+    // Get cached NFT data for each wallet
     for (const walletAddress of walletData.walletAddresses) {
-      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-        new PublicKey(walletAddress),
-        { programId: TOKEN_PROGRAM_ID }
-      );
-
-      for (const acc of tokenAccounts.value) {
-        if (acc.account.data.parsed.info.mint === process.env.BUX_TOKEN_MINT) {
-          totalBuxBalance += parseInt(acc.account.data.parsed.info.tokenAmount.amount);
-        }
-      }
-
-      const walletMints = new Set();
-      for (const acc of tokenAccounts.value) {
-        const mint = acc.account.data.parsed.info.mint;
-        const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
-        if (amount > 0) {
-          walletMints.add(mint);
-        }
-      }
-
-      for (const mint of walletMints) {
-        if (hashlists.fckedCatz?.has(mint)) nftCounts.fcked_catz.add(mint);
-        if (hashlists.celebCatz?.has(mint)) nftCounts.celebcatz.add(mint);
-        if (hashlists.moneyMonsters?.has(mint)) nftCounts.money_monsters.add(mint);
-        if (hashlists.moneyMonsters3d?.has(mint)) nftCounts.money_monsters3d.add(mint);
-        if (hashlists.aiBitbots?.has(mint)) nftCounts.ai_bitbots.add(mint);
-        if (hashlists.warriors?.has(mint)) nftCounts.warriors.add(mint);
-        if (hashlists.squirrels?.has(mint)) nftCounts.squirrels.add(mint);
-        if (hashlists.rjctdBots?.has(mint)) nftCounts.rjctd_bots.add(mint);
-        if (hashlists.energyApes?.has(mint)) nftCounts.energy_apes.add(mint);
-        if (hashlists.doodleBots?.has(mint)) nftCounts.doodle_bots.add(mint);
-        if (hashlists.candyBots?.has(mint)) nftCounts.candy_bots.add(mint);
+      const cachedData = await redis.hgetall(`wallet:${walletAddress}:nfts`);
+      if (cachedData) {
+        Object.entries(cachedData).forEach(([collection, mints]) => {
+          const mintArray = JSON.parse(mints);
+          mintArray.forEach(mint => {
+            if (hashlists.fckedCatz?.has(mint)) nftCounts.fcked_catz.add(mint);
+            if (hashlists.celebCatz?.has(mint)) nftCounts.celebcatz.add(mint);
+            if (hashlists.moneyMonsters?.has(mint)) nftCounts.money_monsters.add(mint);
+            if (hashlists.moneyMonsters3d?.has(mint)) nftCounts.money_monsters3d.add(mint);
+            if (hashlists.aiBitbots?.has(mint)) nftCounts.ai_bitbots.add(mint);
+            if (hashlists.warriors?.has(mint)) nftCounts.warriors.add(mint);
+            if (hashlists.squirrels?.has(mint)) nftCounts.squirrels.add(mint);
+            if (hashlists.rjctdBots?.has(mint)) nftCounts.rjctd_bots.add(mint);
+            if (hashlists.energyApes?.has(mint)) nftCounts.energy_apes.add(mint);
+            if (hashlists.doodleBots?.has(mint)) nftCounts.doodle_bots.add(mint);
+            if (hashlists.candyBots?.has(mint)) nftCounts.candy_bots.add(mint);
+          });
+        });
       }
     }
+
+    // Get cached BUX balance
+    const totalBuxBalance = parseInt(await redis.get(`wallet:${walletData.walletAddresses[0]}:bux`) || '0');
 
     // Update Discord roles before creating embed
     console.log('Updating roles for user:', userId);
@@ -99,27 +84,14 @@ export async function updateUserProfile(channel, userId, client) {
       .map(role => role.name)
       .join('\n');
 
-    const dailyReward = calculateDailyReward({
-      fcked_catz: nftCounts.fcked_catz.size,
-      celebcatz: nftCounts.celebcatz.size,
-      money_monsters: nftCounts.money_monsters.size,
-      money_monsters3d: nftCounts.money_monsters3d.size,
-      ai_bitbots: nftCounts.ai_bitbots.size,
-      warriors: nftCounts.warriors.size
-    });
+    const dailyReward = await calculateDailyReward(nftCounts, totalBuxBalance);
 
     const [timerData, timeUntilNext] = await Promise.all([
-      startOrUpdateDailyTimer(userId, {
-        fcked_catz: nftCounts.fcked_catz.size,
-        celebcatz: nftCounts.celebcatz.size,
-        money_monsters: nftCounts.money_monsters.size,
-        money_monsters3d: nftCounts.money_monsters3d.size,
-        ai_bitbots: nftCounts.ai_bitbots.size,
-        warriors: nftCounts.warriors.size
-      }, totalBuxBalance),
+      startOrUpdateDailyTimer(userId, nftCounts, totalBuxBalance),
       getTimeUntilNextClaim(userId)
     ]);
 
+    // Create and send embed
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
       .setTitle(`${member.user.username}'s BUX DAO Profile`)
