@@ -1,352 +1,133 @@
-import { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, PermissionsBitField } from 'discord.js';
-import fs from 'fs/promises';
-import path from 'path';
-import { PublicKey } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { config } from '../config/config.js';
 import { connection } from '../config/solana.js';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { PublicKey } from '@solana/web3.js';
 import { redis } from '../config/redis.js';
-import { readFile } from 'fs/promises';
-import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Initialize hashlists with hardcoded data
+let hashlists = {
+  fckedCatz: new Set([
+    "BsarXX8ByP61bQaxHB1BumzjJHZipySbkAZM9HTsGHnZ",
+    "ti93mWDrGoN4F3L9QbceWWrPDyy6rG8p4SxcwqNneT4",
+    // ... rest of fcked_catz addresses
+  ]),
+  
+  celebCatz: new Set([
+    "27AZCipUgnokLraJiFRzihNbVkC1p1BFwo7yYy8Dehwg",
+    "2AMCTGkrxMsPoYsEi3k5HoHqBV71yZvCfhJ7qkhj8sfv",
+    // ... rest of celebcatz addresses
+  ]),
+  
+  moneyMonsters: new Set([
+    "5BZFAbdrh7C41RMa9i8mdMwKy4L2yij4AVWDPMx5Jr6h",
+    "CgiAp4FwF8uv2oQ18pB7KsVSCotX9MrX3LU5aCzZHJ2s",
+    // ... rest of money_monsters addresses
+  ]),
+  
+  moneyMonsters3d: new Set([
+    "5WhqtK8P9ycdaH7sDPccm6zwxBQoGB2Eoq6n6FFxGdXi",
+    "8vLh5iEvNNT85h7hucsCWQ9MPNNeHXUiQsaEgT8yXssT",
+    // ... rest of money_monsters3d addresses
+  ]),
+  
+  aiBitbots: new Set([
+    "2AMwhQ1VJE5XrChgLAAN2ho67Z3Kd6G6ZH9K3tUDaeAj",
+    "2DFivijFtTUrG8wU1yG6zguPNDatCfc8oggKkcMtPtDK",
+    // ... rest of ai_bitbots addresses
+  ]),
+  
+  // Top 10 collections
+  mmTop10: new Set([
+    "DjBWcV9MMDYT184mZex1FokGo9RiR5HKcLi8RA7vMF1V",
+    "2PNNMgdVLpxjDY2DsUCmB1gf7pVNenrydWBiWCZxxDxG",
+    // ... rest of MM_top10 addresses
+  ]),
+  
+  mm3dTop10: new Set([
+    "C4SNQtPwPVt5k1tju9QVFK4PuiU32SJt7pZjBPNUA2X9",
+    "CPBmgYsyLc6Y7aqRJvrpiaBBmB5DtQiisX4dFLpGkELT",
+    // ... rest of MM3D_top10 addresses
+  ]),
+  
+  // AI Collabs
+  squirrels: new Set([
+    "53uo3rxsC581PogRokje1heL9guwVDHWGJgizCsH8Lhq",
+    "5mh8x7Mtr4LbPmxUWNjj8ub7RAwf2mDyTeJ5RnqZgi7S",
+    // ... rest of squirrels addresses
+  ]),
+  
+  rjctdBots: new Set([
+    "6bFtMFRA62sPJFioZkARRU1FNruEPMJ4KRswwkXyYzQ9",
+    "5sLRard2DHmwYjtR6eadJm61PWBn3zFrhX1bQcaowqT7",
+    // ... rest of rjctd_bots addresses
+  ]),
+  
+  energyApes: new Set([
+    "GhYWZ23HBe4c5srSSrVg1TtN734a9fLFdG4dxvt4NRNP",
+    "4oM1zXktE85P7o4e9Zps5FAwZRdTCu11XLMKZ1gUbbYN",
+    // ... rest of energy_apes addresses
+  ]),
+  
+  doodleBots: new Set([
+    "298Lo9g3mKS925ZZDdcuq3WmEZeooxok1GXq16YMSCNh",
+    "GG71RzW86XYc5VVvBmHDy8xRC8w3qYNY4zKHoMEvVfP",
+    // ... rest of doodle_bot addresses
+  ]),
+  
+  candyBots: new Set([
+    "5WSgTYGEyvwrSPzZ8iJcvGHNJcFKYzhadgsiah26HLgn",
+    "HVRdxDPXymftQA6BDbNHJbB8Lp1XQwobFQMx8MYijv2U",
+    // ... rest of candy_bots addresses
+  ])
+};
 
-// Use config values
-const BUX_TOKEN_MINT = config.solana.buxMint;
-const GUILD_ID = config.discord.guildId;
+// No need for loadHashlists function anymore since data is hardcoded
 
-// Add verification message function
-export async function sendVerificationMessage(channel) {
-  const embed = new EmbedBuilder()
-    .setColor('#0099ff')
-    .setTitle('BUX DAO Wallet Verification')
-    .setDescription('Click the button below to verify your wallet and receive your roles!')
-    .setThumbnail('https://i.imgur.com/AfFp7pu.png');
-
-  const button = new ButtonBuilder()
-    .setCustomId('verify_wallet')
-    .setLabel('Verify Wallet')
-    .setStyle(ButtonStyle.Primary);
-
-  const row = new ActionRowBuilder()
-    .addComponents(button);
-
-  await channel.send({
-    embeds: [embed],
-    components: [row]
-  });
-}
-
-// Load hashlists from JSON files
-async function loadHashlist(filename) {
-  try {
-    const filePath = path.join(__dirname, '..', 'config', 'hashlists', filename);
-    const data = await readFile(filePath, 'utf8');
-    return new Set(JSON.parse(data));
-  } catch (error) {
-    console.error(`Error loading hashlist ${filename}:`, error);
-    throw error;
-  }
-}
-
-// Initialize hashlists
-let hashlists = null;
-
-// Initialize hashlists
-async function initializeHashlists() {
-  try {
-    const [fckedCatz, celebCatz, moneyMonsters, moneyMonsters3d, aiBitbots] = await Promise.all([
-      readFile(path.join(__dirname, '..', 'config', 'hashlists', 'fcked_catz.json'), 'utf8'),
-      readFile(path.join(__dirname, '..', 'config', 'hashlists', 'celebcatz.json'), 'utf8'),
-      readFile(path.join(__dirname, '..', 'config', 'hashlists', 'money_monsters.json'), 'utf8'),
-      readFile(path.join(__dirname, '..', 'config', 'hashlists', 'money_monsters3d.json'), 'utf8'),
-      readFile(path.join(__dirname, '..', 'config', 'hashlists', 'ai_bitbots.json'), 'utf8')
-    ]);
-
-    hashlists = {
-      fckedCatz: new Set(JSON.parse(fckedCatz)),
-      celebCatz: new Set(JSON.parse(celebCatz)),
-      moneyMonsters: new Set(JSON.parse(moneyMonsters)),
-      moneyMonsters3d: new Set(JSON.parse(moneyMonsters3d)),
-      aiBitbots: new Set(JSON.parse(aiBitbots))
-    };
-
-    console.log('Hashlists loaded:', {
-      fckedCatz: hashlists.fckedCatz.size,
-      celebCatz: hashlists.celebCatz.size,
-      moneyMonsters: hashlists.moneyMonsters.size,
-      moneyMonsters3d: hashlists.moneyMonsters3d.size,
-      aiBitbots: hashlists.aiBitbots.size
-    });
-
-    return true;
-  } catch (error) {
-    console.error('Error initializing hashlists:', error);
-    throw error;
-  }
-}
-
-// Initialize hashlists when the module is imported
-initializeHashlists().catch(error => {
-  console.error('Failed to initialize hashlists:', error);
+// Initialize Redis first
+redis.on('error', (err) => {
+  console.error('Redis error:', err);
   process.exit(1);
 });
 
-// Add rate limiting and retry logic for RPC calls
-async function retryWithBackoff(fn, maxRetries = 5, initialDelay = 1000) {
-  let retries = 0;
-  while (true) {
-    try {
-      return await fn();
-    } catch (error) {
-      if (error.message.includes('429') && retries < maxRetries) {
-        retries++;
-        const delay = initialDelay * Math.pow(2, retries - 1);
-        console.log(`RPC rate limited. Retrying in ${delay}ms (attempt ${retries}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
-      }
-      throw error;
-    }
-  }
-}
+redis.on('ready', () => {
+  console.log('Redis connected and ready');
+  console.log('Hashlists initialized with:', {
+    fckedCatz: hashlists.fckedCatz.size,
+    celebCatz: hashlists.celebCatz.size,
+    moneyMonsters: hashlists.moneyMonsters.size,
+    moneyMonsters3d: hashlists.moneyMonsters3d.size,
+    aiBitbots: hashlists.aiBitbots.size,
+    mmTop10: hashlists.mmTop10.size,
+    mm3dTop10: hashlists.mm3dTop10.size,
+    squirrels: hashlists.squirrels.size,
+    rjctdBots: hashlists.rjctdBots.size,
+    energyApes: hashlists.energyApes.size,
+    doodleBots: hashlists.doodleBots.size,
+    candyBots: hashlists.candyBots.size
+  });
+});
 
-// Update verifyHolder function to properly check NFT ownership
-export async function verifyHolder(walletData, userId, client) {
-  try {
-    const walletAddress = walletData.walletAddress;
-    
-    // Validate wallet address
-    try {
-      new PublicKey(walletAddress);
-    } catch (error) {
-      return {
-        success: false,
-        error: 'Invalid wallet address'
-      };
-    }
-
-    // Get token accounts
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-      new PublicKey(walletAddress),
-      { programId: TOKEN_PROGRAM_ID }
-    );
-
-    // Create map of mint addresses to token amounts
-    const ownedTokens = new Map();
-    tokenAccounts.value.forEach(acc => {
-      const mint = acc.account.data.parsed.info.mint;
-      const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
-      if (amount > 0) {
-        ownedTokens.set(mint, amount);
-      }
-    });
-
-    // Check NFT ownership against local hashlists
-    const nftCounts = {
-      fcked_catz: [],
-      celebcatz: [],
-      money_monsters: [],
-      money_monsters3d: [],
-      ai_bitbots: []
-    };
-
-    // Helper function to check and add NFTs
-    const checkAndAddNFTs = (collection, hashlist) => {
-      hashlist.forEach(mint => {
-        if (ownedTokens.has(mint) && ownedTokens.get(mint) > 0) {
-          nftCounts[collection].push(mint);
-        }
-      });
-    };
-
-    // Check each collection
-    checkAndAddNFTs('fcked_catz', hashlists.fckedCatz);
-    checkAndAddNFTs('celebcatz', hashlists.celebCatz);
-    checkAndAddNFTs('money_monsters', hashlists.moneyMonsters);
-    checkAndAddNFTs('money_monsters3d', hashlists.moneyMonsters3d);
-    checkAndAddNFTs('ai_bitbots', hashlists.aiBitbots);
-
-    // Store NFT counts in Redis
-    await redis.hset(`user:${userId}:nfts`, {
-      fcked_catz: JSON.stringify(nftCounts.fcked_catz),
-      celebcatz: JSON.stringify(nftCounts.celebcatz),
-      money_monsters: JSON.stringify(nftCounts.money_monsters),
-      money_monsters3d: JSON.stringify(nftCounts.money_monsters3d),
-      ai_bitbots: JSON.stringify(nftCounts.ai_bitbots)
-    });
-
-    // Store the same data for the wallet
-    await redis.hset(`wallet:${walletAddress}:nfts`, {
-      fcked_catz: JSON.stringify(nftCounts.fcked_catz),
-      celebcatz: JSON.stringify(nftCounts.celebcatz),
-      money_monsters: JSON.stringify(nftCounts.money_monsters),
-      money_monsters3d: JSON.stringify(nftCounts.money_monsters3d),
-      ai_bitbots: JSON.stringify(nftCounts.ai_bitbots)
-    });
-
-    // Update Discord roles
-    await updateDiscordRoles(userId, client);
-
-    return {
-      success: true,
-      nftCounts,
-      message: 'Wallet verified and roles updated successfully'
-    };
-  } catch (error) {
-    console.error('Error verifying holder:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
-
-// Update Discord roles function
-export async function updateDiscordRoles(userId, client) {
-  try {
-    // Get all wallets for user
-    const wallets = await redis.smembers(`wallets:${userId}`);
-    if (!wallets || wallets.length === 0) {
-      console.log('No wallets found for user:', userId);
-      return;
-    }
-
-    // Get NFTs from all wallets
-    const allNFTs = {
-      fcked_catz: new Set(),
-      celebcatz: new Set(),
-      money_monsters: new Set(),
-      money_monsters3d: new Set(),
-      ai_bitbots: new Set()
-    };
-
-    // Aggregate NFTs from all wallets
-    for (const wallet of wallets) {
-      const nfts = await checkNFTOwnership(wallet);
-      Object.entries(nfts).forEach(([collection, tokens]) => {
-        tokens.forEach(token => allNFTs[collection].add(token));
-      });
-    }
-
-    // Convert Sets to counts
-    const nftCounts = {
-      fcked_catz: allNFTs.fcked_catz.size,
-      celebcatz: allNFTs.celebcatz.size,
-      money_monsters: allNFTs.money_monsters.size,
-      money_monsters3d: allNFTs.money_monsters3d.size,
-      ai_bitbots: allNFTs.ai_bitbots.size
-    };
-
-    console.log('NFT counts for role assignment:', nftCounts);
-
-    // Get guild and member
-    const guild = client.guilds.cache.get(GUILD_ID);
-    if (!guild) throw new Error('Guild not found');
-
-    const member = await guild.members.fetch(userId);
-    if (!member) throw new Error('Member not found');
-
-    // Define role assignments with exact Discord role names
-    const roleAssignments = [
-      { name: 'MONSTER', collection: 'money_monsters', threshold: 1 },
-      { name: 'MONSTER 3D', collection: 'money_monsters3d', threshold: 1 },
-      { name: 'CAT', collection: 'fcked_catz', threshold: 1 },
-      { name: 'CELEB', collection: 'celebcatz', threshold: 1 },
-      { name: 'BITBOT', collection: 'ai_bitbots', threshold: 1 },
-      { name: 'MONSTER 🐋', collection: 'money_monsters', threshold: 20 },
-      { name: 'MONSTER 3D 🐋', collection: 'money_monsters3d', threshold: 20 },
-      { name: 'MEGA BOT 🐋', collection: 'ai_bitbots', threshold: 5 },
-      { name: 'MEGA CAT', collection: 'fcked_catz', threshold: 20 },
-      { name: 'MEGA CELEB', collection: 'celebcatz', threshold: 5 }
-    ];
-
-    // Update roles
-    for (const assignment of roleAssignments) {
-      const role = guild.roles.cache.find(r => r.name === assignment.name);
-      if (!role) {
-        console.log(`Role ${assignment.name} not found`);
-        continue;
-      }
-
-      const shouldHaveRole = nftCounts[assignment.collection] >= assignment.threshold;
-      const hasRole = member.roles.cache.has(role.id);
-
-      if (shouldHaveRole && !hasRole) {
-        await member.roles.add(role.id);
-        console.log(`Added role ${assignment.name} to user ${userId}`);
-      } else if (!shouldHaveRole && hasRole) {
-        await member.roles.remove(role.id);
-        console.log(`Removed role ${assignment.name} from user ${userId}`);
-      }
-    }
-
-    // Store the actual NFT data in Redis
-    await redis.hset(`user:${userId}:nfts`, {
-      fcked_catz: JSON.stringify(Array.from(allNFTs.fcked_catz)),
-      celebcatz: JSON.stringify(Array.from(allNFTs.celebcatz)),
-      money_monsters: JSON.stringify(Array.from(allNFTs.money_monsters)),
-      money_monsters3d: JSON.stringify(Array.from(allNFTs.money_monsters3d)),
-      ai_bitbots: JSON.stringify(Array.from(allNFTs.ai_bitbots))
-    });
-
-    // Clear any cached data
-    await redis.del(`wallet:${userId}:nfts`);
-
-    console.log('Updated roles and stored NFT data for user:', userId);
-    return nftCounts;
-
-  } catch (error) {
-    console.error('Error updating Discord roles:', error);
-    throw error;
-  }
-}
-
-// Validate wallet address middleware
-export function validateWalletAddress(req, res, next) {
-  const { walletAddress } = req.body;
-  
-  if (!walletAddress) {
-    return res.status(400).json({
-      success: false,
-      error: 'No wallet address provided'
-    });
-  }
-
-  try {
-    new PublicKey(walletAddress);
-    next();
-  } catch (error) {
-    return res.status(400).json({
-      success: false,
-      error: 'Invalid wallet address'
-    });
-  }
-}
-
-// Update checkNFTOwnership to use the hashlists object
 export async function checkNFTOwnership(walletAddress) {
   try {
-    if (!hashlists) {
-      throw new Error('Hashlists not initialized');
-    }
-
-    // Get token accounts
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
       new PublicKey(walletAddress),
       { programId: TOKEN_PROGRAM_ID }
     );
 
-    // Initialize NFT counts with Sets to prevent duplicates
     const nftCounts = {
       fcked_catz: new Set(),
       celebcatz: new Set(),
       money_monsters: new Set(),
       money_monsters3d: new Set(),
-      ai_bitbots: new Set()
+      ai_bitbots: new Set(),
+      mm_top10: new Set(),
+      mm3d_top10: new Set(),
+      squirrels: new Set(),
+      rjctd_bots: new Set(),
+      energy_apes: new Set(),
+      doodle_bots: new Set(),
+      candy_bots: new Set()
     };
 
-    // Check each token account against hashlists
     for (const acc of tokenAccounts.value) {
       const mint = acc.account.data.parsed.info.mint;
       const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
@@ -357,16 +138,29 @@ export async function checkNFTOwnership(walletAddress) {
         if (hashlists.moneyMonsters.has(mint)) nftCounts.money_monsters.add(mint);
         if (hashlists.moneyMonsters3d.has(mint)) nftCounts.money_monsters3d.add(mint);
         if (hashlists.aiBitbots.has(mint)) nftCounts.ai_bitbots.add(mint);
+        if (hashlists.mmTop10.has(mint)) nftCounts.mm_top10.add(mint);
+        if (hashlists.mm3dTop10.has(mint)) nftCounts.mm3d_top10.add(mint);
+        if (hashlists.squirrels.has(mint)) nftCounts.squirrels.add(mint);
+        if (hashlists.rjctdBots.has(mint)) nftCounts.rjctd_bots.add(mint);
+        if (hashlists.energyApes.has(mint)) nftCounts.energy_apes.add(mint);
+        if (hashlists.doodleBots.has(mint)) nftCounts.doodle_bots.add(mint);
+        if (hashlists.candyBots.has(mint)) nftCounts.candy_bots.add(mint);
       }
     }
 
-    // Convert Sets to arrays
     return {
       fcked_catz: Array.from(nftCounts.fcked_catz),
       celebcatz: Array.from(nftCounts.celebcatz),
       money_monsters: Array.from(nftCounts.money_monsters),
       money_monsters3d: Array.from(nftCounts.money_monsters3d),
-      ai_bitbots: Array.from(nftCounts.ai_bitbots)
+      ai_bitbots: Array.from(nftCounts.ai_bitbots),
+      mm_top10: Array.from(nftCounts.mm_top10),
+      mm3d_top10: Array.from(nftCounts.mm3d_top10),
+      squirrels: Array.from(nftCounts.squirrels),
+      rjctd_bots: Array.from(nftCounts.rjctd_bots),
+      energy_apes: Array.from(nftCounts.energy_apes),
+      doodle_bots: Array.from(nftCounts.doodle_bots),
+      candy_bots: Array.from(nftCounts.candy_bots)
     };
   } catch (error) {
     console.error('Error checking NFT ownership:', error);
@@ -374,29 +168,104 @@ export async function checkNFTOwnership(walletAddress) {
   }
 }
 
-// Update getBUXBalance to use retry logic
-export async function getBUXBalance(walletAddress) {
-  return retryWithBackoff(async () => {
-    // Get token accounts
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-      new PublicKey(walletAddress),
-      { programId: TOKEN_PROGRAM_ID }
+// Update ROLES object to use the exact role IDs from .env
+const ROLES = {
+  // Main collections
+  FCKED_CATZ: process.env.ROLE_FCKED_CATZ,
+  CELEBCATZ: process.env.ROLE_CELEBCATZ,
+  MONEY_MONSTERS: process.env.ROLE_MONEY_MONSTERS,
+  MONEY_MONSTERS_3D: process.env.ROLE_MONEY_MONSTERS_3D,
+  AI_BITBOTS: process.env.ROLE_AI_BITBOTS,
+  
+  // Top holders
+  MM_TOP_10: process.env.ROLE_MM_TOP_10,
+  MM3D_TOP_10: process.env.ROLE_MM3D_TOP_10,
+  
+  // AI Collabs with exact role IDs from .env
+  WARRIORS: process.env.ROLE_ID_WARRIORS,      // 1300968343783735296
+  SQUIRRELS: process.env.ROLE_ID_SQUIRRELS,    // 1300968613179686943
+  ENERGY_APES: process.env.ROLE_ID_ENERGY_APES, // 1300968964276621313
+  CANDY_BOTS: process.env.ROLE_ID_CANDY_BOTS,  // 1300969268665389157
+  RJCTD_BOTS: process.env.ROLE_ID_RJCTD_BOTS,  // 1300969147441610773
+  DOODLE_BOTS: process.env.ROLE_ID_DOODLE_BOTS // 1300969353952362557
+};
+
+// Update assignRoles function to handle all collections
+export async function assignRoles(nftCounts, discordId, accessToken) {
+  try {
+    const guildId = config.discord.guildId;
+    const headers = {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    };
+
+    // Get current member roles
+    const memberResponse = await fetch(
+      `https://discord.com/api/v10/guilds/${guildId}/members/${discordId}`,
+      { headers }
     );
 
-    // Find BUX token account
-    const buxAccount = tokenAccounts.value.find(acc => 
-      acc.account.data.parsed.info.mint === BUX_TOKEN_MINT
-    );
+    if (!memberResponse.ok) {
+      throw new Error(`Failed to get member data: ${await memberResponse.text()}`);
+    }
 
-    // Get balance
-    const balance = buxAccount ? 
-      Number(buxAccount.account.data.parsed.info.tokenAmount.amount) / 1e9 : 
-      0;
+    const memberData = await memberResponse.json();
+    const currentRoles = new Set(memberData.roles);
+    const newRoles = new Set(currentRoles);
 
-    // Cache in Redis
-    await redis.set(`wallet:${walletAddress}:bux_balance`, balance.toString());
+    // Check each collection and assign roles
+    if (nftCounts.fcked_catz.length > 0) newRoles.add(ROLES.FCKED_CATZ);
+    if (nftCounts.celebcatz.length > 0) newRoles.add(ROLES.CELEBCATZ);
+    if (nftCounts.money_monsters.length > 0) newRoles.add(ROLES.MONEY_MONSTERS);
+    if (nftCounts.money_monsters3d.length > 0) newRoles.add(ROLES.MONEY_MONSTERS_3D);
+    if (nftCounts.ai_bitbots.length > 0) newRoles.add(ROLES.AI_BITBOTS);
 
-    return balance;
+    // Top holders
+    if (nftCounts.mm_top10.length > 0) newRoles.add(ROLES.MM_TOP_10);
+    if (nftCounts.mm3d_top10.length > 0) newRoles.add(ROLES.MM3D_TOP_10);
 
-  });
+    // AI Collabs
+    if (nftCounts.warriors.length > 0) newRoles.add(ROLES.WARRIORS);
+    if (nftCounts.squirrels.length > 0) newRoles.add(ROLES.SQUIRRELS);
+    if (nftCounts.rjctd_bots.length > 0) newRoles.add(ROLES.RJCTD_BOTS);
+    if (nftCounts.energy_apes.length > 0) newRoles.add(ROLES.ENERGY_APES);
+    if (nftCounts.doodle_bots.length > 0) newRoles.add(ROLES.DOODLE_BOTS);
+    if (nftCounts.candy_bots.length > 0) newRoles.add(ROLES.CANDY_BOTS);
+
+    // Update roles if they've changed
+    if (!setsAreEqual(currentRoles, newRoles)) {
+      const response = await fetch(
+        `https://discord.com/api/v10/guilds/${guildId}/members/${discordId}`,
+        {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({
+            roles: Array.from(newRoles)
+          })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to update roles: ${await response.text()}`);
+      }
+
+      console.log('Roles updated successfully for user:', discordId);
+      return true;
+    }
+
+    console.log('No role updates needed for user:', discordId);
+    return false;
+  } catch (error) {
+    console.error('Error assigning roles:', error);
+    throw error;
+  }
+}
+
+// Helper function to compare sets
+function setsAreEqual(a, b) {
+  if (a.size !== b.size) return false;
+  for (const item of a) {
+    if (!b.has(item)) return false;
+  }
+  return true;
 }
