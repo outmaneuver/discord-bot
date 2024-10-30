@@ -163,45 +163,38 @@ export async function getBUXBalance(walletAddress) {
       return 0;
     }
 
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-      new PublicKey(walletAddress),
-      { programId: TOKEN_PROGRAM_ID }
-    );
-
-    console.log('Raw token accounts:', JSON.stringify(tokenAccounts.value.map(acc => ({
-      mint: acc.account.data.parsed.info.mint,
-      amount: acc.account.data.parsed.info.tokenAmount.amount
-    })), null, 2));
-
-    console.log('Token accounts found:', tokenAccounts.value.length);
-    
-    let buxBalance = 0;
-    for (const acc of tokenAccounts.value) {
-      try {
-        const mint = acc.account.data.parsed.info.mint;
-        const amount = acc.account.data.parsed.info.tokenAmount.amount;
-        console.log(`Found token: mint=${mint}, amount=${amount}`);
-        
-        if (mint === process.env.BUX_TOKEN_MINT) {
-          const parsedAmount = parseInt(amount);
-          console.log('Found BUX token, parsed amount:', parsedAmount);
-          buxBalance += parsedAmount;
-        }
-      } catch (err) {
-        console.error('Error parsing token account:', err);
-      }
+    // Try to get cached balance first
+    const cachedBalance = await redis.get(`bux:${walletAddress}`);
+    if (cachedBalance) {
+      console.log('Using cached BUX balance:', cachedBalance);
+      return parseInt(cachedBalance);
     }
-    
-    console.log('Final BUX balance:', buxBalance);
-    
-    // Store in Redis
-    await redis.set(`bux:${walletAddress}`, buxBalance.toString());
-    console.log('Stored BUX balance in Redis:', {
-      key: `bux:${walletAddress}`,
-      value: buxBalance.toString()
-    });
-    
-    return buxBalance;
+
+    try {
+      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+        new PublicKey(walletAddress),
+        { programId: TOKEN_PROGRAM_ID }
+      );
+
+      let buxBalance = 0;
+      for (const acc of tokenAccounts.value) {
+        const mint = acc.account.data.parsed.info.mint;
+        if (mint === process.env.BUX_TOKEN_MINT) {
+          const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+          buxBalance += amount;
+        }
+      }
+      
+      // Cache the balance
+      await redis.set(`bux:${walletAddress}`, buxBalance.toString());
+      console.log('Stored new BUX balance in Redis:', buxBalance);
+      
+      return buxBalance;
+    } catch (rpcError) {
+      console.error('RPC error getting BUX balance:', rpcError);
+      // If RPC fails, return cached balance or 0
+      return parseInt(cachedBalance || '0');
+    }
   } catch (error) {
     console.error('Error getting BUX balance:', error);
     return 0;
