@@ -357,61 +357,69 @@ async function fetchTensorStats(collection) {
     });
 
     // Navigate to page
-    await page.goto(`https://www.tensor.trade/trade/${slug}`, {
+    const response = await page.goto(`https://www.tensor.trade/trade/${slug}`, {
       waitUntil: 'networkidle0',
       timeout: 30000
     });
 
-    // Wait for network requests to finish
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // Check if navigation was successful
+    if (!response.ok()) {
+      throw new Error(`Failed to load page: ${response.status()}`);
+    }
 
-    // Get page content
-    const content = await page.evaluate(() => {
-      // Helper function to get number from text
-      const getNumber = (text) => {
-        if (!text) return 0;
-        const match = text.match(/[\d,.]+/);
-        return match ? parseFloat(match[0].replace(/,/g, '')) : 0;
-      };
+    // Wait for API data to load
+    await page.waitForFunction(() => {
+      const scripts = document.getElementsByTagName('script');
+      for (const script of scripts) {
+        if (script.textContent && script.textContent.includes('__NEXT_DATA__')) {
+          return true;
+        }
+      }
+      return false;
+    }, { timeout: 10000 });
 
-      // Get all text nodes
-      const textNodes = Array.from(document.querySelectorAll('*'))
-        .filter(el => el.childNodes.length === 1 && el.childNodes[0].nodeType === 3)
-        .map(el => el.textContent.trim())
-        .filter(text => text.length > 0);
+    // Extract data from __NEXT_DATA__
+    const stats = await page.evaluate(() => {
+      const scriptContent = Array.from(document.getElementsByTagName('script'))
+        .find(script => script.textContent && script.textContent.includes('__NEXT_DATA__'))
+        ?.textContent;
 
-      console.log('Found text nodes:', textNodes);
+      if (!scriptContent) return null;
 
-      // Find values in text nodes
-      const findValue = (keywords) => {
-        const node = textNodes.find(text => 
-          keywords.some(keyword => text.toLowerCase().includes(keyword.toLowerCase()))
-        );
-        return node ? getNumber(node) : 0;
-      };
-
-      return {
-        floor: findValue(['Floor', 'floor']),
-        buyNow: findValue(['Floor', 'floor']),
-        listed: findValue(['Listed', 'listed']),
-        totalSupply: findValue(['Supply', 'supply']),
-        volume24h: findValue(['24h Volume', '24h volume']),
-        volumeAll: findValue(['All Volume', 'all volume']),
-        sales24h: findValue(['24h Sales', '24h sales']),
-        priceChange24h: findValue(['Change', 'change']) / 100
-      };
+      try {
+        const data = JSON.parse(scriptContent.split('__NEXT_DATA__ = ')[1]);
+        const collectionData = data?.props?.pageProps?.collection || {};
+        
+        return {
+          floor: parseFloat(collectionData.floor || 0),
+          buyNow: parseFloat(collectionData.floor || 0),
+          listed: parseInt(collectionData.listedCount || 0),
+          totalSupply: parseInt(collectionData.totalSupply || 0),
+          volume24h: parseFloat(collectionData.volume24h || 0),
+          volumeAll: parseFloat(collectionData.volumeAll || 0),
+          sales24h: parseInt(collectionData.sales24h || 0),
+          priceChange24h: parseFloat(collectionData.priceChange24h || 0) / 100
+        };
+      } catch (error) {
+        console.error('Error parsing data:', error);
+        return null;
+      }
     });
 
-    // Convert SOL to lamports
-    content.floor *= 1e9;
-    content.buyNow *= 1e9;
-    content.volume24h *= 1e9;
-    content.volumeAll *= 1e9;
+    if (!stats) {
+      throw new Error('Failed to extract collection data');
+    }
 
-    console.log('Extracted content:', content);
+    // Convert SOL to lamports
+    stats.floor *= 1e9;
+    stats.buyNow *= 1e9;
+    stats.volume24h *= 1e9;
+    stats.volumeAll *= 1e9;
+
+    console.log('Extracted stats:', stats);
 
     await browser.close();
-    return content;
+    return stats;
   } catch (error) {
     if (browser) await browser.close();
     console.error('Error fetching Tensor stats:', error);
