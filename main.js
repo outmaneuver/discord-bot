@@ -264,3 +264,39 @@ process.on('unhandledRejection', (error) => {
   process.exit(1);
 });
 
+// Add helper function to calculate daily reward
+function calculateDailyReward(nftCounts) {
+  try {
+    let reward = 0;
+    
+    // Make sure we're working with numbers
+    const counts = {
+      fcked_catz: nftCounts.fcked_catz?.length || 0,
+      celebcatz: nftCounts.celebcatz?.length || 0,
+      money_monsters: nftCounts.money_monsters?.length || 0,
+      money_monsters3d: nftCounts.money_monsters3d?.length || 0,
+      ai_bitbots: nftCounts.ai_bitbots?.length || 0,
+      warriors: nftCounts.warriors?.length || 0
+    };
+    
+    // Calculate rewards
+    reward += counts.fcked_catz * 2;      // 2 BUX per FCatz
+    reward += counts.celebcatz * 8;       // 8 BUX per CelebCatz
+    reward += counts.money_monsters * 2;   // 2 BUX per MM
+    reward += counts.money_monsters3d * 4; // 4 BUX per MM3D
+    reward += counts.ai_bitbots * 1;      // 1 BUX per AI Bitbot
+    reward += counts.warriors * 2;         // 2 BUX per Warriors NFT
+
+    console.log('Daily reward calculation:', {
+      counts,
+      reward,
+      timestamp: new Date().toISOString()
+    });
+
+    return reward;
+  } catch (error) {
+    console.error('Error calculating daily reward:', error);
+    return 0;
+  }
+}
+
