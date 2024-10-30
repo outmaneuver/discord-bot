@@ -34,6 +34,8 @@ import {
   displayBitbotsInfo
 } from './services/profile.js';
 
+import verifyRouter from './routes/verify.js';
+
 // Initialize hashlists with all collections
 let hashlistsData = {
   fckedCatz: new Set(),
@@ -100,46 +102,13 @@ async function startApp() {
     // Mount auth routes at root level
     app.use('/', authRouter);
 
+    // Mount verify routes
+    app.use('/holder-verify', verifyRouter);
+
     // Serve static files after routes
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
     app.use(express.static(path.join(__dirname, 'public')));
     app.use('/holder-verify', express.static(path.join(__dirname, 'public')));
-
-    // Add verify endpoint at root level
-    app.post('/holder-verify/verify', async (req, res) => {
-      try {
-        if (!req.session.user) {
-          return res.status(401).json({ error: 'Not authenticated' });
-        }
-
-        const { walletAddress } = req.body;
-        if (!walletAddress) {
-          return res.status(400).json({ error: 'Wallet address required' });
-        }
-
-        console.log('Verifying wallet:', {
-          userId: req.session.user.id,
-          walletAddress,
-        });
-
-        // Verify the wallet
-        const result = await verifyWallet(req.session.user.id, walletAddress);
-        
-        // Return success response
-        res.json({ 
-          success: true,
-          message: 'Wallet verified successfully',
-          data: result
-        });
-
-      } catch (error) {
-        console.error('Error in verify endpoint:', error);
-        res.status(500).json({ 
-          error: 'Failed to verify wallet',
-          details: error.message
-        });
-      }
-    });
 
     // Start server first
     const server = await new Promise((resolve, reject) => {
