@@ -7,19 +7,19 @@ import fs from 'fs/promises';
 
 // Initialize hashlists with hardcoded data
 let hashlists = {
-  fckedCatz: new Set(JSON.parse(await fs.readFile('./config/hashlists/fcked_catz.json', 'utf8'))),
-  celebCatz: new Set(JSON.parse(await fs.readFile('./config/hashlists/celebcatz.json', 'utf8'))),
-  moneyMonsters: new Set(JSON.parse(await fs.readFile('./config/hashlists/money_monsters.json', 'utf8'))),
-  moneyMonsters3d: new Set(JSON.parse(await fs.readFile('./config/hashlists/money_monsters3d.json', 'utf8'))),
-  aiBitbots: new Set(JSON.parse(await fs.readFile('./config/hashlists/ai_bitbots.json', 'utf8'))),
-  mmTop10: new Set(JSON.parse(await fs.readFile('./config/hashlists/MM_top10.json', 'utf8'))),
-  mm3dTop10: new Set(JSON.parse(await fs.readFile('./config/hashlists/MM3D_top10.json', 'utf8'))),
+  fckedCatz: new Set(JSON.parse(await fs.readFile('config/hashlists/fcked_catz.json', 'utf8'))),
+  celebCatz: new Set(JSON.parse(await fs.readFile('config/hashlists/celebcatz.json', 'utf8'))),
+  moneyMonsters: new Set(JSON.parse(await fs.readFile('config/hashlists/money_monsters.json', 'utf8'))),
+  moneyMonsters3d: new Set(JSON.parse(await fs.readFile('config/hashlists/money_monsters3d.json', 'utf8'))),
+  aiBitbots: new Set(JSON.parse(await fs.readFile('config/hashlists/ai_bitbots.json', 'utf8'))),
+  mmTop10: new Set(JSON.parse(await fs.readFile('config/hashlists/MM_top10.json', 'utf8'))),
+  mm3dTop10: new Set(JSON.parse(await fs.readFile('config/hashlists/MM3D_top10.json', 'utf8'))),
   warriors: new Set([]),
-  squirrels: new Set(JSON.parse(await fs.readFile('./config/hashlists/ai_collabs/squirrels.json', 'utf8'))),
-  rjctdBots: new Set(JSON.parse(await fs.readFile('./config/hashlists/ai_collabs/rjctd_bots.json', 'utf8'))),
-  energyApes: new Set(JSON.parse(await fs.readFile('./config/hashlists/ai_collabs/energy_apes.json', 'utf8'))),
-  doodleBots: new Set(JSON.parse(await fs.readFile('./config/hashlists/ai_collabs/doodle_bot.json', 'utf8'))),
-  candyBots: new Set(JSON.parse(await fs.readFile('./config/hashlists/ai_collabs/candy_bots.json', 'utf8')))
+  squirrels: new Set(JSON.parse(await fs.readFile('config/hashlists/ai_collabs/squirrels.json', 'utf8'))),
+  rjctdBots: new Set(JSON.parse(await fs.readFile('config/hashlists/ai_collabs/rjctd_bots.json', 'utf8'))),
+  energyApes: new Set(JSON.parse(await fs.readFile('config/hashlists/ai_collabs/energy_apes.json', 'utf8'))),
+  doodleBots: new Set(JSON.parse(await fs.readFile('config/hashlists/ai_collabs/doodle_bot.json', 'utf8'))),
+  candyBots: new Set(JSON.parse(await fs.readFile('config/hashlists/ai_collabs/candy_bots.json', 'utf8')))
 };
 
 // Initialize Redis first
