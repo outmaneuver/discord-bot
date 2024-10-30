@@ -279,7 +279,7 @@ Your roles have been updated! 🎉`;
       res.status(404).send('Page not found');
     });
 
-    // Initialize Discord client after server is running
+    // Initialize Discord client
     const client = new Client({
       intents: [
         GatewayIntentBits.Guilds,
@@ -291,6 +291,72 @@ Your roles have been updated! 🎉`;
         GatewayIntentBits.DirectMessages,
         GatewayIntentBits.DirectMessageReactions
       ]
+    });
+
+    // Add message event handler
+    client.on('messageCreate', async (message) => {
+      try {
+        // Ignore bot messages
+        if (message.author.bot) return;
+
+        // Check for commands
+        if (message.content.startsWith('=')) {
+          const command = message.content.slice(1).toLowerCase();
+
+          switch (command) {
+            case 'my.profile':
+              await updateUserProfile(message.channel, message.author.id, client);
+              break;
+
+            case 'my.nfts':
+              const walletData = await getWalletData(message.author.id);
+              if (!walletData || !walletData.walletAddresses.length) {
+                await message.channel.send('No wallets connected. Please verify your wallet first.');
+                return;
+              }
+              const nftData = await aggregateWalletData(walletData);
+              const nftList = formatNFTCounts(nftData.nftCounts);
+              await message.channel.send(`Your NFTs:\n${nftList || 'No NFTs found'}`);
+              break;
+
+            case 'my.roles':
+              const member = await message.guild.members.fetch(message.author.id);
+              const roles = member.roles.cache
+                .filter(role => role.name !== '@everyone')
+                .sort((a, b) => b.position - a.position)
+                .map(role => role.name)
+                .join('\n');
+              await message.channel.send(`Your roles:\n${roles || 'No roles'}`);
+              break;
+
+            case 'my.bux':
+              const buxWalletData = await getWalletData(message.author.id);
+              if (!buxWalletData || !buxWalletData.walletAddresses.length) {
+                await message.channel.send('No wallets connected. Please verify your wallet first.');
+                return;
+              }
+              let totalBux = 0;
+              for (const wallet of buxWalletData.walletAddresses) {
+                const balance = await getBUXBalance(wallet);
+                totalBux += balance;
+              }
+              await message.channel.send(`Your BUX balance: ${totalBux.toLocaleString()} BUX`);
+              break;
+
+            case 'my.wallets':
+              const userWallets = await getWalletData(message.author.id);
+              await message.channel.send(
+                userWallets.walletAddresses.length > 0
+                  ? `Your connected wallets:\n${userWallets.walletAddresses.join('\n')}`
+                  : 'No wallets connected'
+              );
+              break;
+          }
+        }
+      } catch (error) {
+        console.error('Error handling message:', error);
+        await message.channel.send('An error occurred while processing your command. Please try again later.');
+      }
     });
 
     // Login to Discord
