@@ -354,23 +354,39 @@ async function fetchTensorStats(collection) {
       timeout: 60000
     });
 
-    // Wait for stats to load
-    await page.waitForSelector('[data-floor-price]', { timeout: 30000 });
+    // Wait for stats to load and get page content
+    await page.waitForSelector('.collection-stats', { timeout: 30000 });
+    const html = await page.content();
+    console.log('Page HTML:', html); // Debug log
 
-    // Extract stats
-    const stats = await page.evaluate(() => ({
-      floor: parseFloat(document.querySelector('[data-floor-price]').textContent) * 1e9,
-      buyNow: parseFloat(document.querySelector('[data-floor-price]').textContent) * 1e9,
-      listed: parseInt(document.querySelector('[data-listed-count]').textContent),
-      totalSupply: parseInt(document.querySelector('[data-total-supply]').textContent),
-      volume24h: parseFloat(document.querySelector('[data-volume-24h]').textContent) * 1e9,
-      volumeAll: parseFloat(document.querySelector('[data-volume-all]').textContent) * 1e9,
-      sales24h: parseInt(document.querySelector('[data-sales-24h]').textContent),
-      priceChange24h: parseFloat(document.querySelector('[data-price-change]').textContent) / 100
-    }));
+    // Extract stats using more general selectors
+    const stats = await page.evaluate(() => {
+      const getNumber = (text) => {
+        const match = text.match(/[\d,.]+/);
+        return match ? parseFloat(match[0].replace(/,/g, '')) : 0;
+      };
+
+      const floorPrice = document.querySelector('.collection-stats .floor-price')?.textContent || '0';
+      const listed = document.querySelector('.collection-stats .listed-count')?.textContent || '0';
+      const supply = document.querySelector('.collection-stats .total-supply')?.textContent || '0';
+      const volume24h = document.querySelector('.collection-stats .volume-24h')?.textContent || '0';
+      const volumeAll = document.querySelector('.collection-stats .volume-all')?.textContent || '0';
+      const sales24h = document.querySelector('.collection-stats .sales-24h')?.textContent || '0';
+      const priceChange = document.querySelector('.collection-stats .price-change')?.textContent || '0';
+
+      return {
+        floor: getNumber(floorPrice) * 1e9,
+        buyNow: getNumber(floorPrice) * 1e9,
+        listed: getNumber(listed),
+        totalSupply: getNumber(supply),
+        volume24h: getNumber(volume24h) * 1e9,
+        volumeAll: getNumber(volumeAll) * 1e9,
+        sales24h: getNumber(sales24h),
+        priceChange24h: getNumber(priceChange) / 100
+      };
+    });
 
     await browser.close();
-
     return stats;
   } catch (error) {
     console.error('Error fetching Tensor stats:', error);
