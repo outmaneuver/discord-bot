@@ -362,11 +362,11 @@ async function fetchTensorStats(collection) {
     });
 
     // Wait for any content to load
-    await page.waitForXPath("//div[contains(text(), 'Floor') or contains(text(), 'Listed') or contains(text(), 'Volume')]", {
+    await page.waitForSelector('div:has-text("Floor"), div:has-text("Listed"), div:has-text("Volume")', {
       timeout: 20000
     });
 
-    // Get page content using XPath
+    // Get page content using modern selectors
     const content = await page.evaluate(() => {
       // Helper function to get number from text
       const getNumber = (text) => {
@@ -375,25 +375,19 @@ async function fetchTensorStats(collection) {
         return match ? parseFloat(match[0].replace(/,/g, '')) : 0;
       };
 
-      // Helper function to get text from XPath
-      const getTextFromXPath = (xpath) => {
-        const element = document.evaluate(
-          xpath,
-          document,
-          null,
-          XPathResult.FIRST_ORDERED_NODE_TYPE,
-          null
-        ).singleNodeValue;
+      // Helper function to get text from selector
+      const getTextFromSelector = (selector) => {
+        const element = document.querySelector(selector);
         return element ? element.textContent : '';
       };
 
-      // Get stats using XPath
-      const floorText = getTextFromXPath("//div[contains(text(), 'Floor')]/following-sibling::div");
-      const listedText = getTextFromXPath("//div[contains(text(), 'Listed')]/following-sibling::div");
-      const supplyText = getTextFromXPath("//div[contains(text(), 'Supply')]/following-sibling::div");
-      const volumeText = getTextFromXPath("//div[contains(text(), 'Volume')]/following-sibling::div");
-      const salesText = getTextFromXPath("//div[contains(text(), 'Sales')]/following-sibling::div");
-      const changeText = getTextFromXPath("//div[contains(text(), 'Change')]/following-sibling::div");
+      // Get stats using modern selectors
+      const floorText = getTextFromSelector('div:has-text("Floor") + div');
+      const listedText = getTextFromSelector('div:has-text("Listed") + div');
+      const supplyText = getTextFromSelector('div:has-text("Supply") + div');
+      const volumeText = getTextFromSelector('div:has-text("Volume") + div');
+      const salesText = getTextFromSelector('div:has-text("Sales") + div');
+      const changeText = getTextFromSelector('div:has-text("Change") + div');
 
       return {
         floor: getNumber(floorText),
