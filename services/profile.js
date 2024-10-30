@@ -323,7 +323,22 @@ export async function displayHelp(channel) {
 // Update the fetchTensorStats function
 async function fetchTensorStats(collection) {
   try {
-    const response = await fetch(`https://tensor-api.vercel.app/api/v1/collections/${collection}/stats`);
+    // Map collection names to Tensor slugs
+    const slugMap = {
+      'fcked_catz': 'fckedcatz',
+      'celebcatz': 'celebcatz',
+      'money_monsters': 'moneymonsters',
+      'money_monsters3d': 'moneymonsters3d',
+      'ai_bitbots': 'aibitbots'
+    };
+
+    const slug = slugMap[collection] || collection;
+    const response = await fetch(`https://api.tensor.so/api/collections/${slug}/stats`, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+      }
+    });
 
     if (!response.ok) {
       console.log('Response status:', response.status);
@@ -336,9 +351,9 @@ async function fetchTensorStats(collection) {
     console.log('Tensor response:', data);  // Debug log
 
     return {
-      floor: data.floor || 0,
-      buyNowPrice: data.buyNow || data.floor || 0,
-      listedCount: data.listed || 0,
+      floor: data.floor_price || 0,
+      buyNowPrice: data.floor_price || 0,
+      listedCount: data.listed_count || 0,
       totalSupply: data.total_supply || 0,
       volume24hr: data.volume_24h || 0,
       volumeAll: data.volume_all || 0,
