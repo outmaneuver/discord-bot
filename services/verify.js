@@ -157,64 +157,33 @@ export async function getBUXBalance(walletAddress) {
   try {
     console.log('Getting BUX balance for wallet:', walletAddress);
     console.log('Using BUX token mint:', process.env.BUX_TOKEN_MINT);
-    
-    if (!process.env.BUX_TOKEN_MINT) {
-      console.error('BUX_TOKEN_MINT not found in environment variables');
-      return 0;
-    }
 
-    // Try to get cached balance first
-    const cachedBalance = await redis.get(`bux:${walletAddress}`);
-    if (cachedBalance) {
-      console.log('Using cached BUX balance:', cachedBalance);
-      return parseInt(cachedBalance);
-    }
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      new PublicKey(walletAddress),
+      { programId: TOKEN_PROGRAM_ID }
+    );
 
-    // List of backup RPC endpoints
-    const rpcEndpoints = [
-      'https://api.mainnet-beta.solana.com',
-      'https://solana-api.projectserum.com',
-      'https://rpc.ankr.com/solana'
-    ];
+    console.log('Found token accounts:', tokenAccounts.value.length);
 
-    let lastError = null;
-    
-    // Try each endpoint until one works
-    for (const endpoint of rpcEndpoints) {
-      try {
-        const tempConnection = new Connection(endpoint);
-        const tokenAccounts = await tempConnection.getParsedTokenAccountsByOwner(
-          new PublicKey(walletAddress),
-          { programId: TOKEN_PROGRAM_ID }
-        );
-
-        let buxBalance = 0;
-        for (const acc of tokenAccounts.value) {
-          const mint = acc.account.data.parsed.info.mint;
-          if (mint === process.env.BUX_TOKEN_MINT) {
-            const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
-            buxBalance += amount;
-          }
-        }
-        
-        // Cache successful result
-        await redis.set(`bux:${walletAddress}`, buxBalance.toString());
-        console.log('Stored new BUX balance in Redis:', buxBalance);
-        
-        return buxBalance;
-      } catch (error) {
-        console.error(`RPC error with endpoint ${endpoint}:`, error);
-        lastError = error;
-        // Continue to next endpoint
+    let buxBalance = 0;
+    for (const acc of tokenAccounts.value) {
+      const mint = acc.account.data.parsed.info.mint;
+      console.log('Checking token mint:', mint);
+      
+      if (mint === process.env.BUX_TOKEN_MINT) {
+        const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+        console.log('Found BUX token with amount:', amount);
+        buxBalance += amount;
       }
     }
 
-    // If all endpoints fail, return cached balance or 0
-    console.error('All RPC endpoints failed:', lastError);
-    return parseInt(cachedBalance || '0');
+    console.log('Final BUX balance:', buxBalance);
+    await redis.set(`bux:${walletAddress}`, buxBalance.toString());
+    
+    return buxBalance;
   } catch (error) {
     console.error('Error getting BUX balance:', error);
-    return parseInt(cachedBalance || '0');
+    return 0;
   }
 }
 
