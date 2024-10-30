@@ -23,62 +23,9 @@ export async function updateUserProfile(channel, userId, client) {
     }
     console.log(`Processing profile for user ${userId} with wallets:`, walletData.walletAddresses);
 
-    // Initialize NFT counts
-    const nftCounts = {
-      fcked_catz: new Set(),
-      celebcatz: new Set(),
-      money_monsters: new Set(),
-      money_monsters3d: new Set(),
-      ai_bitbots: new Set(),
-      warriors: new Set(),
-      squirrels: new Set(),
-      rjctd_bots: new Set(),
-      energy_apes: new Set(),
-      doodle_bots: new Set(),
-      candy_bots: new Set()
-    };
-
-    let totalBuxBalance = 0;
-
-    // Get cached NFT data for each wallet
-    for (const walletAddress of walletData.walletAddresses) {
-      // Get cached NFT data
-      const walletNFTs = await redis.hgetall(`wallet:${walletAddress}:nfts`);
-      if (walletNFTs) {
-        Object.entries(walletNFTs).forEach(([collection, mints]) => {
-          try {
-            const mintArray = JSON.parse(mints);
-            if (Array.isArray(mintArray)) {
-              mintArray.forEach(mint => {
-                switch(collection) {
-                  case 'fcked_catz': nftCounts.fcked_catz.add(mint); break;
-                  case 'celebcatz': nftCounts.celebcatz.add(mint); break;
-                  case 'money_monsters': nftCounts.money_monsters.add(mint); break;
-                  case 'money_monsters3d': nftCounts.money_monsters3d.add(mint); break;
-                  case 'ai_bitbots': nftCounts.ai_bitbots.add(mint); break;
-                  case 'warriors': nftCounts.warriors.add(mint); break;
-                  case 'squirrels': nftCounts.squirrels.add(mint); break;
-                  case 'rjctd_bots': nftCounts.rjctd_bots.add(mint); break;
-                  case 'energy_apes': nftCounts.energy_apes.add(mint); break;
-                  case 'doodle_bots': nftCounts.doodle_bots.add(mint); break;
-                  case 'candy_bots': nftCounts.candy_bots.add(mint); break;
-                }
-              });
-            }
-          } catch (error) {
-            console.error(`Error parsing mints for ${collection}:`, error);
-          }
-        });
-      }
-
-      // Get cached BUX balance
-      const buxBalance = parseInt(await redis.get(`wallet:${walletAddress}:bux`) || '0');
-      totalBuxBalance += buxBalance;
-    }
-
-    // Update Discord roles
-    console.log('Updating roles for user:', userId);
-    await updateDiscordRoles(userId, client);
+    // Get NFT counts from updateDiscordRoles
+    const roleUpdateResult = await updateDiscordRoles(userId, client);
+    const nftCounts = roleUpdateResult.nftCounts;
 
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
     if (!guild) throw new Error('Guild not found');
@@ -92,10 +39,10 @@ export async function updateUserProfile(channel, userId, client) {
       .map(role => role.name)
       .join('\n');
 
-    const dailyReward = await calculateDailyReward(nftCounts, totalBuxBalance);
+    const dailyReward = await calculateDailyReward(nftCounts, 0); // Fix BUX balance later
 
     const [timerData, timeUntilNext] = await Promise.all([
-      startOrUpdateDailyTimer(userId, nftCounts, totalBuxBalance),
+      startOrUpdateDailyTimer(userId, nftCounts, 0), // Fix BUX balance later
       getTimeUntilNextClaim(userId)
     ]);
 
@@ -112,23 +59,23 @@ export async function updateUserProfile(channel, userId, client) {
         { 
           name: 'Main Collections', 
           value: [
-            `Fcked Catz: ${nftCounts.fcked_catz.size}`,
-            `CelebCatz: ${nftCounts.celebcatz.size}`,
-            `Money Monsters: ${nftCounts.money_monsters.size}`,
-            `Money Monsters 3D: ${nftCounts.money_monsters3d.size}`,
-            `AI Bitbots: ${nftCounts.ai_bitbots.size}`
+            `Fcked Catz: ${nftCounts.fcked_catz}`,
+            `CelebCatz: ${nftCounts.celebcatz}`,
+            `Money Monsters: ${nftCounts.money_monsters}`,
+            `Money Monsters 3D: ${nftCounts.money_monsters3d}`,
+            `AI Bitbots: ${nftCounts.ai_bitbots}`
           ].join('\n') || 'No NFTs'
         },
         { name: '\u200B', value: '─'.repeat(40) },
         {
           name: 'A.I. Collabs',
           value: [
-            `A.I. Warriors: ${nftCounts.warriors.size}`,
-            `A.I. Squirrels: ${nftCounts.squirrels.size}`,
-            `A.I. Energy Apes: ${nftCounts.energy_apes.size}`,
-            `RJCTD Bots: ${nftCounts.rjctd_bots.size}`,
-            `Candy Bots: ${nftCounts.candy_bots.size}`,
-            `Doodle Bots: ${nftCounts.doodle_bots.size}`
+            `A.I. Warriors: ${nftCounts.warriors}`,
+            `A.I. Squirrels: ${nftCounts.squirrels}`,
+            `A.I. Energy Apes: ${nftCounts.energy_apes}`,
+            `RJCTD Bots: ${nftCounts.rjctd_bots}`,
+            `Candy Bots: ${nftCounts.candy_bots}`,
+            `Doodle Bots: ${nftCounts.doodle_bots}`
           ].join('\n') || 'No A.I. Collab NFTs'
         },
         { name: '\u200B', value: '─'.repeat(40) },
@@ -139,7 +86,7 @@ export async function updateUserProfile(channel, userId, client) {
         { name: '\u200B', value: '─'.repeat(40) },
         { 
           name: 'BUX Balance', 
-          value: `${totalBuxBalance.toLocaleString()} BUX` 
+          value: `0 BUX` // Fix later
         },
         { 
           name: 'Daily Reward', 
