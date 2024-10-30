@@ -9,22 +9,42 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Initialize hashlists with empty arrays for now
-let hashlists = {
+// Initialize hashlists with empty Sets
+export let hashlists = {
   fckedCatz: new Set(),
   celebCatz: new Set(),
   moneyMonsters: new Set(),
   moneyMonsters3d: new Set(),
   aiBitbots: new Set(),
-  mmTop10: new Set(),
-  mm3dTop10: new Set(),
   warriors: new Set(),
   squirrels: new Set(),
   rjctdBots: new Set(),
   energyApes: new Set(),
   doodleBots: new Set(),
-  candyBots: new Set()
+  candyBots: new Set(),
+  mmTop10: new Set(),
+  mm3dTop10: new Set()
 };
+
+// Add function to update hashlists
+export function updateHashlists(newHashlists) {
+  hashlists = newHashlists;
+  console.log('Updated hashlists:', {
+    fckedCatz: hashlists.fckedCatz.size,
+    celebCatz: hashlists.celebCatz.size,
+    moneyMonsters: hashlists.moneyMonsters.size,
+    moneyMonsters3d: hashlists.moneyMonsters3d.size,
+    aiBitbots: hashlists.aiBitbots.size,
+    warriors: hashlists.warriors.size,
+    squirrels: hashlists.squirrels.size,
+    rjctdBots: hashlists.rjctdBots.size,
+    energyApes: hashlists.energyApes.size,
+    doodleBots: hashlists.doodleBots.size,
+    candyBots: hashlists.candyBots.size,
+    mmTop10: hashlists.mmTop10.size,
+    mm3dTop10: hashlists.mm3dTop10.size
+  });
+}
 
 // Initialize Redis first
 redis.on('error', (err) => {

@@ -16,7 +16,7 @@ import RedisStore from 'connect-redis';
 import { redis } from './config/redis.js';
 import fs from 'fs/promises';
 
-import { verifyHolder, updateDiscordRoles } from './services/verify.js';
+import { verifyHolder, updateDiscordRoles, updateHashlists } from './services/verify.js';
 import { updateUserProfile, getWalletData } from './services/profile.js';
 import { config } from './config/config.js';
 import {
@@ -152,6 +152,9 @@ async function startApp() {
       doodleBots: hashlists.doodleBots.size,
       candyBots: hashlists.candyBots.size
     });
+
+    // Update hashlists in verify service
+    updateHashlists(hashlists);
 
     // Configure Redis store
     const redisStore = new RedisStore({
