@@ -162,7 +162,7 @@ async function startApp() {
             // Check if user has verified wallets
             const walletData = await getWalletData(message.author.id);
             if (!walletData.walletAddresses.length) {
-              const verifyUrl = process.env.VERIFY_URL || 'https://buxdao.herokuapp.com/holder-verify';
+              const verifyUrl = process.env.SIGN_IN_URL || 'https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify';
               return await message.channel.send(
                 `Please verify your wallet first at ${verifyUrl} before using profile commands.`
               );
