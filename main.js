@@ -99,16 +99,16 @@ async function startApp() {
       }
     }));
 
-    // Mount auth routes at root level
-    app.use('/', authRouter);
-
-    // Mount verify routes
-    app.use('/holder-verify', verifyRouter);
-
-    // Serve static files after routes
+    // Serve static files first
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
     app.use(express.static(path.join(__dirname, 'public')));
     app.use('/holder-verify', express.static(path.join(__dirname, 'public')));
+
+    // Mount auth routes at /auth
+    app.use('/auth', authRouter);
+
+    // Mount verify routes at /holder-verify
+    app.use('/holder-verify', verifyRouter);
 
     // Start server first
     const server = await new Promise((resolve, reject) => {
