@@ -152,13 +152,24 @@ async function startApp() {
               await updateUserProfile(message.channel, message.author.id, client);
               break;
 
-            case 'my.wallets':
-              const userWallets = await getWalletData(message.author.id);
-              await message.channel.send(
-                userWallets.walletAddresses.length > 0
-                  ? `Your connected wallets:\n${userWallets.walletAddresses.join('\n')}`
-                  : 'No wallets connected'
-              );
+            case 'my.wallet':
+              await displayWallets(message.channel, message.author.id);
+              break;
+
+            case 'my.nfts':
+              await displayNFTs(message.channel, message.author.id, client);
+              break;
+
+            case 'my.roles':
+              await displayRoles(message.channel, message.author.id, client);
+              break;
+
+            case 'my.bux':
+              await displayBuxInfo(message.channel, message.author.id, client);
+              break;
+
+            case 'help':
+              await displayHelp(message.channel);
               break;
           }
         }
