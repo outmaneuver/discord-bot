@@ -86,30 +86,68 @@ export async function updateUserProfile(channel, userId, client) {
   try {
     // Get wallet data
     const walletData = await getWalletData(userId);
-    if (!walletData || !walletData.walletAddresses) {
-      throw new Error('Failed to get wallet data');
+    if (!walletData || !walletData.walletAddresses.length === 0) {
+      throw new Error('No wallets connected');
     }
     console.log(`Processing profile for user ${userId} with wallets:`, walletData.walletAddresses);
 
-    // Clear any cached NFT data
-    await redis.del(`user:${userId}:nfts`);
-    for (const wallet of walletData.walletAddresses) {
-      await redis.del(`wallet:${wallet}:nfts`);
-    }
-
-    // Force a fresh check of NFTs and roles
-    await updateDiscordRoles(userId, client);
-
-    // Get fresh NFT data after role update
-    const nftData = await redis.hgetall(`user:${userId}:nfts`);
+    // Initialize NFT counts with empty Sets
     const nftCounts = {
-      fcked_catz: JSON.parse(nftData.fcked_catz || '[]').length,
-      celebcatz: JSON.parse(nftData.celebcatz || '[]').length,
-      money_monsters: JSON.parse(nftData.money_monsters || '[]').length,
-      money_monsters3d: JSON.parse(nftData.money_monsters3d || '[]').length,
-      ai_bitbots: JSON.parse(nftData.ai_bitbots || '[]').length,
-      warriors: JSON.parse(nftData.warriors || '[]').length
+      fcked_catz: new Set(),
+      celebcatz: new Set(),
+      money_monsters: new Set(),
+      money_monsters3d: new Set(),
+      ai_bitbots: new Set(),
+      warriors: new Set(),
+      squirrels: new Set(),
+      rjctd_bots: new Set(),
+      energy_apes: new Set(),
+      doodle_bots: new Set(),
+      candy_bots: new Set()
     };
+
+    let totalBuxBalance = 0;
+
+    // Process each wallet
+    for (const walletAddress of walletData.walletAddresses) {
+      // Get token accounts for wallet - single RPC call
+      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+        new PublicKey(walletAddress),
+        { programId: TOKEN_PROGRAM_ID }
+      );
+
+      // Get BUX balance
+      for (const acc of tokenAccounts.value) {
+        if (acc.account.data.parsed.info.mint === process.env.BUX_TOKEN_MINT) {
+          totalBuxBalance += parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+        }
+      }
+
+      // Get all token mints from wallet
+      const walletMints = new Set();
+      for (const acc of tokenAccounts.value) {
+        const mint = acc.account.data.parsed.info.mint;
+        const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
+        if (amount > 0) {
+          walletMints.add(mint);
+        }
+      }
+
+      // Check mints against hashlists - no RPC calls
+      for (const mint of walletMints) {
+        if (hashlists.fckedCatz?.has(mint)) nftCounts.fcked_catz.add(mint);
+        if (hashlists.celebCatz?.has(mint)) nftCounts.celebcatz.add(mint);
+        if (hashlists.moneyMonsters?.has(mint)) nftCounts.money_monsters.add(mint);
+        if (hashlists.moneyMonsters3d?.has(mint)) nftCounts.money_monsters3d.add(mint);
+        if (hashlists.aiBitbots?.has(mint)) nftCounts.ai_bitbots.add(mint);
+        if (hashlists.warriors?.has(mint)) nftCounts.warriors.add(mint);
+        if (hashlists.squirrels?.has(mint)) nftCounts.squirrels.add(mint);
+        if (hashlists.rjctdBots?.has(mint)) nftCounts.rjctd_bots.add(mint);
+        if (hashlists.energyApes?.has(mint)) nftCounts.energy_apes.add(mint);
+        if (hashlists.doodleBots?.has(mint)) nftCounts.doodle_bots.add(mint);
+        if (hashlists.candyBots?.has(mint)) nftCounts.candy_bots.add(mint);
+      }
+    }
 
     // Get guild and member
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
@@ -125,21 +163,28 @@ export async function updateUserProfile(channel, userId, client) {
       .map(role => role.name)
       .join('\n');
 
-    // Get BUX balance
-    let buxBalance = 0;
-    for (const wallet of walletData.walletAddresses) {
-      const balance = await getBUXBalance(wallet);
-      buxBalance += balance;
-    }
+    // Calculate daily reward
+    const dailyReward = calculateDailyReward({
+      fcked_catz: nftCounts.fcked_catz.size,
+      celebcatz: nftCounts.celebcatz.size,
+      money_monsters: nftCounts.money_monsters.size,
+      money_monsters3d: nftCounts.money_monsters3d.size,
+      ai_bitbots: nftCounts.ai_bitbots.size,
+      warriors: nftCounts.warriors.size
+    });
 
     // Get timer data
     const [timerData, timeUntilNext] = await Promise.all([
-      startOrUpdateDailyTimer(userId, nftCounts, buxBalance),
+      startOrUpdateDailyTimer(userId, {
+        fcked_catz: nftCounts.fcked_catz.size,
+        celebcatz: nftCounts.celebcatz.size,
+        money_monsters: nftCounts.money_monsters.size,
+        money_monsters3d: nftCounts.money_monsters3d.size,
+        ai_bitbots: nftCounts.ai_bitbots.size,
+        warriors: nftCounts.warriors.size
+      }, totalBuxBalance),
       getTimeUntilNextClaim(userId)
     ]);
-
-    // Calculate daily reward
-    const dailyReward = calculateDailyReward(nftCounts);
 
     // Create embed
     const embed = new EmbedBuilder()
@@ -153,9 +198,22 @@ export async function updateUserProfile(channel, userId, client) {
         { name: '\u200B', value: '─'.repeat(40) },
         { 
           name: 'NFTs', 
-          value: Object.entries(nftCounts)
+          value: Object.entries({
+            'Fcked Catz': nftCounts.fcked_catz.size,
+            'CelebCatz': nftCounts.celebcatz.size,
+            'Money Monsters': nftCounts.money_monsters.size,
+            'Money Monsters 3D': nftCounts.money_monsters3d.size,
+            'AI Bitbots': nftCounts.ai_bitbots.size,
+            'Warriors': nftCounts.warriors.size,
+            'Squirrels': nftCounts.squirrels.size,
+            'RJCTD Bots': nftCounts.rjctd_bots.size,
+            'Energy Apes': nftCounts.energy_apes.size,
+            'Doodle Bots': nftCounts.doodle_bots.size,
+            'Candy Bots': nftCounts.candy_bots.size
+          })
+            .filter(([_, count]) => count > 0)
             .map(([collection, count]) => `${collection}: ${count}`)
-            .join('\n') || 'No NFTs' 
+            .join('\n') || 'No NFTs'
         },
         { name: '\u200B', value: '─'.repeat(40) },
         {
@@ -165,7 +223,7 @@ export async function updateUserProfile(channel, userId, client) {
         { name: '\u200B', value: '─'.repeat(40) },
         { 
           name: 'BUX Balance', 
-          value: `${buxBalance.toLocaleString()} BUX` 
+          value: `${totalBuxBalance.toLocaleString()} BUX` 
         },
         { 
           name: 'Daily Reward', 
