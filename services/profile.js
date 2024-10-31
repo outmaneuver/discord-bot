@@ -225,30 +225,43 @@ export async function displayRoles(channel, userId, client) {
 }
 
 export async function displayBuxInfo(channel) {
-  const embed = new EmbedBuilder()
-    .setColor('#FFD700')
-    .setTitle('$BUX Token Info')
-    .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/favicon.ico')
-    .addFields(
-      {
-        name: 'Public Supply',
-        value: '100,000,000 BUX',
-        inline: true
-      },
-      {
-        name: 'Community Wallet',
-        value: '25,000,000 BUX',
-        inline: true
-      },
-      {
-        name: '$BUX Value',
-        value: '0.01 USDC',
-        inline: true
-      }
-    )
-    .setFooter({ text: 'BUX DAO Treasury' });
+  try {
+    const { fetchBuxPublicSupply } = await import('../src/scripts/fetchBuxSupply.js');
+    const publicSupply = await fetchBuxPublicSupply();
+    
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle('$BUX Token Info')
+      .setThumbnail('https://i.imgur.com/YOUR_BUX_LOGO.png') // Replace with actual BUX logo URL
+      .addFields(
+        { 
+          name: 'Public Supply',
+          value: `${publicSupply.toLocaleString()} BUX`,
+          inline: true
+        },
+        { 
+          name: 'Community Wallet',
+          value: '25,000,000 BUX',
+          inline: true
+        },
+        {
+          name: '\u200B',
+          value: '\u200B',
+          inline: true
+        },
+        {
+          name: 'BUX Value',
+          value: '0.01 USDC',
+          inline: true
+        }
+      )
+      .setFooter({ text: 'Data updated in real-time' });
 
-  await channel.send({ embeds: [embed] });
+    await channel.send({ embeds: [embed] });
+  } catch (error) {
+    console.error('Error displaying BUX info:', error);
+    await channel.send('An error occurred while fetching BUX token information.');
+  }
 }
 
 export async function displayHelp(channel) {
