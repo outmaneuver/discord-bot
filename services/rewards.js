@@ -8,82 +8,71 @@ const redis = new Redis(process.env.REDIS_URL, {
 
 export async function calculateDailyReward(nftCounts, buxBalance) {
   try {
-    let reward = 0;  // No base reward
+    // Base rewards per NFT
+    const rewardRates = {
+      fcked_catz: 5,
+      celebcatz: 15,
+      money_monsters: 5,
+      money_monsters3d: 10,
+      ai_bitbots: 3,
+      warriors: 1,
+      squirrels: 1,
+      rjctd_bots: 1,
+      energy_apes: 1,
+      doodle_bots: 1,
+      candy_bots: 1
+    };
 
-    // Add rewards based on NFT holdings only
-    if (nftCounts) {
-      // Main collections
-      reward += (nftCounts.fcked_catz || 0) * 5;      // 5 BUX per FCatz
-      reward += (nftCounts.celebcatz || 0) * 15;      // 15 BUX per CelebCatz
-      reward += (nftCounts.money_monsters || 0) * 5;   // 5 BUX per MM
-      reward += (nftCounts.money_monsters3d || 0) * 10; // 10 BUX per MM3D
-      reward += (nftCounts.ai_bitbots || 0) * 3;      // 3 BUX per AI Bitbot
-
-      // AI Collabs - 1 BUX each
-      reward += (nftCounts.warriors || 0) * 1;        // 1 BUX per Warriors
-      reward += (nftCounts.squirrels || 0) * 1;       // 1 BUX per Squirrels
-      reward += (nftCounts.rjctd_bots || 0) * 1;      // 1 BUX per RJCTD
-      reward += (nftCounts.energy_apes || 0) * 1;     // 1 BUX per Energy Apes
-      reward += (nftCounts.doodle_bots || 0) * 1;     // 1 BUX per Doodle Bots
-      reward += (nftCounts.candy_bots || 0) * 1;      // 1 BUX per Candy Bots
+    // Calculate total reward
+    let totalReward = 0;
+    for (const [collection, count] of Object.entries(nftCounts)) {
+      if (rewardRates[collection]) {
+        totalReward += count * rewardRates[collection];
+      }
     }
 
-    return reward;
+    // Add BUX balance bonus (0.1% of balance)
+    const buxBonus = Math.floor((buxBalance || 0) * 0.001);
+    totalReward += buxBonus;
+
+    console.log('Daily reward calculation:', {
+      nftCounts,
+      buxBalance,
+      buxBonus,
+      totalReward
+    });
+
+    return totalReward;
   } catch (error) {
     console.error('Error calculating daily reward:', error);
-    return 0; // Return 0 on error
+    return 0;
   }
 }
 
 export async function startOrUpdateDailyTimer(userId, nftCounts, buxBalance) {
   try {
-    const key = `daily_timer:${userId}`;
-    const claimKey = `bux_claim:${userId}`;
+    const key = `timer:${userId}`;
+    const timerData = await redis.get(key);
     
-    // Get last check time
-    const lastCheck = await redis.get(key);
-    const now = Date.now();
-    
-    if (!lastCheck) {
-      // First time setup
-      await redis.set(key, now);
-      return {
-        nextClaimTime: now + (24 * 60 * 60 * 1000),
-        claimAmount: 0
-      };
+    if (timerData) {
+      const data = JSON.parse(timerData);
+      // Update reward amount but keep timer
+      data.claimAmount = await calculateDailyReward(nftCounts, buxBalance);
+      await redis.set(key, JSON.stringify(data));
+      return data;
     }
 
-    const timeDiff = now - parseInt(lastCheck);
-    if (timeDiff >= 24 * 60 * 60 * 1000) {
-      // 24 hours passed, add reward to claim balance
-      const reward = await calculateDailyReward(nftCounts, buxBalance);
-      const currentClaim = parseInt(await redis.get(claimKey) || '0');
-      await redis.set(claimKey, currentClaim + reward);
-      await redis.set(key, now);
-      
-      console.log('Updated daily timer:', {
-        userId,
-        reward,
-        currentClaim,
-        newClaim: currentClaim + reward
-      });
-
-      return {
-        nextClaimTime: now + (24 * 60 * 60 * 1000),
-        claimAmount: currentClaim + reward
-      };
-    }
-
-    return {
-      nextClaimTime: parseInt(lastCheck) + (24 * 60 * 60 * 1000),
-      claimAmount: parseInt(await redis.get(claimKey) || '0')
+    // Start new timer
+    const newData = {
+      lastClaim: Date.now(),
+      claimAmount: await calculateDailyReward(nftCounts, buxBalance)
     };
+    
+    await redis.set(key, JSON.stringify(newData));
+    return newData;
   } catch (error) {
-    console.error('Error in startOrUpdateDailyTimer:', error);
-    return {
-      nextClaimTime: Date.now() + (24 * 60 * 60 * 1000),
-      claimAmount: 0
-    };
+    console.error('Error updating daily timer:', error);
+    return null;
   }
 }
 
