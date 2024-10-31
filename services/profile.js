@@ -342,7 +342,7 @@ async function fetchTensorStats(collection) {
   }
 }
 
-// Update getTensorFloor function with proper Heroku Chrome path
+// Update getTensorFloor function with better selectors and timeouts
 async function getTensorFloor(collection) {
     try {
         const browser = await puppeteer.launch({
@@ -350,29 +350,56 @@ async function getTensorFloor(collection) {
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--single-process'
+                '--single-process',
+                '--disable-gpu',
+                '--no-zygote'
             ],
-            executablePath: process.env.CHROME_PATH || '/app/.apt/usr/bin/google-chrome'
+            executablePath: process.env.CHROME_PATH || '/app/.apt/usr/bin/google-chrome',
+            headless: 'new'
         });
+
         const page = await browser.newPage();
+        
+        // Set a shorter navigation timeout
+        page.setDefaultNavigationTimeout(15000);
+        
+        // Set viewport to mobile size for faster loading
+        await page.setViewport({ width: 390, height: 844 });
+        
         await page.goto(`https://www.tensor.trade/trade/${collection}`, {
             waitUntil: 'networkidle0',
-            timeout: 30000
+            timeout: 15000
         });
         
-        // Wait for floor price element and get its text
-        await page.waitForSelector('[data-price-sol]', {timeout: 10000});
-        const floorPrice = await page.$eval('[data-price-sol]', el => el.getAttribute('data-price-sol'));
+        // Try multiple selectors with shorter timeout
+        const selectors = [
+            '[data-price-sol]',
+            '.floor-price',
+            '.price-sol',
+            '[data-floor]'
+        ];
+
+        let floorPrice = null;
+        for (const selector of selectors) {
+            try {
+                await page.waitForSelector(selector, {timeout: 5000});
+                floorPrice = await page.$eval(selector, el => el.getAttribute('data-price-sol') || el.textContent);
+                if (floorPrice) break;
+            } catch (error) {
+                console.log(`Selector ${selector} not found, trying next...`);
+                continue;
+            }
+        }
         
         await browser.close();
-        return parseFloat(floorPrice);
+        return floorPrice ? parseFloat(floorPrice) : null;
     } catch (error) {
         console.error('Error scraping Tensor floor:', error);
         return null;
     }
 }
 
-// Update displayCatzInfo function
+// Update displayCatzInfo function with video thumbnail
 export async function displayCatzInfo(channel) {
     try {
         // Get floor price
@@ -381,7 +408,7 @@ export async function displayCatzInfo(channel) {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/logo.png')
+            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.mp4')
             .addFields(
                 {
                     name: 'Collection Size',
