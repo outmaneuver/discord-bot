@@ -399,31 +399,34 @@ async function getTensorFloor(collection) {
     }
 }
 
-// Update displayCatzInfo function with Magic Eden API
+// Update displayCatzInfo function with more Magic Eden data
 export async function displayCatzInfo(channel) {
     try {
-        // Get floor price from Magic Eden API
-        const response = await fetch('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats', {
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
+        // Get collection data from Magic Eden API
+        const [statsResponse, collectionResponse] = await Promise.all([
+            fetch('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats'),
+            fetch('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz')
+        ]);
         
-        if (!response.ok) {
-            throw new Error(`Magic Eden API error: ${response.status}`);
+        if (!statsResponse.ok || !collectionResponse.ok) {
+            throw new Error(`Magic Eden API error: ${statsResponse.status}/${collectionResponse.status}`);
         }
         
-        const stats = await response.json();
+        const stats = await statsResponse.json();
+        const collection = await collectionResponse.json();
+        
         const floorPrice = stats.floorPrice / 1e9; // Convert from lamports to SOL
+        const totalSupply = collection.totalItems || 1422; // Fallback to our count if API fails
+        const image = collection.image || 'https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.mp4';
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setImage('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.mp4')
+            .setImage(image)
             .addFields(
                 {
                     name: 'Collection Size',
-                    value: `${hashlists.fckedCatz.size.toLocaleString()} NFTs`
+                    value: `${totalSupply.toLocaleString()} NFTs`
                 },
                 {
                     name: 'Floor Price',
@@ -449,7 +452,7 @@ export async function displayCatzInfo(channel) {
         await channel.send({ embeds: [embed] });
     } catch (error) {
         console.error('Error displaying Catz info:', error);
-        // Still show info even if floor price fails
+        // Still show info even if API fails
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
