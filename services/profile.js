@@ -232,6 +232,14 @@ export async function displayBuxInfo(channel) {
     // Calculate BUX value in SOL
     const buxValueInSol = communityWalletSol / publicSupply;
     
+    // Fetch current SOL price
+    const solPriceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+    const solPriceData = await solPriceResponse.json();
+    const solPrice = solPriceData.solana.usd;
+    
+    // Calculate BUX value in USD
+    const buxValueInUsd = buxValueInSol * solPrice;
+    
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
       .setTitle('$BUX Token Info')
@@ -239,28 +247,15 @@ export async function displayBuxInfo(channel) {
       .addFields(
         { 
           name: 'Public Supply',
-          value: `${publicSupply.toLocaleString()} BUX`,
-          inline: true
+          value: `${publicSupply.toLocaleString()} BUX`
         },
         { 
           name: 'Community Wallet',
-          value: `${communityWalletSol.toLocaleString()} SOL`,
-          inline: true
-        },
-        {
-          name: '\u200B',
-          value: '\u200B',
-          inline: true
+          value: `${communityWalletSol.toLocaleString()} SOL`
         },
         {
           name: 'BUX Value',
-          value: `${buxValueInSol.toFixed(8)} SOL`,
-          inline: true
-        },
-        {
-          name: 'BUX Value',
-          value: '0.01 USDC',
-          inline: true
+          value: `${buxValueInSol.toFixed(8)} SOL ($${buxValueInUsd.toFixed(4)})`
         }
       )
       .setFooter({ text: 'Data updated in real-time' });
