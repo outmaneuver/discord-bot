@@ -691,7 +691,7 @@ export async function displayRewards(channel) {
   await channel.send({ embeds: [embed] });
 }
 
-// Add this new function for =my.bux command
+// Update displayBuxBalance function
 export async function displayBuxBalance(channel, userId, client) {
   try {
     const walletData = await getWalletData(userId);
@@ -732,6 +732,7 @@ export async function displayBuxBalance(channel, userId, client) {
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
       .setTitle('Your BUX Balance')
+      .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/bux.jpg')
       .addFields(
         { 
           name: 'BUX Balance', 
@@ -749,11 +750,18 @@ export async function displayBuxBalance(channel, userId, client) {
           name: 'Claim updates in', 
           value: timeUntilNext || 'Start timer by verifying wallet'
         }
-      );
+      )
+      .setFooter({ text: 'Data updated in real-time' });
 
     await channel.send({ embeds: [embed] });
   } catch (error) {
     console.error('Error displaying BUX balance:', error);
-    await channel.send('An error occurred while fetching your BUX information.');
+    
+    // More descriptive error message
+    if (error.message === 'No wallets connected') {
+      await channel.send('Please verify your wallet first using the verification link.');
+    } else {
+      await channel.send('An error occurred while fetching your BUX information. Please try again later.');
+    }
   }
 }
