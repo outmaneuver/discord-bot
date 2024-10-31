@@ -258,22 +258,53 @@ async function verifyWallet(userId, walletAddress) {
 function calculateDailyReward(nftCounts) {
   let reward = 0;
   
-  // Add reward for each NFT type
-  reward += nftCounts.fcked_catz * 10;
-  reward += nftCounts.celebcatz * 15;
-  reward += nftCounts.money_monsters * 20;
-  reward += nftCounts.money_monsters3d * 25;
-  reward += nftCounts.ai_bitbots * 30;
-  
-  // AI collabs reward
-  const aiCollabs = nftCounts.warriors + 
-                   nftCounts.squirrels + 
-                   nftCounts.rjctd_bots +
-                   nftCounts.energy_apes + 
-                   nftCounts.doodle_bots +
-                   nftCounts.candy_bots;
-                   
-  reward += aiCollabs * 5;
+  // Base rewards per NFT type
+  const REWARDS = {
+    fcked_catz: 5,      // 5 BUX per Fcked Cat
+    celebcatz: 10,      // 10 BUX per Celeb Cat
+    money_monsters: 15,  // 15 BUX per Money Monster
+    money_monsters3d: 20, // 20 BUX per 3D Money Monster
+    ai_bitbots: 25,     // 25 BUX per AI Bitbot
+    
+    // AI collabs all give 5 BUX each
+    warriors: 5,
+    squirrels: 5,
+    rjctd_bots: 5,
+    energy_apes: 5,
+    doodle_bots: 5,
+    candy_bots: 5
+  };
+
+  // Calculate rewards for each collection
+  for (const [collection, amount] of Object.entries(nftCounts)) {
+    if (amount > 0) {
+      reward += amount * REWARDS[collection];
+    }
+  }
+
+  // Add bonus rewards for holding multiple NFTs from same collection
+  if (nftCounts.fcked_catz >= 3) reward += 10;  // +10 BUX for 3+ Fcked Catz
+  if (nftCounts.celebcatz >= 2) reward += 15;   // +15 BUX for 2+ Celeb Catz
+  if (nftCounts.money_monsters >= 2) reward += 20; // +20 BUX for 2+ Money Monsters
+  if (nftCounts.money_monsters3d >= 2) reward += 25; // +25 BUX for 2+ 3D Money Monsters
+  if (nftCounts.ai_bitbots >= 2) reward += 30;  // +30 BUX for 2+ AI Bitbots
+
+  // Add bonus for holding AI collabs
+  const aiCollabCount = nftCounts.warriors + 
+                       nftCounts.squirrels + 
+                       nftCounts.rjctd_bots +
+                       nftCounts.energy_apes + 
+                       nftCounts.doodle_bots +
+                       nftCounts.candy_bots;
+
+  if (aiCollabCount >= 3) reward += 15;  // +15 BUX for holding 3+ AI collabs
+
+  console.log('Daily reward calculation:', {
+    nftCounts,
+    baseRewards: reward - (aiCollabCount >= 3 ? 15 : 0),
+    aiCollabBonus: aiCollabCount >= 3 ? 15 : 0,
+    totalReward: reward
+  });
 
   return reward;
 }
