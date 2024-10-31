@@ -302,6 +302,10 @@ async function startApp() {
             case 'rewards':
               await displayRewards(message.channel);
               break;
+
+            case 'info.bux':
+              await displayBuxInfo(message.channel);
+              break;
           }
         }
       } catch (error) {

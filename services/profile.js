@@ -703,3 +703,31 @@ export async function displayRewards(channel) {
 
   await channel.send({ embeds: [embed] });
 }
+
+// Add displayBuxInfo function
+export async function displayBuxInfo(channel) {
+  const embed = new EmbedBuilder()
+    .setColor('#FFD700')
+    .setTitle('$BUX Token Info')
+    .setThumbnail('https://i.imgur.com/XYdha3K.png') // BUX logo
+    .addFields(
+      {
+        name: 'Public Supply',
+        value: '100,000,000 BUX',
+        inline: true
+      },
+      {
+        name: 'Community Wallet',
+        value: '25,000,000 BUX',
+        inline: true
+      },
+      {
+        name: '$BUX Value',
+        value: '0.01 USDC',
+        inline: true
+      }
+    )
+    .setFooter({ text: 'BUX DAO Treasury' });
+
+  await channel.send({ embeds: [embed] });
+}
