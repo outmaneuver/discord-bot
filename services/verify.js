@@ -337,8 +337,22 @@ async function updateDiscordRoles(userId, client) {
             'Rjctd bot': () => nftCounts.rjctd_bots > 0,
             'AI energy ape': () => nftCounts.energy_apes > 0,
             'Doodle bot': () => nftCounts.doodle_bots > 0,
-            'Candy bot': () => nftCounts.candy_bots > 0
+            'Candy bot': () => nftCounts.candy_bots > 0,
+            // Add whale roles
+            'MONSTER 🐋': () => nftCounts.money_monsters >= 20,
+            'MONSTER 3D 🐋': () => nftCounts.money_monsters3d >= 20,
+            'MEGA BOT 🐋': () => nftCounts.ai_bitbots >= 10,
+            'CAT 🐋': () => nftCounts.fcked_catz >= 10,
+            'CELEB 🐋': () => nftCounts.celebcatz >= 2
         };
+
+        // Add debug logging
+        console.log('Role assignment check:', {
+            nftCounts,
+            eligibleRoles: Object.entries(roleChecks)
+                .filter(([_, checkFn]) => checkFn())
+                .map(([roleName]) => roleName)
+        });
 
         // Check each role
         for (const [roleName, checkFn] of Object.entries(roleChecks)) {
