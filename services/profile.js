@@ -430,7 +430,7 @@ async function fetchWithRetry(url, maxRetries = 3) {
     }
 }
 
-// Update displayCatzInfo function with working image URL
+// Update displayCatzInfo function with proper image URL
 export async function displayCatzInfo(channel) {
     try {
         // Get collection data with retries
@@ -443,7 +443,7 @@ export async function displayCatzInfo(channel) {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setImage('https://bafybeigxpxmfxqxvtqvwxqjqxk5zt7qvhqgxqvwxqjqxk5zt7qvhqgxqvw.ipfs.nftstorage.link/0.png')
+            .setImage('https://creator-hub-prod.s3.us-east-2.amazonaws.com/fcked_catz_pfp_1677595252883.gif') // Use verified working URL
             .addFields(
                 {
                     name: 'Collection Size',
