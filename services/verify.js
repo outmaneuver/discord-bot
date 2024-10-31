@@ -67,6 +67,7 @@ async function getBUXBalance(walletAddress) {
 
 async function verifyHolder(walletAddress) {
     try {
+        console.log(`Checking NFTs for wallet: ${walletAddress}`);
         const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
         const nftCounts = {
             fcked_catz: 0,
@@ -82,6 +83,7 @@ async function verifyHolder(walletAddress) {
             candy_bots: 0
         };
 
+        // Get token accounts with retries
         const tokenAccounts = await retryWithBackoff(() =>
             connection.getParsedTokenAccountsByOwner(
                 new PublicKey(walletAddress),
@@ -89,21 +91,63 @@ async function verifyHolder(walletAddress) {
             )
         );
 
+        console.log(`Found ${tokenAccounts.value.length} token accounts`);
+
+        // Check each token account
         for (const account of tokenAccounts.value) {
             const mint = account.account.data.parsed.info.mint;
-            if (hashlists.fckedCatz.has(mint)) nftCounts.fcked_catz++;
-            if (hashlists.celebCatz.has(mint)) nftCounts.celebcatz++;
-            if (hashlists.moneyMonsters.has(mint)) nftCounts.money_monsters++;
-            if (hashlists.moneyMonsters3d.has(mint)) nftCounts.money_monsters3d++;
-            if (hashlists.aiBitbots.has(mint)) nftCounts.ai_bitbots++;
-            if (hashlists.warriors.has(mint)) nftCounts.warriors++;
-            if (hashlists.squirrels.has(mint)) nftCounts.squirrels++;
-            if (hashlists.rjctdBots.has(mint)) nftCounts.rjctd_bots++;
-            if (hashlists.energyApes.has(mint)) nftCounts.energy_apes++;
-            if (hashlists.doodleBots.has(mint)) nftCounts.doodle_bots++;
-            if (hashlists.candyBots.has(mint)) nftCounts.candy_bots++;
+            const amount = account.account.data.parsed.info.tokenAmount.uiAmount;
+
+            // Only count tokens with amount > 0
+            if (amount > 0) {
+                if (hashlists.fckedCatz.has(mint)) {
+                    nftCounts.fcked_catz++;
+                    console.log(`Found Fcked Cat: ${mint}`);
+                }
+                if (hashlists.celebCatz.has(mint)) {
+                    nftCounts.celebcatz++;
+                    console.log(`Found Celeb Cat: ${mint}`);
+                }
+                if (hashlists.moneyMonsters.has(mint)) {
+                    nftCounts.money_monsters++;
+                    console.log(`Found Money Monster: ${mint}`);
+                }
+                if (hashlists.moneyMonsters3d.has(mint)) {
+                    nftCounts.money_monsters3d++;
+                    console.log(`Found 3D Monster: ${mint}`);
+                }
+                if (hashlists.aiBitbots.has(mint)) {
+                    nftCounts.ai_bitbots++;
+                    console.log(`Found AI Bitbot: ${mint}`);
+                }
+                if (hashlists.warriors.has(mint)) {
+                    nftCounts.warriors++;
+                    console.log(`Found AI Warrior: ${mint}`);
+                }
+                if (hashlists.squirrels.has(mint)) {
+                    nftCounts.squirrels++;
+                    console.log(`Found AI Squirrel: ${mint}`);
+                }
+                if (hashlists.rjctdBots.has(mint)) {
+                    nftCounts.rjctd_bots++;
+                    console.log(`Found RJCTD Bot: ${mint}`);
+                }
+                if (hashlists.energyApes.has(mint)) {
+                    nftCounts.energy_apes++;
+                    console.log(`Found Energy Ape: ${mint}`);
+                }
+                if (hashlists.doodleBots.has(mint)) {
+                    nftCounts.doodle_bots++;
+                    console.log(`Found Doodle Bot: ${mint}`);
+                }
+                if (hashlists.candyBots.has(mint)) {
+                    nftCounts.candy_bots++;
+                    console.log(`Found Candy Bot: ${mint}`);
+                }
+            }
         }
 
+        console.log('Final NFT counts:', nftCounts);
         return nftCounts;
     } catch (error) {
         console.error('Error verifying holder:', error);
