@@ -41,13 +41,31 @@ async function retryWithBackoff(fn, maxRetries = 5) {
     }
 }
 
-// Keep all functions as regular functions
 async function getBUXBalance(walletAddress) {
     // ... existing getBUXBalance implementation ...
 }
 
 async function verifyHolder(walletAddress) {
     // ... existing verifyHolder implementation ...
+}
+
+async function verifyWallet(walletAddress) {
+    try {
+        console.log('Verifying wallet:', walletAddress);
+        const nftCounts = await verifyHolder(walletAddress);
+        const buxBalance = await getBUXBalance(walletAddress);
+        return {
+            success: true,
+            nftCounts,
+            buxBalance
+        };
+    } catch (error) {
+        console.error('Error verifying wallet:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
 }
 
 async function updateDiscordRoles(userId, client) {
@@ -61,6 +79,7 @@ async function updateHashlists(newHashlists) {
 // Export everything at once
 export {
     verifyHolder,
+    verifyWallet,
     updateDiscordRoles,
     updateHashlists,
     getBUXBalance,
