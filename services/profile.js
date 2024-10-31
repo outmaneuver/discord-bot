@@ -666,7 +666,7 @@ export async function displayBitbotsInfo(channel) {
   }
 }
 
-// Add displayRewards function
+// Update displayRewards function
 export async function displayRewards(channel) {
   const embed = new EmbedBuilder()
     .setColor('#FFD700')
@@ -692,17 +692,6 @@ export async function displayRewards(channel) {
           '• Energy Apes: 1 BUX each',
           '• Doodle Bots: 1 BUX each',
           '• Candy Bots: 1 BUX each'
-        ].join('\n')
-      },
-      {
-        name: '✨ Collection Bonuses',
-        value: [
-          '• 3+ Fcked Catz: +5 BUX',
-          '• 2+ Celeb Catz: +10 BUX',
-          '• 2+ Money Monsters: +5 BUX',
-          '• 2+ 3D Monsters: +10 BUX',
-          '• 2+ AI Bitbots: +3 BUX',
-          '• 3+ AI Collabs: +2 BUX'
         ].join('\n')
       },
       {

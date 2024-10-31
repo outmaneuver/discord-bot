@@ -258,7 +258,7 @@ async function verifyWallet(userId, walletAddress) {
 function calculateDailyReward(nftCounts) {
   let reward = 0;
   
-  // Base rewards per NFT type
+  // Base rewards per NFT type - NO BONUSES
   const REWARDS = {
     fcked_catz: 5,       // 5 BUX per Fcked Cat
     celebcatz: 15,       // 15 BUX per Celeb Cat
@@ -282,27 +282,8 @@ function calculateDailyReward(nftCounts) {
     }
   }
 
-  // Add bonus rewards for holding multiple NFTs from same collection
-  if (nftCounts.fcked_catz >= 3) reward += 5;   // +5 BUX for 3+ Fcked Catz
-  if (nftCounts.celebcatz >= 2) reward += 10;   // +10 BUX for 2+ Celeb Catz
-  if (nftCounts.money_monsters >= 2) reward += 5;  // +5 BUX for 2+ Money Monsters
-  if (nftCounts.money_monsters3d >= 2) reward += 10; // +10 BUX for 2+ 3D Money Monsters
-  if (nftCounts.ai_bitbots >= 2) reward += 3;   // +3 BUX for 2+ AI Bitbots
-
-  // Add bonus for holding AI collabs
-  const aiCollabCount = nftCounts.warriors + 
-                       nftCounts.squirrels + 
-                       nftCounts.rjctd_bots +
-                       nftCounts.energy_apes + 
-                       nftCounts.doodle_bots +
-                       nftCounts.candy_bots;
-
-  if (aiCollabCount >= 3) reward += 2;  // +2 BUX for holding 3+ AI collabs
-
   console.log('Daily reward calculation:', {
     nftCounts,
-    baseRewards: reward - (aiCollabCount >= 3 ? 2 : 0),
-    aiCollabBonus: aiCollabCount >= 3 ? 2 : 0,
     totalReward: reward
   });
 
