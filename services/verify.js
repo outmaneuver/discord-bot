@@ -251,7 +251,7 @@ async function verifyWallet(userId, walletAddress) {
       A.I. collabs - ${nftCounts.warriors + nftCounts.squirrels + nftCounts.rjctd_bots + 
                       nftCounts.energy_apes + nftCounts.doodle_bots + nftCounts.candy_bots}
 
-      **Daily reward - ${result.dailyReward} BUX**
+      **Daily reward - ${dailyReward} BUX**
     `;
 
         // Cache final result for 5 minutes
