@@ -342,17 +342,26 @@ async function fetchTensorStats(collection) {
   }
 }
 
-// Add function to scrape Tensor floor price
+// Update getTensorFloor function to use Puppeteer properly on Heroku
 async function getTensorFloor(collection) {
     try {
         const browser = await puppeteer.launch({
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--single-process'
+            ],
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome'
         });
         const page = await browser.newPage();
-        await page.goto(`https://www.tensor.trade/trade/${collection}`);
+        await page.goto(`https://www.tensor.trade/trade/${collection}`, {
+            waitUntil: 'networkidle0',
+            timeout: 30000
+        });
         
         // Wait for floor price element and get its text
-        await page.waitForSelector('[data-price-sol]', {timeout: 5000});
+        await page.waitForSelector('[data-price-sol]', {timeout: 10000});
         const floorPrice = await page.$eval('[data-price-sol]', el => el.getAttribute('data-price-sol'));
         
         await browser.close();
