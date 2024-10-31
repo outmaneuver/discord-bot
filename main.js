@@ -32,7 +32,8 @@ import {
   displayMM3DInfo,
   displayCelebInfo,
   displayBitbotsInfo,
-  displayRewards
+  displayRewards,
+  displayBuxBalance
 } from './services/profile.js';
 
 import verifyRouter from './routes/verify.js';
@@ -272,7 +273,7 @@ async function startApp() {
               break;
 
             case 'my.bux':
-              await displayBuxInfo(message.channel, message.author.id, client);
+              await displayBuxBalance(message.channel, message.author.id, client);
               break;
 
             case 'help':
