@@ -3,6 +3,9 @@ import { updateDiscordRoles, getBUXBalance } from './verify.js';
 import { redis } from '../config/redis.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim, calculateDailyReward } from './rewards.js';
 
+// Add sleep function
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 export async function getWalletData(userId) {
   try {
     const wallets = await redis.smembers(`wallets:${userId}`);
@@ -39,7 +42,7 @@ export async function updateUserProfile(channel, userId, client) {
       candy_bots: 0
     };
 
-    // Get BUX balance and value
+    // Get BUX balance and value with retries
     let totalBuxBalance = 0;
     for (const wallet of walletData.walletAddresses) {
       try {
