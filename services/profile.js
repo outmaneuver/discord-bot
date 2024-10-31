@@ -1,5 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
-import { updateDiscordRoles, getBUXBalance } from './verify.js';
+import { updateDiscordRoles, getBUXBalance, hashlists } from './verify.js';
 import { redis } from '../config/redis.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim, calculateDailyReward } from './rewards.js';
 
@@ -324,7 +324,11 @@ export async function displayHelp(channel) {
 // Update the fetchTensorStats function
 async function fetchTensorStats(collection) {
   try {
-    const response = await fetch(`https://api.tensor.so/api/v1/collections/${collection}/stats`);
+    const response = await fetch(`https://api.tensor.so/api/v1/collections/${collection}/stats`, {
+      headers: {
+        'x-tensor-api-key': process.env.TENSOR_API_KEY
+      }
+    });
     if (!response.ok) {
       console.log('Tensor API error:', await response.text());
       throw new Error(`Failed to fetch collection data: ${response.status}`);
@@ -337,11 +341,9 @@ async function fetchTensorStats(collection) {
   }
 }
 
+// Update displayCatzInfo function to work without Tensor API
 export async function displayCatzInfo(channel) {
   try {
-    // Update collection slug to match Tensor's format
-    const tensorStats = await fetchTensorStats('fcked_catz'); // Changed from fckedcatz
-    
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
       .setTitle('Fcked Catz Collection Info')
@@ -350,26 +352,23 @@ export async function displayCatzInfo(channel) {
         {
           name: 'Collection Size',
           value: `${hashlists.fckedCatz.size.toLocaleString()} NFTs`
-        }
-      );
-
-    // Only add Tensor stats if available
-    if (tensorStats) {
-      embed.addFields(
-        {
-          name: 'Floor Price',
-          value: `${tensorStats.floor_price} SOL`
         },
         {
-          name: 'Total Volume',
-          value: `${tensorStats.volume.toLocaleString()} SOL`
+          name: 'Daily Reward',
+          value: '5 BUX per NFT'
         },
         {
-          name: 'Listed Count',
-          value: `${tensorStats.listed_count.toLocaleString()} NFTs`
+          name: 'Whale Status',
+          value: '10+ NFTs'
+        },
+        {
+          name: 'Links',
+          value: [
+            '[Magic Eden](https://magiceden.io/marketplace/fcked_catz)',
+            '[Tensor](https://www.tensor.trade/trade/fcked_catz)'
+          ].join('\n')
         }
       );
-    }
 
     await channel.send({ embeds: [embed] });
   } catch (error) {
@@ -643,7 +642,7 @@ export async function displayRewards(channel) {
         ].join('\n')
       },
       {
-        name: '⏰ Claiming Rewards',
+        name: '�� Claiming Rewards',
         value: 'Use `=my.bux` to check your daily rewards and claim status.'
       }
     )
