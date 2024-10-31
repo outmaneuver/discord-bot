@@ -399,29 +399,39 @@ async function getTensorFloor(collection) {
     }
 }
 
-// Update displayCatzInfo function with buttons and fixes
+// Update displayCatzInfo function with collection size fetch
 export async function displayCatzInfo(channel) {
     try {
         // Get collection data from Magic Eden API
-        const response = await fetch('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats', {
-            headers: {
-                'User-Agent': 'Mozilla/5.0',
-                'Accept': 'application/json'
-            }
-        });
+        const [statsResponse, collectionResponse] = await Promise.all([
+            fetch('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats', {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0',
+                    'Accept': 'application/json'
+                }
+            }),
+            fetch('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz', {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0',
+                    'Accept': 'application/json'
+                }
+            })
+        ]);
         
-        if (!response.ok) {
-            throw new Error(`Magic Eden API error: ${response.status}`);
+        if (!statsResponse.ok || !collectionResponse.ok) {
+            throw new Error(`Magic Eden API error: ${statsResponse.status}/${collectionResponse.status}`);
         }
         
-        const data = await response.json();
-        const floorPrice = data.floorPrice / 1e9; // Convert from lamports to SOL
-        const totalSupply = 1422; // Hardcode since API is unreliable
+        const stats = await statsResponse.json();
+        const collection = await collectionResponse.json();
+        
+        const floorPrice = stats.floorPrice / 1e9; // Convert from lamports to SOL
+        const totalSupply = collection.totalItems || hashlists.fckedCatz.size; // Use API or fallback
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/fcked_catz_pfp_1677595252883.gif')
+            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.gif')
             .addFields(
                 {
                     name: 'Collection Size',
@@ -464,11 +474,11 @@ export async function displayCatzInfo(channel) {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/fcked_catz_pfp_1677595252883.gif')
+            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.gif')
             .addFields(
                 {
                     name: 'Collection Size',
-                    value: `1,422 NFTs`
+                    value: `${hashlists.fckedCatz.size.toLocaleString()} NFTs`
                 },
                 {
                     name: 'Floor Price',
