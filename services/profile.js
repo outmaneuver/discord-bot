@@ -2,6 +2,7 @@ import { EmbedBuilder } from 'discord.js';
 import { updateDiscordRoles, getBUXBalance, hashlists } from './verify.js';
 import { redis } from '../config/redis.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim, calculateDailyReward } from './rewards.js';
+import puppeteer from 'puppeteer';
 
 // Add sleep function
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -341,40 +342,68 @@ async function fetchTensorStats(collection) {
   }
 }
 
-// Update displayCatzInfo function to work without Tensor API
-export async function displayCatzInfo(channel) {
-  try {
-    const embed = new EmbedBuilder()
-      .setColor('#0099ff')
-      .setTitle('Fcked Catz Collection Info')
-      .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/logo.png')
-      .addFields(
-        {
-          name: 'Collection Size',
-          value: `${hashlists.fckedCatz.size.toLocaleString()} NFTs`
-        },
-        {
-          name: 'Daily Reward',
-          value: '5 BUX per NFT'
-        },
-        {
-          name: 'Whale Status',
-          value: '10+ NFTs'
-        },
-        {
-          name: 'Links',
-          value: [
-            '[Magic Eden](https://magiceden.io/marketplace/fcked_catz)',
-            '[Tensor](https://www.tensor.trade/trade/fcked_catz)'
-          ].join('\n')
-        }
-      );
+// Add function to scrape Tensor floor price
+async function getTensorFloor(collection) {
+    try {
+        const browser = await puppeteer.launch({
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+        const page = await browser.newPage();
+        await page.goto(`https://www.tensor.trade/trade/${collection}`);
+        
+        // Wait for floor price element and get its text
+        await page.waitForSelector('[data-price-sol]', {timeout: 5000});
+        const floorPrice = await page.$eval('[data-price-sol]', el => el.getAttribute('data-price-sol'));
+        
+        await browser.close();
+        return parseFloat(floorPrice);
+    } catch (error) {
+        console.error('Error scraping Tensor floor:', error);
+        return null;
+    }
+}
 
-    await channel.send({ embeds: [embed] });
-  } catch (error) {
-    console.error('Error displaying Catz info:', error);
-    await channel.send('Error fetching Fcked Catz collection information. Please try again later.');
-  }
+// Update displayCatzInfo function
+export async function displayCatzInfo(channel) {
+    try {
+        // Get floor price
+        const floorPrice = await getTensorFloor('fcked_catz');
+        
+        const embed = new EmbedBuilder()
+            .setColor('#0099ff')
+            .setTitle('Fcked Catz Collection Info')
+            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/logo.png')
+            .addFields(
+                {
+                    name: 'Collection Size',
+                    value: `${hashlists.fckedCatz.size.toLocaleString()} NFTs`
+                },
+                {
+                    name: 'Floor Price',
+                    value: floorPrice ? `${floorPrice.toFixed(2)} SOL` : 'Unable to fetch floor'
+                },
+                {
+                    name: 'Daily Reward',
+                    value: '5 BUX per NFT'
+                },
+                {
+                    name: 'Whale Status',
+                    value: '10+ NFTs'
+                },
+                {
+                    name: 'Links',
+                    value: [
+                        '[Magic Eden](https://magiceden.io/marketplace/fcked_catz)',
+                        '[Tensor](https://www.tensor.trade/trade/fcked_catz)'
+                    ].join('\n')
+                }
+            );
+
+        await channel.send({ embeds: [embed] });
+    } catch (error) {
+        console.error('Error displaying Catz info:', error);
+        await channel.send('Error fetching Fcked Catz collection information. Please try again later.');
+    }
 }
 
 export async function displayMMInfo(channel) {
@@ -642,7 +671,7 @@ export async function displayRewards(channel) {
         ].join('\n')
       },
       {
-        name: '�� Claiming Rewards',
+        name: ' Claiming Rewards',
         value: 'Use `=my.bux` to check your daily rewards and claim status.'
       }
     )
