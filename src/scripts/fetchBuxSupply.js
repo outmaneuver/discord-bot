@@ -5,15 +5,42 @@ const BUX_TOKEN_ADDRESS = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
 const BUX_DECIMALS = 9;
 
 const EXEMPT_WALLETS = [
-    'DXM1SKEbtDVFJcqLDJvSBSh83CeHkYv4qM88JG9BwJ5t',
-    'BX1PEe4FJiWuHjFnYuYFB8edZsFg39BWggi65yTH52or',
-    '95vRUfprVqvURhPryNdEsaBrSNmbE1uuufYZkyrxyjir',
-    'FFfTserUJGZEFLKB7ffqxaXvoHfdRJDtNYgXu7NEn8an',
-    'He7HLAH2v8pnVafzxmfkqZUVefy4DUGiHmpetQFZNjrg',
-    'FAEjAsCtpoapdsCF1DDhj71vdjQjSeAJt8gt9uYxL7gz',
-    '9pRsKWUw2nQBfdVhfknyWQ4KEiDiYvahRXCf9an4kpW4',
-    'FYfLzXckAf2JZoMYBz2W4fpF9vejqpA6UFV17d1A7C75',
-    'H4RPEi5Sfpapy1B233b4DUhh6hsmFTTKx4pXqWnpW637'
+    {
+        wallet: 'DXM1SKEbtDVFJcqLDJvSBSh83CeHkYv4qM88JG9BwJ5t',
+        tokenAccount: '857soYnFmYzTU9gAuYZATCe1fwozRBVGidzV5vf3X9m3'
+    },
+    {
+        wallet: 'BX1PEe4FJiWuHjFnYuYFB8edZsFg39BWggi65yTH52or',
+        tokenAccount: '9PhXMK9MUrx3XHdwnUd8SWCXJMN4dn1t6VphM4ag9S9t'
+    },
+    {
+        wallet: '95vRUfprVqvURhPryNdEsaBrSNmbE1uuufYZkyrxyjir',
+        tokenAccount: '5B6wB3PpxVttsUi4511xYRy6giGdHCeGwSLJRY9V1px4'
+    },
+    {
+        wallet: 'FFfTserUJGZEFLKB7ffqxaXvoHfdRJDtNYgXu7NEn8an',
+        tokenAccount: '4aCuUNM8fmZ4EJgMSuqAXyB7Nh5oQVeejN2gEdhfmjyB'
+    },
+    {
+        wallet: 'He7HLAH2v8pnVafzxmfkqZUVefy4DUGiHmpetQFZNjrg',
+        tokenAccount: 'Jh4BVgcD9Pp3TFJzxxVDeyp1TPUioY3k4cwj7GjaLsJ'
+    },
+    {
+        wallet: 'FAEjAsCtpoapdsCF1DDhj71vdjQjSeAJt8gt9uYxL7gz',
+        tokenAccount: 'HyBS72PmHuhwX7Z6qLM9HaLsboKHZy4se27sDMkqEgqd'
+    },
+    {
+        wallet: '9pRsKWUw2nQBfdVhfknyWQ4KEiDiYvahRXCf9an4kpW4',
+        tokenAccount: 'CFJdc43HP5q9N9KMkhy9oaoRZKYiAXnEcVmpdYaD1tci'
+    },
+    {
+        wallet: 'FYfLzXckAf2JZoMYBz2W4fpF9vejqpA6UFV17d1A7C75',
+        tokenAccount: '2ViuF6cWJ5PH9sXwC8RFK8azwdNEQM4aKnfhF6qUSjNH'
+    },
+    {
+        wallet: 'H4RPEi5Sfpapy1B233b4DUhh6hsmFTTKx4pXqWnpW637',
+        tokenAccount: '32B5gWmvmTgASxqdxDhgweo2CdcxVtCkx4t4Y2DTdu1C'
+    }
 ];
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -39,36 +66,23 @@ export async function fetchBuxPublicSupply() {
     try {
         const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
         
-        // Get token supply (this already comes in the correct decimal format)
+        // Get token supply
         const tokenSupply = await retryWithBackoff(() => 
             connection.getTokenSupply(new PublicKey(BUX_TOKEN_ADDRESS))
         );
 
         // Get balances of exempt wallets with delay between requests
         const exemptBalances = [];
-        for (const wallet of EXEMPT_WALLETS) {
+        for (const { wallet, tokenAccount } of EXEMPT_WALLETS) {
             try {
-                await sleep(500);
-                const tokenAccounts = await retryWithBackoff(() =>
-                    connection.getTokenAccountsByOwner(
-                        new PublicKey(wallet),
-                        { programId: TOKEN_PROGRAM_ID }
-                    )
+                await sleep(500); // Add delay between requests
+                const accountInfo = await retryWithBackoff(() =>
+                    connection.getTokenAccountBalance(new PublicKey(tokenAccount))
                 );
-
-                let walletBalance = 0;
-                for (const account of tokenAccounts.value) {
-                    await sleep(200);
-                    const accountInfo = await retryWithBackoff(() =>
-                        connection.getTokenAccountBalance(account.pubkey)
-                    );
-                    // Use uiAmount which is already adjusted for decimals
-                    if (accountInfo.value.uiAmount) {
-                        walletBalance += accountInfo.value.uiAmount;
-                    }
-                }
-                exemptBalances.push(walletBalance);
-                console.log(`Balance for ${wallet}: ${walletBalance.toLocaleString()} BUX`);
+                
+                const balance = accountInfo.value.uiAmount || 0;
+                exemptBalances.push(balance);
+                console.log(`Balance for ${wallet}: ${balance.toLocaleString()} BUX`);
             } catch (error) {
                 console.error(`Error fetching balance for wallet ${wallet}:`, error);
                 exemptBalances.push(0);
@@ -85,7 +99,7 @@ export async function fetchBuxPublicSupply() {
         console.log('Total Exempt Balance:', totalExemptBalance.toLocaleString(), 'BUX');
         console.log('Public Supply:', publicSupply.toLocaleString(), 'BUX');
 
-        return Math.max(0, publicSupply); // Ensure we never return negative supply
+        return Math.max(0, publicSupply);
     } catch (error) {
         console.error('Error fetching BUX public supply:', error);
         throw error;
