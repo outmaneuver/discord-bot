@@ -31,14 +31,8 @@ export async function calculateDailyReward(nftCounts, buxBalance) {
       }
     }
 
-    // Add BUX balance bonus (0.1% of balance)
-    const buxBonus = Math.floor((buxBalance || 0) * 0.001);
-    totalReward += buxBonus;
-
     console.log('Daily reward calculation:', {
       nftCounts,
-      buxBalance,
-      buxBonus,
       totalReward
     });
 
