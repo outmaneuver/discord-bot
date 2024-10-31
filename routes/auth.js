@@ -4,7 +4,8 @@ import cors from 'cors';
 import { config } from '../config/config.js';
 import { verifyWallet } from '../services/verify.js';
 import session from 'express-session';
-import redisStore from 'connect-redis';
+import RedisStore from 'connect-redis';
+import { redis } from '../config/redis.js';
 
 const router = express.Router();
 
@@ -15,6 +16,12 @@ router.use(cors({
     : 'http://localhost:3000',
   credentials: true
 }));
+
+// Initialize Redis store properly
+const redisStore = new RedisStore({
+  client: redis,
+  prefix: 'session:'
+});
 
 // Update session configuration
 router.use(session({
