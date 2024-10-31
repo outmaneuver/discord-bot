@@ -399,7 +399,7 @@ async function getTensorFloor(collection) {
     }
 }
 
-// Update displayCatzInfo function with video thumbnail
+// Update displayCatzInfo function with GIF and new whale status
 export async function displayCatzInfo(channel) {
     try {
         // Get floor price
@@ -408,7 +408,7 @@ export async function displayCatzInfo(channel) {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.mp4')
+            .setImage('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.mp4')
             .addFields(
                 {
                     name: 'Collection Size',
@@ -424,7 +424,7 @@ export async function displayCatzInfo(channel) {
                 },
                 {
                     name: 'Whale Status',
-                    value: '10+ NFTs'
+                    value: '25+ NFTs'
                 },
                 {
                     name: 'Links',
