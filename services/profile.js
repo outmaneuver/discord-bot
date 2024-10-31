@@ -430,7 +430,7 @@ async function fetchWithRetry(url, maxRetries = 3) {
     }
 }
 
-// Update displayCatzInfo function to only use Magic Eden data
+// Update displayCatzInfo function with correct Magic Eden API properties
 export async function displayCatzInfo(channel) {
     try {
         // Get collection data with retries
@@ -441,7 +441,7 @@ export async function displayCatzInfo(channel) {
         
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         const listedCount = statsData.listedCount || 0;
-        const totalSupply = collectionData.totalSupply; // Get size from Magic Eden
+        const totalSupply = collectionData.listedCount + collectionData.unlistedCount; // Get total supply
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
@@ -458,7 +458,7 @@ export async function displayCatzInfo(channel) {
                 },
                 {
                     name: 'Listed Count',
-                    value: `${listedCount} NFTs`
+                    value: `${listedCount} NFTs (${((listedCount/totalSupply)*100).toFixed(1)}%)`
                 },
                 {
                     name: 'Daily Reward',
