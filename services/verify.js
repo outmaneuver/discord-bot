@@ -114,27 +114,43 @@ async function verifyHolder(walletAddress) {
 async function verifyWallet(userId, walletAddress) {
     try {
         // First check Redis cache
-        const cachedResult = await redis.get(`verify:${userId}:${walletAddress}`);
+        const cacheKey = `verify:${userId}:${walletAddress}`;
+        const cachedResult = await redis.get(cacheKey);
         if (cachedResult) {
+            console.log('Using cached verification result');
             return JSON.parse(cachedResult);
         }
 
-        const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
-        
-        // Get NFT counts and BUX balance in parallel with individual timeouts
+        // Get NFT counts and BUX balance in parallel with retries
         const [nftCounts, buxBalance] = await Promise.all([
-            Promise.race([
-                verifyHolder(walletAddress),
-                new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('NFT verification timeout')), 10000)
-                )
-            ]),
-            Promise.race([
-                getBUXBalance(walletAddress),
-                new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('BUX balance timeout')), 10000)
-                )
-            ])
+            retryWithBackoff(async () => {
+                // Check cache first
+                const nftCacheKey = `nfts:${walletAddress}`;
+                const cachedNfts = await redis.get(nftCacheKey);
+                if (cachedNfts) {
+                    console.log('Using cached NFT counts');
+                    return JSON.parse(cachedNfts);
+                }
+
+                const counts = await verifyHolder(walletAddress);
+                // Cache NFT counts for 1 hour
+                await redis.setex(nftCacheKey, 3600, JSON.stringify(counts));
+                return counts;
+            }, 3),
+            retryWithBackoff(async () => {
+                // Check cache first
+                const buxCacheKey = `bux:${walletAddress}`;
+                const cachedBux = await redis.get(buxCacheKey);
+                if (cachedBux) {
+                    console.log('Using cached BUX balance');
+                    return parseInt(cachedBux);
+                }
+
+                const balance = await getBUXBalance(walletAddress);
+                // Cache BUX balance for 5 minutes
+                await redis.setex(buxCacheKey, 300, balance.toString());
+                return balance;
+            }, 3)
         ]);
 
         const result = {
@@ -143,16 +159,27 @@ async function verifyWallet(userId, walletAddress) {
             buxBalance
         };
 
-        // Cache result for 5 minutes
-        await redis.setex(
-            `verify:${userId}:${walletAddress}`,
-            300,
-            JSON.stringify(result)
-        );
+        // Cache final result for 5 minutes
+        await redis.setex(cacheKey, 300, JSON.stringify(result));
 
         return result;
     } catch (error) {
         console.error('Error verifying wallet:', error);
+        
+        // Try to return cached data even if verification fails
+        try {
+            const cachedResult = await redis.get(`verify:${userId}:${walletAddress}`);
+            if (cachedResult) {
+                console.log('Returning cached data after error');
+                return {
+                    ...JSON.parse(cachedResult),
+                    fromCache: true
+                };
+            }
+        } catch (cacheError) {
+            console.error('Error getting cached data:', cacheError);
+        }
+
         return {
             success: false,
             error: error.message
