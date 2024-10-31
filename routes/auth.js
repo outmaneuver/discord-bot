@@ -11,10 +11,10 @@ const router = express.Router();
 
 // Enable CORS for auth routes
 router.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? 'https://buxdao-verify-d1faffc83da7.herokuapp.com'
-    : 'http://localhost:3000',
-  credentials: true
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Initialize Redis store properly
@@ -31,11 +31,11 @@ router.use(session({
   saveUninitialized: true,
   name: 'buxdao.sid',
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'none', // Changed from 'lax' to 'none' for mobile
-    domain: process.env.NODE_ENV === 'production' ? '.herokuapp.com' : undefined
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    sameSite: 'none',
+    path: '/'
   }
 }));
 
@@ -65,7 +65,7 @@ router.get('/discord', (req, res) => {
 
 router.get('/callback', async (req, res) => {
   try {
-    const { code, state } = req.query;
+    const { code } = req.query;
     console.log('Processing OAuth callback with code');
 
     const tokenData = await getOAuthToken(code);
@@ -79,9 +79,9 @@ router.get('/callback', async (req, res) => {
       accessToken: tokenData.access_token
     };
 
-    // Set cookies for mobile/cross-domain support
+    // Set cookies with proper flags for mobile
     res.cookie('discord_user', userData.username, {
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
       httpOnly: false,
       secure: true,
       sameSite: 'none',
@@ -104,25 +104,14 @@ router.get('/callback', async (req, res) => {
       path: '/'
     });
 
-    // Save session explicitly and wait for it
-    await new Promise((resolve, reject) => {
-      req.session.save((err) => {
-        if (err) {
-          console.error('Session save error:', err);
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
-    });
+    // Save session explicitly
+    await new Promise((resolve) => req.session.save(resolve));
 
-    console.log('Session saved:', {
-      id: req.session.id,
-      user: req.session.user?.username,
-      cookie: req.session.cookie
-    });
+    // Set headers for cross-origin
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
 
-    // Redirect with success parameter and user data
+    // Redirect with success parameter
     res.redirect(`/holder-verify/?auth=success&user=${encodeURIComponent(userData.username)}`);
 
   } catch (error) {
@@ -144,6 +133,8 @@ router.get('/status', (req, res) => {
         id: discordId,
         username: discordUser
       };
+      // Save session immediately
+      req.session.save();
     }
 
     const status = {
@@ -153,6 +144,10 @@ router.get('/status', (req, res) => {
     };
 
     console.log('Auth status check:', status);
+
+    // Set CORS headers
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
 
     res.json({
       authenticated: status.hasUser,
