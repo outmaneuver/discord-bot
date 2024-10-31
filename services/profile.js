@@ -430,7 +430,7 @@ async function fetchWithRetry(url, maxRetries = 3) {
     }
 }
 
-// Update displayCatzInfo function with absolute path
+// Update displayCatzInfo function with direct image URL
 export async function displayCatzInfo(channel) {
     try {
         // Get collection data with retries
@@ -443,7 +443,7 @@ export async function displayCatzInfo(channel) {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/fcked_catz_pfp_1677595252883.gif') // Use ME image for now
+            .setImage('https://img-cdn.magiceden.dev/rs:fill:640:640:0:0/plain/https://bafybeihc2x7lz2og5g3lg7qmemx7zqvtxabzf4vr4wqgk75yw7ebxqhbeu.ipfs.dweb.link/fcatz.png')
             .addFields(
                 {
                     name: 'Collection Size',
