@@ -399,43 +399,44 @@ async function getTensorFloor(collection) {
     }
 }
 
-// Update displayCatzInfo function with collection size fetch
+// Update displayCatzInfo function to only use Magic Eden data
 export async function displayCatzInfo(channel) {
     try {
         // Get collection data from Magic Eden API
-        const [statsResponse, collectionResponse] = await Promise.all([
-            fetch('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats', {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0',
-                    'Accept': 'application/json'
-                }
-            }),
-            fetch('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz', {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0',
-                    'Accept': 'application/json'
-                }
-            })
-        ]);
+        const response = await fetch('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz', {
+            headers: {
+                'User-Agent': 'Mozilla/5.0',
+                'Accept': 'application/json'
+            }
+        });
         
-        if (!statsResponse.ok || !collectionResponse.ok) {
-            throw new Error(`Magic Eden API error: ${statsResponse.status}/${collectionResponse.status}`);
+        if (!response.ok) {
+            throw new Error(`Magic Eden API error: ${response.status}`);
         }
         
-        const stats = await statsResponse.json();
-        const collection = await collectionResponse.json();
+        const collectionData = await response.json();
+        const statsResponse = await fetch('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats', {
+            headers: {
+                'User-Agent': 'Mozilla/5.0',
+                'Accept': 'application/json'
+            }
+        });
         
-        const floorPrice = stats.floorPrice / 1e9; // Convert from lamports to SOL
-        const totalSupply = collection.totalItems || hashlists.fckedCatz.size; // Use API or fallback
+        if (!statsResponse.ok) {
+            throw new Error(`Magic Eden API error: ${statsResponse.status}`);
+        }
+        
+        const statsData = await statsResponse.json();
+        const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.gif')
+            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.mp4')
             .addFields(
                 {
                     name: 'Collection Size',
-                    value: `${totalSupply.toLocaleString()} NFTs`
+                    value: `${collectionData.totalItems.toLocaleString()} NFTs`
                 },
                 {
                     name: 'Floor Price',
@@ -470,46 +471,7 @@ export async function displayCatzInfo(channel) {
         });
     } catch (error) {
         console.error('Error displaying Catz info:', error);
-        // Still show info even if API fails
-        const embed = new EmbedBuilder()
-            .setColor('#0099ff')
-            .setTitle('Fcked Catz Collection Info')
-            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.gif')
-            .addFields(
-                {
-                    name: 'Collection Size',
-                    value: `${hashlists.fckedCatz.size.toLocaleString()} NFTs`
-                },
-                {
-                    name: 'Floor Price',
-                    value: 'Unable to fetch floor'
-                },
-                {
-                    name: 'Daily Reward',
-                    value: '5 BUX per NFT'
-                },
-                {
-                    name: 'Whale Status',
-                    value: '25+ NFTs'
-                }
-            );
-
-        const row = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setLabel('Magic Eden')
-                    .setURL('https://magiceden.io/marketplace/fcked_catz')
-                    .setStyle(ButtonStyle.Link),
-                new ButtonBuilder()
-                    .setLabel('Tensor')
-                    .setURL('https://www.tensor.trade/trade/fcked_catz')
-                    .setStyle(ButtonStyle.Link)
-            );
-
-        await channel.send({ 
-            embeds: [embed],
-            components: [row]
-        });
+        await channel.send('Error fetching Fcked Catz collection information. Please try again later.');
     }
 }
 
