@@ -430,7 +430,7 @@ async function fetchWithRetry(url, maxRetries = 3) {
     }
 }
 
-// Update displayCatzInfo function with static image
+// Update displayCatzInfo function with JPG image
 export async function displayCatzInfo(channel) {
     try {
         // Get collection data with retries
@@ -443,7 +443,7 @@ export async function displayCatzInfo(channel) {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setImage('https://nftstorage.link/ipfs/bafybeigxpxmfxqxvtqvwxqjqxk5zt7qvhqgxqvwxqjqxk5zt7qvhqgxqvw/fckedcatz.png')
+            .setImage('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.jpg')
             .addFields(
                 {
                     name: 'Collection Size',
