@@ -204,11 +204,24 @@ async function getDiscordUser(accessToken) {
 // Update the verify endpoint
 router.post('/verify', async (req, res) => {
   try {
-    if (!req.session.user) {
+    // Check both session and cookies for auth
+    const discordId = req.session?.user?.id || req.cookies?.discord_id;
+    const discordUser = req.session?.user?.username || req.cookies?.discord_user;
+
+    if (!discordId || !discordUser) {
       return res.status(401).json({ 
         success: false, 
         error: 'Not authenticated' 
       });
+    }
+
+    // Recreate session if needed
+    if (!req.session.user && discordId && discordUser) {
+      req.session.user = {
+        id: discordId,
+        username: discordUser
+      };
+      await new Promise(resolve => req.session.save(resolve));
     }
 
     const { walletAddress } = req.body;
@@ -220,7 +233,7 @@ router.post('/verify', async (req, res) => {
     }
 
     console.log('Verifying wallet:', {
-      userId: req.session.user.id,
+      userId: discordId,
       walletAddress,
     });
 
@@ -237,7 +250,7 @@ router.post('/verify', async (req, res) => {
     try {
       // Verify the wallet with shorter timeout
       const result = await Promise.race([
-        verifyWallet(req.session.user.id, walletAddress),
+        verifyWallet(discordId, walletAddress),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Verification timeout')), 15000)
         )
@@ -248,7 +261,7 @@ router.post('/verify', async (req, res) => {
 
       if (result.success) {
         // Store wallet in Redis
-        await redis.sadd(`wallets:${req.session.user.id}`, walletAddress);
+        await redis.sadd(`wallets:${discordId}`, walletAddress);
       }
 
       // Return success response
