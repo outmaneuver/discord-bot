@@ -699,35 +699,48 @@ export async function displayBuxBalance(channel, userId, client) {
       throw new Error('No wallets connected');
     }
 
-    // Get BUX balance and value
+    // Get BUX balance from cache first
     let totalBuxBalance = 0;
     for (const wallet of walletData.walletAddresses) {
-      const chainBalance = await getBUXBalance(wallet);
       const cachedBalance = parseInt(await redis.get(`bux:${wallet}`) || '0');
-      const balance = chainBalance || cachedBalance;
-      totalBuxBalance += Math.floor(balance / 1e9);
+      totalBuxBalance += Math.floor(cachedBalance / 1e9);
     }
 
-    // Fetch current SOL price and BUX value
-    const { fetchBuxPublicSupply } = await import('../src/scripts/fetchBuxSupply.js');
-    const { publicSupply, communityWalletSol } = await fetchBuxPublicSupply();
-    const buxValueInSol = communityWalletSol / publicSupply;
-    
-    const solPriceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
-    const solPriceData = await solPriceResponse.json();
-    const solPrice = solPriceData.solana.usd;
-    
+    // Try to get fresh BUX value, but don't fail if it errors
+    let buxValueInSol = 0;
+    let solPrice = 0;
+    try {
+      const { fetchBuxPublicSupply } = await import('../src/scripts/fetchBuxSupply.js');
+      const { publicSupply, communityWalletSol } = await fetchBuxPublicSupply();
+      buxValueInSol = communityWalletSol / publicSupply;
+      
+      const solPriceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+      const solPriceData = await solPriceResponse.json();
+      solPrice = solPriceData.solana.usd;
+    } catch (error) {
+      console.error('Error fetching BUX value:', error);
+      // Continue with cached values
+    }
+
     // Calculate total BUX value in USD
     const buxValueInUsd = buxValueInSol * solPrice;
     const totalBuxValueUsd = totalBuxBalance * buxValueInUsd;
 
-    // Get daily reward info
-    const nftCounts = (await updateDiscordRoles(userId, client))?.nftCounts || {};
-    const dailyReward = await calculateDailyReward(nftCounts, totalBuxBalance);
-    const [timerData, timeUntilNext] = await Promise.all([
-      startOrUpdateDailyTimer(userId, nftCounts, totalBuxBalance),
-      getTimeUntilNextClaim(userId)
-    ]);
+    // Get daily reward info from cache if possible
+    let dailyReward = 0;
+    let timerData = null;
+    let timeUntilNext = null;
+    try {
+      const nftCounts = (await updateDiscordRoles(userId, client))?.nftCounts || {};
+      dailyReward = await calculateDailyReward(nftCounts, totalBuxBalance);
+      [timerData, timeUntilNext] = await Promise.all([
+        startOrUpdateDailyTimer(userId, nftCounts, totalBuxBalance),
+        getTimeUntilNextClaim(userId)
+      ]);
+    } catch (error) {
+      console.error('Error fetching reward info:', error);
+      // Continue with default values
+    }
 
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
@@ -736,28 +749,38 @@ export async function displayBuxBalance(channel, userId, client) {
       .addFields(
         { 
           name: 'BUX Balance', 
-          value: `${totalBuxBalance.toLocaleString()} BUX ($${totalBuxValueUsd.toFixed(2)})`
-        },
-        { 
-          name: 'Daily Reward', 
-          value: `${dailyReward.toLocaleString()} BUX` 
-        },
-        { 
-          name: 'BUX Claim', 
-          value: `${(timerData?.claimAmount || 0).toLocaleString()} BUX` 
-        },
-        { 
-          name: 'Claim updates in', 
-          value: timeUntilNext || 'Start timer by verifying wallet'
+          value: `${totalBuxBalance.toLocaleString()} BUX${buxValueInSol ? ` ($${totalBuxValueUsd.toFixed(2)})` : ''}`
         }
-      )
-      .setFooter({ text: 'Data updated in real-time' });
+      );
+
+    // Only add these fields if we have the data
+    if (dailyReward) {
+      embed.addFields({ 
+        name: 'Daily Reward', 
+        value: `${dailyReward.toLocaleString()} BUX` 
+      });
+    }
+
+    if (timerData?.claimAmount) {
+      embed.addFields({ 
+        name: 'BUX Claim', 
+        value: `${(timerData.claimAmount).toLocaleString()} BUX` 
+      });
+    }
+
+    if (timeUntilNext) {
+      embed.addFields({ 
+        name: 'Claim updates in', 
+        value: timeUntilNext
+      });
+    }
+
+    embed.setFooter({ text: 'Data updated in real-time' });
 
     await channel.send({ embeds: [embed] });
   } catch (error) {
     console.error('Error displaying BUX balance:', error);
     
-    // More descriptive error message
     if (error.message === 'No wallets connected') {
       await channel.send('Please verify your wallet first using the verification link.');
     } else {
