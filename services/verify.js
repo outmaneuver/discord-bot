@@ -446,6 +446,8 @@ async function updateHashlists(newHashlists) {
   });
 }
 
+const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
+
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function retryWithBackoff(fn, maxRetries = 5) {
