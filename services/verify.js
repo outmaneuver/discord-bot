@@ -446,6 +446,25 @@ async function updateHashlists(newHashlists) {
   });
 }
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function retryWithBackoff(fn, maxRetries = 5) {
+    let retries = 0;
+    while (true) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (!error.message.includes('429 Too Many Requests') || retries >= maxRetries) {
+                throw error;
+            }
+            retries++;
+            const delay = Math.min(1000 * Math.pow(2, retries), 10000);
+            console.log(`Rate limited, retrying in ${delay}ms...`);
+            await sleep(delay);
+        }
+    }
+}
+
 export async function getBUXBalance(walletAddress) {
   try {
     console.log('Getting BUX balance for wallet:', walletAddress);
@@ -459,11 +478,18 @@ export async function getBUXBalance(walletAddress) {
       )
     );
 
+    console.log('Found token accounts:', tokenAccounts.value.length);
     let totalBalance = 0;
     for (const account of tokenAccounts.value) {
-      totalBalance += account.account.data.parsed.info.tokenAmount.amount;
+      console.log('Checking token mint:', account.account.data.parsed.info.mint);
+      if (account.account.data.parsed.info.mint === BUX_TOKEN_MINT) {
+        const amount = account.account.data.parsed.info.tokenAmount.amount;
+        console.log('Found BUX token with amount:', amount);
+        totalBalance += parseInt(amount);
+      }
     }
 
+    console.log('Final BUX balance:', totalBalance);
     return totalBalance;
   } catch (error) {
     console.error('Error getting BUX balance:', error);
