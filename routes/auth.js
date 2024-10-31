@@ -40,8 +40,16 @@ router.get('/discord', (req, res) => {
 
 router.get('/callback', async (req, res) => {
   try {
-    const { code } = req.query;
+    const { code, state } = req.query;
     console.log('Processing OAuth callback with code');
+
+    // Verify state parameter matches
+    if (state !== req.session.oauthState) {
+      console.error('State mismatch:', { 
+        expected: req.session.oauthState, 
+        received: state 
+      });
+    }
 
     const tokenData = await getOAuthToken(code);
     console.log('Received token data');
@@ -49,13 +57,49 @@ router.get('/callback', async (req, res) => {
     const userData = await getDiscordUser(tokenData.access_token);
     console.log('Received user data:', userData);
 
+    // Set session data
     req.session.user = {
       id: userData.id,
       username: userData.username,
       accessToken: tokenData.access_token
     };
 
-    res.redirect('/holder-verify/');
+    // Save session explicitly
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+
+    console.log('Session saved:', {
+      id: req.session.id,
+      user: req.session.user?.username,
+      cookie: req.session.cookie
+    });
+
+    // Set additional cookies for mobile
+    res.cookie('discord_user', userData.username, {
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+
+    res.cookie('auth_status', 'logged_in', {
+      maxAge: 24 * 60 * 60 * 1000,
+      httpOnly: false, // Allow JS access
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+
+    // Redirect with success parameter
+    res.redirect('/holder-verify/?auth=success');
+
   } catch (error) {
     console.error('Error in OAuth callback:', error);
     res.redirect('/holder-verify/?error=auth_failed');
@@ -63,15 +107,21 @@ router.get('/callback', async (req, res) => {
 });
 
 router.get('/status', (req, res) => {
-  console.log('Auth status check:', {
+  const status = {
     hasSession: !!req.session,
     hasUser: !!req.session?.user,
     username: req.session?.user?.username
-  });
+  };
+
+  console.log('Auth status check:', status);
+
+  // Check cookies as fallback for mobile
+  const discordUser = req.cookies?.discord_user;
+  const authStatus = req.cookies?.auth_status;
 
   res.json({
-    authenticated: !!req.session?.user,
-    username: req.session?.user?.username || null
+    authenticated: status.hasUser || (authStatus === 'logged_in' && !!discordUser),
+    username: status.username || discordUser || null
   });
 });
 
