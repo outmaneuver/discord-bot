@@ -229,6 +229,9 @@ export async function displayBuxInfo(channel) {
     const { fetchBuxPublicSupply } = await import('../src/scripts/fetchBuxSupply.js');
     const { publicSupply, communityWalletSol } = await fetchBuxPublicSupply();
     
+    // Calculate BUX value in SOL
+    const buxValueInSol = communityWalletSol / publicSupply;
+    
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
       .setTitle('$BUX Token Info')
@@ -247,6 +250,11 @@ export async function displayBuxInfo(channel) {
         {
           name: '\u200B',
           value: '\u200B',
+          inline: true
+        },
+        {
+          name: 'BUX Value',
+          value: `${buxValueInSol.toFixed(8)} SOL`,
           inline: true
         },
         {
