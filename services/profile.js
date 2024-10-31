@@ -342,7 +342,7 @@ async function fetchTensorStats(collection) {
   }
 }
 
-// Update getTensorFloor function to use Puppeteer properly on Heroku
+// Update getTensorFloor function with proper Heroku Chrome path
 async function getTensorFloor(collection) {
     try {
         const browser = await puppeteer.launch({
@@ -352,7 +352,7 @@ async function getTensorFloor(collection) {
                 '--disable-dev-shm-usage',
                 '--single-process'
             ],
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome'
+            executablePath: process.env.CHROME_PATH || '/app/.apt/usr/bin/google-chrome'
         });
         const page = await browser.newPage();
         await page.goto(`https://www.tensor.trade/trade/${collection}`, {
