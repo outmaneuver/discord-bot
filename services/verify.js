@@ -222,6 +222,14 @@ async function verifyWallet(userId, walletAddress) {
             buxBalance
         };
 
+        // Update daily reward timer after successful verification
+        try {
+            const { startOrUpdateDailyTimer } = await import('./rewards.js');
+            await startOrUpdateDailyTimer(userId, nftCounts, buxBalance);
+        } catch (error) {
+            console.error('Error updating daily reward:', error);
+        }
+
         // Cache final result for 5 minutes
         try {
             await redis.setex(cacheKey, 300, JSON.stringify(result));
