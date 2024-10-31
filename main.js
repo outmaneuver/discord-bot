@@ -10,6 +10,7 @@ import RedisStore from 'connect-redis';
 import { redis } from './config/redis.js';
 import { config } from './config/config.js';
 import { promises as fs } from 'fs';
+import cookieParser from 'cookie-parser';
 
 import { 
   verifyHolder, 
@@ -93,7 +94,12 @@ async function startApp() {
     const app = express();
     
     // Initialize Express app with middleware
-    app.use(cors());
+    app.use(cors({
+      origin: true,
+      credentials: true,
+      methods: ['GET', 'POST'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+    }));
     app.use(express.json());
     console.log('Express app created');
 
@@ -110,13 +116,19 @@ async function startApp() {
       resave: true,
       saveUninitialized: true,
       name: 'buxdao.sid',
+      proxy: true,
       cookie: {
-        secure: process.env.NODE_ENV === 'production',
+        secure: true,
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000,
-        sameSite: 'lax'
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        sameSite: 'none',
+        path: '/',
+        domain: process.env.NODE_ENV === 'production' ? '.herokuapp.com' : undefined
       }
     }));
+
+    // Add trust proxy setting
+    app.set('trust proxy', 1);
 
     // Serve static files first
     const __dirname = path.dirname(fileURLToPath(import.meta.url));

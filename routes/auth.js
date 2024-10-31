@@ -30,14 +30,22 @@ router.use(session({
   resave: true,
   saveUninitialized: true,
   name: 'buxdao.sid',
+  proxy: true,
   cookie: {
     secure: true,
     httpOnly: true,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     sameSite: 'none',
-    path: '/'
+    path: '/',
+    domain: process.env.NODE_ENV === 'production' ? '.herokuapp.com' : undefined
   }
 }));
+
+// Add trust proxy setting
+router.use((req, res, next) => {
+  req.app.set('trust proxy', 1);
+  next();
+});
 
 const DISCORD_API_URL = 'https://discord.com/api/v10';
 
