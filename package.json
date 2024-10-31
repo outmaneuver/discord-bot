@@ -32,7 +32,8 @@
     "passport-discord": "^0.1.4",
     "puppeteer": "^23.6.1",
     "redis": "^4.6.10",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "cookie-parser": "^1.4.6"
   },
   "devDependencies": {
     "eslint": "^8.40.0",
