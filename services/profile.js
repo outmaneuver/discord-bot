@@ -430,7 +430,7 @@ async function fetchWithRetry(url, maxRetries = 3) {
     }
 }
 
-// Update displayCatzInfo function with permanent image URL
+// Update displayCatzInfo function with Discord CDN URL
 export async function displayCatzInfo(channel) {
     try {
         // Get collection data with retries
@@ -443,7 +443,7 @@ export async function displayCatzInfo(channel) {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setImage('https://bafybeigxpxmfxqxvtqvwxqjqxk5zt7qvhqgxqvwxqjqxk5zt7qvhqgxqvw.ipfs.nftstorage.link/fckedcatz.png')
+            .setThumbnail('https://cdn.discordapp.com/attachments/1169387516358824006/1169387611787935744/fckedcatz.png')
             .addFields(
                 {
                     name: 'Collection Size',
