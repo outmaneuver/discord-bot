@@ -15,39 +15,66 @@ const EXEMPT_WALLETS = [
     'H4RPEi5Sfpapy1B233b4DUhh6hsmFTTKx4pXqWnpW637'
 ];
 
+// Helper function to add delay between requests
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper function to retry on rate limit
+async function retryWithBackoff(fn, maxRetries = 5) {
+    let retries = 0;
+    while (true) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (!error.message.includes('429 Too Many Requests') || retries >= maxRetries) {
+                throw error;
+            }
+            retries++;
+            const delay = Math.min(1000 * Math.pow(2, retries), 10000); // Exponential backoff up to 10s
+            console.log(`Rate limited, retrying in ${delay}ms...`);
+            await sleep(delay);
+        }
+    }
+}
+
 export async function fetchBuxPublicSupply() {
     try {
-        // Connect to Solana mainnet
-        const connection = new Connection('https://api.mainnet-beta.solana.com');
+        // Connect to Solana mainnet using Quicknode or other reliable RPC
+        const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
         
         // Get token supply
-        const tokenSupply = await connection.getTokenSupply(
-            new PublicKey(BUX_TOKEN_ADDRESS)
+        const tokenSupply = await retryWithBackoff(() => 
+            connection.getTokenSupply(new PublicKey(BUX_TOKEN_ADDRESS))
         );
 
-        // Get balances of exempt wallets
-        const exemptBalances = await Promise.all(
-            EXEMPT_WALLETS.map(async (wallet) => {
-                try {
-                    const tokenAccounts = await connection.getTokenAccountsByOwner(
+        // Get balances of exempt wallets with delay between requests
+        const exemptBalances = [];
+        for (const wallet of EXEMPT_WALLETS) {
+            try {
+                await sleep(500); // Add 500ms delay between wallet requests
+                const tokenAccounts = await retryWithBackoff(() =>
+                    connection.getTokenAccountsByOwner(
                         new PublicKey(wallet),
                         { programId: TOKEN_PROGRAM_ID }
-                    );
+                    )
+                );
 
-                    let walletBalance = 0;
-                    for (const account of tokenAccounts.value) {
-                        const accountInfo = await connection.getTokenAccountBalance(account.pubkey);
-                        if (accountInfo.value.uiAmount) {
-                            walletBalance += accountInfo.value.uiAmount;
-                        }
+                let walletBalance = 0;
+                for (const account of tokenAccounts.value) {
+                    await sleep(200); // Add 200ms delay between balance requests
+                    const accountInfo = await retryWithBackoff(() =>
+                        connection.getTokenAccountBalance(account.pubkey)
+                    );
+                    if (accountInfo.value.uiAmount) {
+                        walletBalance += accountInfo.value.uiAmount;
                     }
-                    return walletBalance;
-                } catch (error) {
-                    console.error(`Error fetching balance for wallet ${wallet}:`, error);
-                    return 0;
                 }
-            })
-        );
+                exemptBalances.push(walletBalance);
+                console.log(`Balance for ${wallet}: ${walletBalance}`);
+            } catch (error) {
+                console.error(`Error fetching balance for wallet ${wallet}:`, error);
+                exemptBalances.push(0);
+            }
+        }
 
         // Calculate total exempt balance
         const totalExemptBalance = exemptBalances.reduce((acc, curr) => acc + curr, 0);
