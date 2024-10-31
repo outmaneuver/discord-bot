@@ -115,21 +115,35 @@ async function verifyWallet(userId, walletAddress) {
     try {
         // First check Redis cache
         const cacheKey = `verify:${userId}:${walletAddress}`;
-        const cachedResult = await redis.get(cacheKey);
-        if (cachedResult) {
-            console.log('Using cached verification result');
-            return JSON.parse(cachedResult);
+        let cachedResult;
+        try {
+            const cachedData = await redis.get(cacheKey);
+            if (cachedData) {
+                console.log('Using cached verification result');
+                cachedResult = JSON.parse(cachedData);
+            }
+        } catch (cacheError) {
+            console.error('Cache read error:', cacheError);
+            // Delete the problematic key
+            await redis.del(cacheKey);
         }
+
+        if (cachedResult) return cachedResult;
 
         // Get NFT counts and BUX balance in parallel with retries
         const [nftCounts, buxBalance] = await Promise.all([
             retryWithBackoff(async () => {
                 // Check cache first
                 const nftCacheKey = `nfts:${walletAddress}`;
-                const cachedNfts = await redis.get(nftCacheKey);
-                if (cachedNfts) {
-                    console.log('Using cached NFT counts');
-                    return JSON.parse(cachedNfts);
+                try {
+                    const cachedNfts = await redis.get(nftCacheKey);
+                    if (cachedNfts) {
+                        console.log('Using cached NFT counts');
+                        return JSON.parse(cachedNfts);
+                    }
+                } catch (error) {
+                    console.error('NFT cache error:', error);
+                    await redis.del(nftCacheKey);
                 }
 
                 const counts = await verifyHolder(walletAddress);
@@ -140,10 +154,15 @@ async function verifyWallet(userId, walletAddress) {
             retryWithBackoff(async () => {
                 // Check cache first
                 const buxCacheKey = `bux:${walletAddress}`;
-                const cachedBux = await redis.get(buxCacheKey);
-                if (cachedBux) {
-                    console.log('Using cached BUX balance');
-                    return parseInt(cachedBux);
+                try {
+                    const cachedBux = await redis.get(buxCacheKey);
+                    if (cachedBux) {
+                        console.log('Using cached BUX balance');
+                        return parseInt(cachedBux);
+                    }
+                } catch (error) {
+                    console.error('BUX cache error:', error);
+                    await redis.del(buxCacheKey);
                 }
 
                 const balance = await getBUXBalance(walletAddress);
@@ -160,26 +179,15 @@ async function verifyWallet(userId, walletAddress) {
         };
 
         // Cache final result for 5 minutes
-        await redis.setex(cacheKey, 300, JSON.stringify(result));
+        try {
+            await redis.setex(cacheKey, 300, JSON.stringify(result));
+        } catch (error) {
+            console.error('Error caching result:', error);
+        }
 
         return result;
     } catch (error) {
         console.error('Error verifying wallet:', error);
-        
-        // Try to return cached data even if verification fails
-        try {
-            const cachedResult = await redis.get(`verify:${userId}:${walletAddress}`);
-            if (cachedResult) {
-                console.log('Returning cached data after error');
-                return {
-                    ...JSON.parse(cachedResult),
-                    fromCache: true
-                };
-            }
-        } catch (cacheError) {
-            console.error('Error getting cached data:', cacheError);
-        }
-
         return {
             success: false,
             error: error.message
