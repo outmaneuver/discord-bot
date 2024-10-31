@@ -136,19 +136,26 @@ router.post('/verify', async (req, res) => {
     });
 
     // Set timeout for the request
-    const timeout = setTimeout(() => {
-      res.status(503).json({
-        success: false,
-        error: 'Request timed out. Please try again.'
-      });
-    }, 25000); // 25 second timeout
+    const timeoutId = setTimeout(() => {
+      if (!res.headersSent) {
+        res.status(503).json({
+          success: false,
+          error: 'Request timed out due to rate limits. Please try again in a few minutes.'
+        });
+      }
+    }, 20000); // 20 second timeout
 
     try {
-      // Verify the wallet
-      const result = await verifyWallet(req.session.user.id, walletAddress);
-      
+      // Verify the wallet with shorter timeout
+      const result = await Promise.race([
+        verifyWallet(req.session.user.id, walletAddress),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Verification timeout')), 15000)
+        )
+      ]);
+
       // Clear timeout since request completed
-      clearTimeout(timeout);
+      clearTimeout(timeoutId);
 
       if (result.success) {
         // Store wallet in Redis
@@ -156,25 +163,39 @@ router.post('/verify', async (req, res) => {
       }
 
       // Return success response
-      res.json({ 
-        success: true,
-        message: 'Wallet verified successfully',
-        data: result
-      });
+      if (!res.headersSent) {
+        res.json({
+          success: true,
+          message: 'Wallet verified successfully',
+          data: result
+        });
+      }
 
     } catch (error) {
       // Clear timeout since request errored
-      clearTimeout(timeout);
-      throw error;
+      clearTimeout(timeoutId);
+
+      if (!res.headersSent) {
+        if (error.message === 'Verification timeout') {
+          res.status(503).json({
+            success: false,
+            error: 'Verification timed out. Please try again.'
+          });
+        } else {
+          throw error;
+        }
+      }
     }
 
   } catch (error) {
     console.error('Error in verify endpoint:', error);
-    res.status(500).json({ 
-      success: false,
-      error: 'Failed to verify wallet',
-      details: error.message
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to verify wallet',
+        details: error.message
+      });
+    }
   }
 });
 

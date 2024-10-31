@@ -111,51 +111,46 @@ async function verifyHolder(walletAddress) {
     }
 }
 
-async function verifyWallet(userId) {
+async function verifyWallet(userId, walletAddress) {
     try {
-        const walletData = await redis.smembers(`wallets:${userId}`);
-        if (!walletData || walletData.length === 0) {
-            return {
-                success: false,
-                error: 'No wallets found'
-            };
+        // First check Redis cache
+        const cachedResult = await redis.get(`verify:${userId}:${walletAddress}`);
+        if (cachedResult) {
+            return JSON.parse(cachedResult);
         }
 
-        const nftCounts = {
-            fcked_catz: 0,
-            celebcatz: 0,
-            money_monsters: 0,
-            money_monsters3d: 0,
-            ai_bitbots: 0,
-            warriors: 0,
-            squirrels: 0,
-            rjctd_bots: 0,
-            energy_apes: 0,
-            doodle_bots: 0,
-            candy_bots: 0
-        };
+        const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
+        
+        // Get NFT counts and BUX balance in parallel with individual timeouts
+        const [nftCounts, buxBalance] = await Promise.all([
+            Promise.race([
+                verifyHolder(walletAddress),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('NFT verification timeout')), 10000)
+                )
+            ]),
+            Promise.race([
+                getBUXBalance(walletAddress),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('BUX balance timeout')), 10000)
+                )
+            ])
+        ]);
 
-        let totalBuxBalance = 0;
-
-        for (const wallet of walletData) {
-            try {
-                const walletNftCounts = await verifyHolder(wallet);
-                Object.keys(walletNftCounts).forEach(key => {
-                    nftCounts[key] += walletNftCounts[key];
-                });
-
-                const buxBalance = await getBUXBalance(wallet);
-                totalBuxBalance += buxBalance;
-            } catch (error) {
-                console.error(`Error processing wallet ${wallet}:`, error);
-            }
-        }
-
-        return {
+        const result = {
             success: true,
             nftCounts,
-            buxBalance: totalBuxBalance
+            buxBalance
         };
+
+        // Cache result for 5 minutes
+        await redis.setex(
+            `verify:${userId}:${walletAddress}`,
+            300,
+            JSON.stringify(result)
+        );
+
+        return result;
     } catch (error) {
         console.error('Error verifying wallet:', error);
         return {
