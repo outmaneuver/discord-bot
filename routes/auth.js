@@ -80,50 +80,55 @@ router.get('/callback', async (req, res) => {
     const userData = await getDiscordUser(tokenData.access_token);
     console.log('Received user data:', userData);
 
-    // Set session data
+    // Create new session if it doesn't exist
+    if (!req.session) {
+      req.session = {};
+    }
+
+    // Set user data in session
     req.session.user = {
       id: userData.id,
       username: userData.username,
       accessToken: tokenData.access_token
     };
 
-    // Set cookies with proper flags for mobile
-    res.cookie('discord_user', userData.username, {
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      httpOnly: false,
-      secure: true,
-      sameSite: 'none',
-      path: '/'
+    // Force session save
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          reject(err);
+        }
+        resolve();
+      });
     });
 
+    // Set secure cookies
     res.cookie('discord_id', userData.id, {
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      httpOnly: false,
+      maxAge: 24 * 60 * 60 * 1000,
+      httpOnly: true,
       secure: true,
-      sameSite: 'none',
-      path: '/'
+      sameSite: 'lax'
     });
 
-    res.cookie('auth_status', 'logged_in', {
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      httpOnly: false,
+    res.cookie('discord_user', userData.username, {
+      maxAge: 24 * 60 * 60 * 1000,
+      httpOnly: true,
       secure: true,
-      sameSite: 'none',
-      path: '/'
+      sameSite: 'lax'
     });
 
-    // Save session explicitly
-    await new Promise((resolve) => req.session.save(resolve));
+    // Log session state
+    console.log('Session after save:', {
+      id: req.sessionID,
+      user: req.session.user,
+      cookie: req.session.cookie
+    });
 
-    // Set headers for cross-origin
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-
-    // Redirect with success parameter
-    res.redirect(`/holder-verify/?auth=success&user=${encodeURIComponent(userData.username)}`);
+    res.redirect('/holder-verify/');
 
   } catch (error) {
-    console.error('Error in OAuth callback:', error);
+    console.error('Error in callback:', error);
     res.redirect('/holder-verify/?error=auth_failed');
   }
 });
