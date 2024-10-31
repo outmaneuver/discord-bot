@@ -15,8 +15,8 @@
   "description": "",
   "dependencies": {
     "@metaplex-foundation/js": "^0.19.5",
-    "@solana/spl-token": "^0.3.7",
-    "@solana/web3.js": "^1.95.4",
+    "@solana/spl-token": "^0.3.8",
+    "@solana/web3.js": "^1.87.0",
     "borsh": "^2.0.0",
     "connect-redis": "^7.0.0",
     "cors": "^2.8.5",
