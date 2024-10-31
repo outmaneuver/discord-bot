@@ -112,16 +112,22 @@ async function getDiscordUser(accessToken) {
   return userResponse.json();
 }
 
-// Fix verify endpoint path to match frontend
+// Update the verify endpoint
 router.post('/verify', async (req, res) => {
   try {
     if (!req.session.user) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Not authenticated' 
+      });
     }
 
     const { walletAddress } = req.body;
     if (!walletAddress) {
-      return res.status(400).json({ error: 'Wallet address required' });
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Wallet address required' 
+      });
     }
 
     console.log('Verifying wallet:', {
@@ -129,19 +135,43 @@ router.post('/verify', async (req, res) => {
       walletAddress,
     });
 
-    // Verify the wallet
-    const result = await verifyWallet(req.session.user.id, walletAddress);
-    
-    // Return success response
-    res.json({ 
-      success: true,
-      message: 'Wallet verified successfully',
-      data: result
-    });
+    // Set timeout for the request
+    const timeout = setTimeout(() => {
+      res.status(503).json({
+        success: false,
+        error: 'Request timed out. Please try again.'
+      });
+    }, 25000); // 25 second timeout
+
+    try {
+      // Verify the wallet
+      const result = await verifyWallet(req.session.user.id, walletAddress);
+      
+      // Clear timeout since request completed
+      clearTimeout(timeout);
+
+      if (result.success) {
+        // Store wallet in Redis
+        await redis.sadd(`wallets:${req.session.user.id}`, walletAddress);
+      }
+
+      // Return success response
+      res.json({ 
+        success: true,
+        message: 'Wallet verified successfully',
+        data: result
+      });
+
+    } catch (error) {
+      // Clear timeout since request errored
+      clearTimeout(timeout);
+      throw error;
+    }
 
   } catch (error) {
     console.error('Error in verify endpoint:', error);
     res.status(500).json({ 
+      success: false,
       error: 'Failed to verify wallet',
       details: error.message
     });
