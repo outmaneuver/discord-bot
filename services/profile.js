@@ -399,34 +399,46 @@ async function getTensorFloor(collection) {
     }
 }
 
-// Update displayCatzInfo function to only use Magic Eden data
+// Add retry logic for Magic Eden API calls
+async function fetchWithRetry(url, maxRetries = 3) {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0',
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (response.status === 429) {
+                // Rate limited - wait longer between retries
+                const delay = Math.pow(2, i) * 1000;
+                await new Promise(resolve => setTimeout(resolve, delay));
+                continue;
+            }
+            
+            if (!response.ok) {
+                throw new Error(`Magic Eden API error: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            if (i === maxRetries - 1) throw error;
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
+}
+
+// Update displayCatzInfo function with retry logic
 export async function displayCatzInfo(channel) {
     try {
-        // Get collection data from Magic Eden API
-        const response = await fetch('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz', {
-            headers: {
-                'User-Agent': 'Mozilla/5.0',
-                'Accept': 'application/json'
-            }
-        });
+        // Get collection data with retries
+        const [collectionData, statsData] = await Promise.all([
+            fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz'),
+            fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats')
+        ]);
         
-        if (!response.ok) {
-            throw new Error(`Magic Eden API error: ${response.status}`);
-        }
-        
-        const collectionData = await response.json();
-        const statsResponse = await fetch('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats', {
-            headers: {
-                'User-Agent': 'Mozilla/5.0',
-                'Accept': 'application/json'
-            }
-        });
-        
-        if (!statsResponse.ok) {
-            throw new Error(`Magic Eden API error: ${statsResponse.status}`);
-        }
-        
-        const statsData = await statsResponse.json();
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         
         const embed = new EmbedBuilder()
