@@ -231,13 +231,9 @@ async function verifyWallet(userId, walletAddress) {
                 dailyReward
             });
             await startOrUpdateDailyTimer(userId, nftCounts);
-            result.dailyReward = dailyReward; // Add daily reward to response
-        } catch (error) {
-            console.error('Error updating daily reward:', error);
-        }
 
-        // Format the response message with correct daily reward
-        result.formattedResponse = `
+            // Format the response message with the calculated daily reward
+            result.formattedResponse = `
       **Wallet Verification Successful!**
       
       VERIFIED NFTs
@@ -251,8 +247,16 @@ async function verifyWallet(userId, walletAddress) {
       A.I. collabs - ${nftCounts.warriors + nftCounts.squirrels + nftCounts.rjctd_bots + 
                       nftCounts.energy_apes + nftCounts.doodle_bots + nftCounts.candy_bots}
 
-      **Daily reward - ${dailyReward} BUX**
+      **Daily reward - ${dailyReward || 0} BUX**
     `;
+
+            result.dailyReward = dailyReward; // Make sure to add it to the result object
+        } catch (error) {
+            console.error('Error updating daily reward:', error);
+            // Set default values if calculation fails
+            result.dailyReward = 0;
+            result.formattedResponse = result.formattedResponse.replace('Daily reward - 0 BUX', 'Error calculating rewards');
+        }
 
         // Cache final result for 5 minutes
         try {
