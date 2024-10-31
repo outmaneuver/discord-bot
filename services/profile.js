@@ -313,7 +313,10 @@ export async function displayHelp(channel) {
       },
       {
         name: 'Other Commands',
-        value: '`=help` - Show this help message'
+        value: [
+          '`=rewards` - Show daily reward calculations',
+          '`=help` - Show this help message'
+        ].join('\n')
       }
     );
   
@@ -661,4 +664,53 @@ export async function displayBitbotsInfo(channel) {
     console.error('Error displaying Bitbots info:', error);
     await channel.send('An error occurred while fetching collection information.');
   }
+}
+
+// Add displayRewards function
+export async function displayRewards(channel) {
+  const embed = new EmbedBuilder()
+    .setColor('#FFD700')
+    .setTitle('🎁 Daily BUX Rewards')
+    .setDescription('Here\'s how daily BUX rewards are calculated:')
+    .addFields(
+      {
+        name: '🎨 Main Collections',
+        value: [
+          '• Fcked Catz: 5 BUX each',
+          '• Celeb Catz: 15 BUX each',
+          '• Money Monsters: 5 BUX each',
+          '• 3D Monsters: 10 BUX each',
+          '• AI Bitbots: 3 BUX each'
+        ].join('\n')
+      },
+      {
+        name: '🤖 AI Collabs',
+        value: [
+          '• Warriors: 1 BUX each',
+          '• Squirrels: 1 BUX each',
+          '• RJCTD Bots: 1 BUX each',
+          '• Energy Apes: 1 BUX each',
+          '• Doodle Bots: 1 BUX each',
+          '• Candy Bots: 1 BUX each'
+        ].join('\n')
+      },
+      {
+        name: '✨ Collection Bonuses',
+        value: [
+          '• 3+ Fcked Catz: +5 BUX',
+          '• 2+ Celeb Catz: +10 BUX',
+          '• 2+ Money Monsters: +5 BUX',
+          '• 2+ 3D Monsters: +10 BUX',
+          '• 2+ AI Bitbots: +3 BUX',
+          '• 3+ AI Collabs: +2 BUX'
+        ].join('\n')
+      },
+      {
+        name: '⏰ Claiming Rewards',
+        value: 'Use `=my.bux` to check your daily rewards and claim status.'
+      }
+    )
+    .setFooter({ text: 'Rewards reset daily at 00:00 UTC' });
+
+  await channel.send({ embeds: [embed] });
 }

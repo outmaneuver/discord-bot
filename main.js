@@ -31,7 +31,8 @@ import {
   displayMMInfo,
   displayMM3DInfo,
   displayCelebInfo,
-  displayBitbotsInfo
+  displayBitbotsInfo,
+  displayRewards
 } from './services/profile.js';
 
 import verifyRouter from './routes/verify.js';
@@ -296,6 +297,10 @@ async function startApp() {
 
             case 'info.bots':
               await displayBitbotsInfo(message.channel);
+              break;
+
+            case 'rewards':
+              await displayRewards(message.channel);
               break;
           }
         }
