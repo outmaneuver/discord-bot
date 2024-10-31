@@ -1,4 +1,4 @@
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { updateDiscordRoles, getBUXBalance, hashlists } from './verify.js';
 import { redis } from '../config/redis.js';
 import { startOrUpdateDailyTimer, getTimeUntilNextClaim, calculateDailyReward } from './rewards.js';
@@ -399,7 +399,7 @@ async function getTensorFloor(collection) {
     }
 }
 
-// Update displayCatzInfo function with all fixes
+// Update displayCatzInfo function with buttons and fixes
 export async function displayCatzInfo(channel) {
     try {
         // Get collection data from Magic Eden API
@@ -416,7 +416,7 @@ export async function displayCatzInfo(channel) {
         
         const data = await response.json();
         const floorPrice = data.floorPrice / 1e9; // Convert from lamports to SOL
-        const totalSupply = data.totalSupply || 1422; // Use API supply or fallback
+        const totalSupply = 1422; // Hardcode since API is unreliable
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
@@ -438,17 +438,26 @@ export async function displayCatzInfo(channel) {
                 {
                     name: 'Whale Status',
                     value: '25+ NFTs'
-                },
-                {
-                    name: 'Links',
-                    value: [
-                        '[Magic Eden](https://magiceden.io/marketplace/fcked_catz)',
-                        '[Tensor](https://www.tensor.trade/trade/fcked_catz)'
-                    ].join('\n')
                 }
             );
 
-        await channel.send({ embeds: [embed] });
+        // Create buttons for marketplaces
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setLabel('Magic Eden')
+                    .setURL('https://magiceden.io/marketplace/fcked_catz')
+                    .setStyle(ButtonStyle.Link),
+                new ButtonBuilder()
+                    .setLabel('Tensor')
+                    .setURL('https://www.tensor.trade/trade/fcked_catz')
+                    .setStyle(ButtonStyle.Link)
+            );
+
+        await channel.send({ 
+            embeds: [embed],
+            components: [row]
+        });
     } catch (error) {
         console.error('Error displaying Catz info:', error);
         // Still show info even if API fails
@@ -459,7 +468,7 @@ export async function displayCatzInfo(channel) {
             .addFields(
                 {
                     name: 'Collection Size',
-                    value: `${hashlists.fckedCatz.size.toLocaleString()} NFTs`
+                    value: `1,422 NFTs`
                 },
                 {
                     name: 'Floor Price',
@@ -472,17 +481,25 @@ export async function displayCatzInfo(channel) {
                 {
                     name: 'Whale Status',
                     value: '25+ NFTs'
-                },
-                {
-                    name: 'Links',
-                    value: [
-                        '[Magic Eden](https://magiceden.io/marketplace/fcked_catz)',
-                        '[Tensor](https://www.tensor.trade/trade/fcked_catz)'
-                    ].join('\n')
                 }
             );
 
-        await channel.send({ embeds: [embed] });
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setLabel('Magic Eden')
+                    .setURL('https://magiceden.io/marketplace/fcked_catz')
+                    .setStyle(ButtonStyle.Link),
+                new ButtonBuilder()
+                    .setLabel('Tensor')
+                    .setURL('https://www.tensor.trade/trade/fcked_catz')
+                    .setStyle(ButtonStyle.Link)
+            );
+
+        await channel.send({ 
+            embeds: [embed],
+            components: [row]
+        });
     }
 }
 
