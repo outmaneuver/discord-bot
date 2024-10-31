@@ -430,7 +430,7 @@ async function fetchWithRetry(url, maxRetries = 3) {
     }
 }
 
-// Update displayCatzInfo function with guaranteed working image URL
+// Update displayCatzInfo function with proper image display
 export async function displayCatzInfo(channel) {
     try {
         // Get collection data with retries
@@ -443,7 +443,7 @@ export async function displayCatzInfo(channel) {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setImage('https://i.imgur.com/HyPUGWN.png') // Direct Imgur URL that's guaranteed to work
+            .setThumbnail('https://img-cdn.magiceden.dev/rs:fill:400:400:0:0/plain/https://creator-hub-prod.s3.us-east-2.amazonaws.com/fcked_catz_pfp_1677595252883.gif')
             .addFields(
                 {
                     name: 'Collection Size',
