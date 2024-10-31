@@ -399,11 +399,11 @@ async function getTensorFloor(collection) {
     }
 }
 
-// Update displayCatzInfo function with better Magic Eden API endpoint
+// Update displayCatzInfo function with all fixes
 export async function displayCatzInfo(channel) {
     try {
         // Get collection data from Magic Eden API
-        const response = await fetch('https://api-mainnet.magiceden.io/rpc/getCollectionEscrowStats/fcked_catz', {
+        const response = await fetch('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats', {
             headers: {
                 'User-Agent': 'Mozilla/5.0',
                 'Accept': 'application/json'
@@ -415,16 +415,17 @@ export async function displayCatzInfo(channel) {
         }
         
         const data = await response.json();
-        const floorPrice = data.results.floorPrice / 1e9; // Convert from lamports to SOL
+        const floorPrice = data.floorPrice / 1e9; // Convert from lamports to SOL
+        const totalSupply = data.totalSupply || 1422; // Use API supply or fallback
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setImage('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.mp4')
+            .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/fcked_catz_pfp_1677595252883.gif')
             .addFields(
                 {
                     name: 'Collection Size',
-                    value: `${hashlists.fckedCatz.size.toLocaleString()} NFTs`
+                    value: `${totalSupply.toLocaleString()} NFTs`
                 },
                 {
                     name: 'Floor Price',
@@ -454,7 +455,7 @@ export async function displayCatzInfo(channel) {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setImage('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.mp4')
+            .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/fcked_catz_pfp_1677595252883.gif')
             .addFields(
                 {
                     name: 'Collection Size',
