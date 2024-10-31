@@ -224,66 +224,31 @@ export async function displayRoles(channel, userId, client) {
   }
 }
 
-export async function displayBuxInfo(channel, userId, client) {
-  try {
-    const walletData = await getWalletData(userId);
-    let totalBuxBalance = 0;
-    
-    // Try to get cached balances first
-    for (const wallet of walletData.walletAddresses) {
-      const cachedBalance = parseInt(await redis.get(`bux:${wallet}`) || '0');
-      totalBuxBalance += Math.floor(cachedBalance / 1e9);
-    }
-
-    // Only try chain balance if no cached balance
-    if (totalBuxBalance === 0) {
-      for (const wallet of walletData.walletAddresses) {
-        try {
-          const chainBalance = await getBUXBalance(wallet);
-          totalBuxBalance += Math.floor((chainBalance || 0) / 1e9);
-        } catch (error) {
-          console.error('Error getting chain balance:', error);
-          // Continue to next wallet
-        }
+export async function displayBuxInfo(channel) {
+  const embed = new EmbedBuilder()
+    .setColor('#FFD700')
+    .setTitle('$BUX Token Info')
+    .setThumbnail('https://i.imgur.com/XYdha3K.png') // BUX logo
+    .addFields(
+      {
+        name: 'Public Supply',
+        value: '100,000,000 BUX',
+        inline: true
+      },
+      {
+        name: 'Community Wallet',
+        value: '25,000,000 BUX',
+        inline: true
+      },
+      {
+        name: '$BUX Value',
+        value: '0.01 USDC',
+        inline: true
       }
-    }
+    )
+    .setFooter({ text: 'BUX DAO Treasury' });
 
-    const roleUpdate = await updateDiscordRoles(userId, client);
-    const nftCounts = roleUpdate?.nftCounts || {};
-    
-    const dailyReward = await calculateDailyReward(nftCounts, totalBuxBalance);
-    const [timerData, timeUntilNext] = await Promise.all([
-      startOrUpdateDailyTimer(userId, nftCounts, totalBuxBalance),
-      getTimeUntilNextClaim(userId)
-    ]);
-
-    const embed = new EmbedBuilder()
-      .setColor('#0099ff')
-      .setTitle('BUX Information')
-      .addFields(
-        { 
-          name: 'BUX Balance', 
-          value: `${totalBuxBalance.toLocaleString()} BUX`
-        },
-        { 
-          name: 'Daily Reward', 
-          value: `${dailyReward.toLocaleString()} BUX` 
-        },
-        { 
-          name: 'BUX Claim', 
-          value: `${(timerData?.claimAmount || 0).toLocaleString()} BUX` 
-        },
-        { 
-          name: 'Claim updates in', 
-          value: timeUntilNext || 'Start timer by verifying wallet'
-        }
-      );
-    
-    await channel.send({ embeds: [embed] });
-  } catch (error) {
-    console.error('Error displaying BUX info:', error);
-    await channel.send('An error occurred while fetching BUX information.');
-  }
+  await channel.send({ embeds: [embed] });
 }
 
 export async function displayHelp(channel) {
@@ -700,34 +665,6 @@ export async function displayRewards(channel) {
       }
     )
     .setFooter({ text: 'Rewards reset daily at 00:00 UTC' });
-
-  await channel.send({ embeds: [embed] });
-}
-
-// Add displayBuxInfo function
-export async function displayBuxInfo(channel) {
-  const embed = new EmbedBuilder()
-    .setColor('#FFD700')
-    .setTitle('$BUX Token Info')
-    .setThumbnail('https://i.imgur.com/XYdha3K.png') // BUX logo
-    .addFields(
-      {
-        name: 'Public Supply',
-        value: '100,000,000 BUX',
-        inline: true
-      },
-      {
-        name: 'Community Wallet',
-        value: '25,000,000 BUX',
-        inline: true
-      },
-      {
-        name: '$BUX Value',
-        value: '0.01 USDC',
-        inline: true
-      }
-    )
-    .setFooter({ text: 'BUX DAO Treasury' });
 
   await channel.send({ embeds: [embed] });
 }
