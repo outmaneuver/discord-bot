@@ -228,7 +228,7 @@ export async function displayBuxInfo(channel) {
   const embed = new EmbedBuilder()
     .setColor('#FFD700')
     .setTitle('$BUX Token Info')
-    .setThumbnail('https://i.imgur.com/XYdha3K.png') // BUX logo
+    .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/favicon.ico')
     .addFields(
       {
         name: 'Public Supply',
