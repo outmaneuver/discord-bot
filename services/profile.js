@@ -243,7 +243,7 @@ export async function displayBuxInfo(channel) {
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
       .setTitle('$BUX Token Info')
-      .setThumbnail('https://i.imgur.com/YOUR_BUX_LOGO.png')
+      .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/bux.jpg')
       .addFields(
         { 
           name: 'Public Supply',
@@ -289,7 +289,8 @@ export async function displayHelp(channel) {
           '`=info.celeb` - Show Celeb Catz stats',
           '`=info.mm` - Show Money Monsters stats',
           '`=info.mm3d` - Show Money Monsters 3D stats',
-          '`=info.bots` - Show AI Bitbots stats'
+          '`=info.bots` - Show AI Bitbots stats',
+          '`=info.bux` - Show BUX token info'
         ].join('\n')
       },
       {
