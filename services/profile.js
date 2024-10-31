@@ -434,14 +434,11 @@ async function fetchWithRetry(url, maxRetries = 3) {
 export async function displayCatzInfo(channel) {
     try {
         // Get collection data with retries
-        const [collectionData, statsData] = await Promise.all([
-            fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz'),
-            fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats')
-        ]);
+        const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats');
         
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         const listedCount = statsData.listedCount || 0;
-        const totalSupply = collectionData.listedCount + collectionData.unlistedCount; // Get total supply
+        const totalSupply = statsData.totalItems || 1231; // From ME stats page
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
