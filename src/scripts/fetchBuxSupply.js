@@ -1,5 +1,5 @@
-const { Connection, PublicKey } = require('@solana/web3.js');
-const { TOKEN_PROGRAM_ID } = require('@solana/spl-token');
+import { Connection, PublicKey } from '@solana/web3.js';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 const BUX_TOKEN_ADDRESS = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
 
@@ -15,7 +15,7 @@ const EXEMPT_WALLETS = [
     'H4RPEi5Sfpapy1B233b4DUhh6hsmFTTKx4pXqWnpW637'
 ];
 
-async function fetchBuxPublicSupply() {
+export async function fetchBuxPublicSupply() {
     try {
         // Connect to Solana mainnet
         const connection = new Connection('https://api.mainnet-beta.solana.com');
@@ -64,6 +64,4 @@ async function fetchBuxPublicSupply() {
         console.error('Error fetching BUX public supply:', error);
         throw error;
     }
-}
-
-module.exports = { fetchBuxPublicSupply }; 
+} 
