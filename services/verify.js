@@ -161,7 +161,105 @@ async function verifyWallet(userId, walletAddress) {
 }
 
 async function updateDiscordRoles(userId, client) {
-    // ... existing updateDiscordRoles implementation ...
+    try {
+        const walletData = await redis.smembers(`wallets:${userId}`);
+        if (!walletData || walletData.length === 0) {
+            return {
+                success: false,
+                error: 'No wallets found',
+                nftCounts: null
+            };
+        }
+
+        // Initialize NFT counts
+        const nftCounts = {
+            fcked_catz: 0,
+            celebcatz: 0,
+            money_monsters: 0,
+            money_monsters3d: 0,
+            ai_bitbots: 0,
+            warriors: 0,
+            squirrels: 0,
+            rjctd_bots: 0,
+            energy_apes: 0,
+            doodle_bots: 0,
+            candy_bots: 0
+        };
+
+        // Check each wallet
+        for (const wallet of walletData) {
+            try {
+                const walletNftCounts = await verifyHolder(wallet);
+                Object.keys(nftCounts).forEach(key => {
+                    nftCounts[key] += walletNftCounts[key] || 0;
+                });
+            } catch (error) {
+                console.error(`Error checking wallet ${wallet}:`, error);
+                // Continue with next wallet
+            }
+        }
+
+        // Get guild and member
+        const guild = client.guilds.cache.get(process.env.GUILD_ID);
+        if (!guild) throw new Error('Guild not found');
+
+        const member = await guild.members.fetch(userId);
+        if (!member) throw new Error('Member not found');
+
+        // Update roles based on NFT counts
+        const rolesToAdd = [];
+        const rolesToRemove = [];
+
+        // Define role mappings
+        const roleChecks = {
+            'CAT': () => nftCounts.fcked_catz > 0,
+            'CELEB': () => nftCounts.celebcatz > 0,
+            'MONSTER': () => nftCounts.money_monsters > 0,
+            'MONSTER 3D': () => nftCounts.money_monsters3d > 0,
+            'BITBOT': () => nftCounts.ai_bitbots > 0,
+            'AI warrior': () => nftCounts.warriors > 0,
+            'AI squirrel': () => nftCounts.squirrels > 0,
+            'Rjctd bot': () => nftCounts.rjctd_bots > 0,
+            'AI energy ape': () => nftCounts.energy_apes > 0,
+            'Doodle bot': () => nftCounts.doodle_bots > 0,
+            'Candy bot': () => nftCounts.candy_bots > 0
+        };
+
+        // Check each role
+        for (const [roleName, checkFn] of Object.entries(roleChecks)) {
+            const role = guild.roles.cache.find(r => r.name === roleName);
+            if (role) {
+                if (checkFn()) {
+                    if (!member.roles.cache.has(role.id)) {
+                        rolesToAdd.push(role);
+                    }
+                } else {
+                    if (member.roles.cache.has(role.id)) {
+                        rolesToRemove.push(role);
+                    }
+                }
+            }
+        }
+
+        // Apply role changes
+        if (rolesToAdd.length > 0) await member.roles.add(rolesToAdd);
+        if (rolesToRemove.length > 0) await member.roles.remove(rolesToRemove);
+
+        return {
+            success: true,
+            nftCounts,
+            rolesAdded: rolesToAdd.map(r => r.name),
+            rolesRemoved: rolesToRemove.map(r => r.name)
+        };
+
+    } catch (error) {
+        console.error('Error updating Discord roles:', error);
+        return {
+            success: false,
+            error: error.message,
+            nftCounts: null
+        };
+    }
 }
 
 async function updateHashlists(newHashlists) {
