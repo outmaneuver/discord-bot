@@ -127,6 +127,45 @@ async function startApp() {
     // Mount verify routes at /holder-verify
     app.use('/holder-verify', verifyRouter);
 
+    // Mount store-wallet endpoint at root level
+    app.post('/store-wallet', async (req, res) => {
+      try {
+        if (!req.session.user) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
+
+        const { walletAddress } = req.body;
+        if (!walletAddress) {
+          return res.status(400).json({ error: 'Wallet address required' });
+        }
+
+        console.log('Storing wallet:', {
+          userId: req.session.user.id,
+          walletAddress,
+        });
+
+        // Store wallet in Redis
+        await redis.sadd(`wallets:${req.session.user.id}`, walletAddress);
+        
+        // Return success response
+        res.json({ 
+          success: true,
+          message: 'Wallet stored successfully',
+          data: {
+            userId: req.session.user.id,
+            walletAddress
+          }
+        });
+
+      } catch (error) {
+        console.error('Error storing wallet:', error);
+        res.status(500).json({ 
+          error: 'Failed to store wallet',
+          details: error.message
+        });
+      }
+    });
+
     // Start server first
     const server = await new Promise((resolve, reject) => {
       const server = app.listen(port, '0.0.0.0', () => {

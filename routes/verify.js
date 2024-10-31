@@ -69,7 +69,7 @@ router.post('/verify', async (req, res) => {
   }
 });
 
-// Add store-wallet endpoint
+// Update store-wallet endpoint path to match frontend
 router.post('/store-wallet', async (req, res) => {
   try {
     if (!req.session.user) {
