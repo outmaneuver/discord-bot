@@ -39,22 +39,27 @@ export async function updateUserProfile(channel, userId, client) {
       candy_bots: 0
     };
 
-    // Get BUX balance from Redis and refresh from chain
+    // Get BUX balance and value
     let totalBuxBalance = 0;
     for (const wallet of walletData.walletAddresses) {
-      // Get fresh balance from chain
       const chainBalance = await getBUXBalance(wallet);
-      console.log('Chain BUX balance for wallet:', wallet, chainBalance);
-      
-      // Get cached balance from Redis
       const cachedBalance = parseInt(await redis.get(`bux:${wallet}`) || '0');
-      console.log('Cached BUX balance for wallet:', wallet, cachedBalance);
-      
-      // Use chain balance if available, otherwise use cached
       const balance = chainBalance || cachedBalance;
-      // Divide by 1e9 to get correct decimal places and remove decimals
       totalBuxBalance += Math.floor(balance / 1e9);
     }
+
+    // Fetch current SOL price and BUX value
+    const { fetchBuxPublicSupply } = await import('../src/scripts/fetchBuxSupply.js');
+    const { publicSupply, communityWalletSol } = await fetchBuxPublicSupply();
+    const buxValueInSol = communityWalletSol / publicSupply;
+    
+    const solPriceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+    const solPriceData = await solPriceResponse.json();
+    const solPrice = solPriceData.solana.usd;
+    
+    // Calculate total BUX value in USD
+    const buxValueInUsd = buxValueInSol * solPrice;
+    const totalBuxValueUsd = totalBuxBalance * buxValueInUsd;
 
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
     if (!guild) throw new Error('Guild not found');
@@ -113,7 +118,7 @@ export async function updateUserProfile(channel, userId, client) {
         { name: '\u200B', value: '─'.repeat(40) },
         { 
           name: 'BUX Balance', 
-          value: `${totalBuxBalance.toLocaleString()} BUX`
+          value: `${totalBuxBalance.toLocaleString()} BUX ($${totalBuxValueUsd.toFixed(2)})`
         },
         { 
           name: 'Daily Reward', 
