@@ -399,34 +399,32 @@ async function getTensorFloor(collection) {
     }
 }
 
-// Update displayCatzInfo function with more Magic Eden data
+// Update displayCatzInfo function with better Magic Eden API endpoint
 export async function displayCatzInfo(channel) {
     try {
         // Get collection data from Magic Eden API
-        const [statsResponse, collectionResponse] = await Promise.all([
-            fetch('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats'),
-            fetch('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz')
-        ]);
+        const response = await fetch('https://api-mainnet.magiceden.io/rpc/getCollectionEscrowStats/fcked_catz', {
+            headers: {
+                'User-Agent': 'Mozilla/5.0',
+                'Accept': 'application/json'
+            }
+        });
         
-        if (!statsResponse.ok || !collectionResponse.ok) {
-            throw new Error(`Magic Eden API error: ${statsResponse.status}/${collectionResponse.status}`);
+        if (!response.ok) {
+            throw new Error(`Magic Eden API error: ${response.status}`);
         }
         
-        const stats = await statsResponse.json();
-        const collection = await collectionResponse.json();
-        
-        const floorPrice = stats.floorPrice / 1e9; // Convert from lamports to SOL
-        const totalSupply = collection.totalItems || 1422; // Fallback to our count if API fails
-        const image = collection.image || 'https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.mp4';
+        const data = await response.json();
+        const floorPrice = data.results.floorPrice / 1e9; // Convert from lamports to SOL
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setImage(image)
+            .setImage('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.mp4')
             .addFields(
                 {
                     name: 'Collection Size',
-                    value: `${totalSupply.toLocaleString()} NFTs`
+                    value: `${hashlists.fckedCatz.size.toLocaleString()} NFTs`
                 },
                 {
                     name: 'Floor Price',
