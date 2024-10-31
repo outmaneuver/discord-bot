@@ -224,11 +224,35 @@ async function verifyWallet(userId, walletAddress) {
 
         // Update daily reward timer after successful verification
         try {
-            const { startOrUpdateDailyTimer } = await import('./rewards.js');
-            await startOrUpdateDailyTimer(userId, nftCounts, buxBalance);
+            const { startOrUpdateDailyTimer, calculateDailyReward } = await import('./rewards.js');
+            const dailyReward = await calculateDailyReward(nftCounts);
+            console.log('Daily reward calculation:', {
+                nftCounts,
+                dailyReward
+            });
+            await startOrUpdateDailyTimer(userId, nftCounts);
+            result.dailyReward = dailyReward; // Add daily reward to response
         } catch (error) {
             console.error('Error updating daily reward:', error);
         }
+
+        // Format the response message with correct daily reward
+        result.formattedResponse = `
+      **Wallet Verification Successful!**
+      
+      VERIFIED NFTs
+     
+      Fcked Catz - ${nftCounts.fcked_catz}
+      Celeb Catz - ${nftCounts.celebcatz}
+      Monsters - ${nftCounts.money_monsters}
+      3D Monsters - ${nftCounts.money_monsters3d}
+      BitBots - ${nftCounts.ai_bitbots}
+      
+      A.I. collabs - ${nftCounts.warriors + nftCounts.squirrels + nftCounts.rjctd_bots + 
+                      nftCounts.energy_apes + nftCounts.doodle_bots + nftCounts.candy_bots}
+
+      **Daily reward - ${result.dailyReward} BUX**
+    `;
 
         // Cache final result for 5 minutes
         try {
