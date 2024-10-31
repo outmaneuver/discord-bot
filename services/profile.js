@@ -686,12 +686,12 @@ export async function displayRewards(channel) {
       {
         name: '🤖 AI Collabs',
         value: [
-          '• Warriors: 1 BUX each',
-          '• Squirrels: 1 BUX each',
+          '• A.I. Warriors: 1 BUX each',
+          '• A.I. Squirrels: 1 BUX each',
+          '• A.I. Energy Apes: 1 BUX each',
           '• RJCTD Bots: 1 BUX each',
-          '• Energy Apes: 1 BUX each',
-          '• Doodle Bots: 1 BUX each',
-          '• Candy Bots: 1 BUX each'
+          '• Candy Bots: 1 BUX each',
+          '• Doodle Bots: 1 BUX each'
         ].join('\n')
       },
       {
