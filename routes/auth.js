@@ -68,9 +68,9 @@ router.get('/callback', async (req, res) => {
     const { code, state } = req.query;
     console.log('Processing OAuth callback with code');
 
-    // Store user data in both session and cookies
     const tokenData = await getOAuthToken(code);
     const userData = await getDiscordUser(tokenData.access_token);
+    console.log('Received user data:', userData);
 
     // Set session data
     req.session.user = {
@@ -79,32 +79,32 @@ router.get('/callback', async (req, res) => {
       accessToken: tokenData.access_token
     };
 
-    // Set cookies with longer expiration
+    // Set cookies for mobile/cross-domain support
     res.cookie('discord_user', userData.username, {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: 'none',
-      domain: process.env.NODE_ENV === 'production' ? '.herokuapp.com' : undefined
+      path: '/'
     });
 
     res.cookie('discord_id', userData.id, {
       maxAge: 7 * 24 * 60 * 60 * 1000,
       httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: 'none',
-      domain: process.env.NODE_ENV === 'production' ? '.herokuapp.com' : undefined
+      path: '/'
     });
 
     res.cookie('auth_status', 'logged_in', {
       maxAge: 7 * 24 * 60 * 60 * 1000,
       httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: 'none',
-      domain: process.env.NODE_ENV === 'production' ? '.herokuapp.com' : undefined
+      path: '/'
     });
 
-    // Save session explicitly
+    // Save session explicitly and wait for it
     await new Promise((resolve, reject) => {
       req.session.save((err) => {
         if (err) {
@@ -116,9 +116,14 @@ router.get('/callback', async (req, res) => {
       });
     });
 
+    console.log('Session saved:', {
+      id: req.session.id,
+      user: req.session.user?.username,
+      cookie: req.session.cookie
+    });
+
     // Redirect with success parameter and user data
-    const redirectUrl = `/holder-verify/?auth=success&user=${encodeURIComponent(userData.username)}`;
-    res.redirect(redirectUrl);
+    res.redirect(`/holder-verify/?auth=success&user=${encodeURIComponent(userData.username)}`);
 
   } catch (error) {
     console.error('Error in OAuth callback:', error);
@@ -127,29 +132,39 @@ router.get('/callback', async (req, res) => {
 });
 
 router.get('/status', (req, res) => {
-  const status = {
-    hasSession: !!req.session,
-    hasUser: !!req.session?.user,
-    username: req.session?.user?.username
-  };
+  try {
+    // Check cookies first
+    const discordUser = req.cookies?.discord_user;
+    const discordId = req.cookies?.discord_id;
+    const authStatus = req.cookies?.auth_status;
 
-  // Check cookies as primary auth source
-  const discordUser = req.cookies?.discord_user;
-  const discordId = req.cookies?.discord_id;
-  const authStatus = req.cookies?.auth_status;
+    // If cookies exist but session doesn't, recreate session
+    if (discordUser && discordId && authStatus === 'logged_in' && !req.session?.user) {
+      req.session.user = {
+        id: discordId,
+        username: discordUser
+      };
+    }
 
-  // If cookies exist but session doesn't, recreate session
-  if (discordUser && discordId && authStatus === 'logged_in' && !status.hasUser) {
-    req.session.user = {
-      id: discordId,
-      username: discordUser
+    const status = {
+      hasSession: !!req.session,
+      hasUser: !!req.session?.user || (authStatus === 'logged_in' && !!discordUser),
+      username: req.session?.user?.username || discordUser
     };
-  }
 
-  res.json({
-    authenticated: status.hasUser || (authStatus === 'logged_in' && !!discordUser),
-    username: status.username || discordUser || null
-  });
+    console.log('Auth status check:', status);
+
+    res.json({
+      authenticated: status.hasUser,
+      username: status.username
+    });
+  } catch (error) {
+    console.error('Error checking auth status:', error);
+    res.json({
+      authenticated: false,
+      username: null
+    });
+  }
 });
 
 // Add OAuth token function
