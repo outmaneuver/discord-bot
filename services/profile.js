@@ -430,7 +430,7 @@ async function fetchWithRetry(url, maxRetries = 3) {
     }
 }
 
-// Update displayCatzInfo function with correct Magic Eden API properties
+// Update displayCatzInfo function with proper thumbnail
 export async function displayCatzInfo(channel) {
     try {
         // Get collection data with retries
@@ -443,7 +443,7 @@ export async function displayCatzInfo(channel) {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.mp4')
+            .setThumbnail('https://img-cdn.magiceden.dev/rs:fill:400:400:0:0/plain/https://creator-hub-prod.s3.us-east-2.amazonaws.com/fcked_catz_pfp_1677595252883.gif')
             .addFields(
                 {
                     name: 'Collection Size',
