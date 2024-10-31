@@ -3,6 +3,8 @@ import fetch from 'node-fetch';
 import cors from 'cors';
 import { config } from '../config/config.js';
 import { verifyWallet } from '../services/verify.js';
+import session from 'express-session';
+import redisStore from 'connect-redis';
 
 const router = express.Router();
 
@@ -12,6 +14,22 @@ router.use(cors({
     ? 'https://buxdao-verify-d1faffc83da7.herokuapp.com'
     : 'http://localhost:3000',
   credentials: true
+}));
+
+// Update session configuration
+router.use(session({
+  store: redisStore,
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: true,
+  saveUninitialized: true,
+  name: 'buxdao.sid',
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'none', // Changed from 'lax' to 'none' for mobile
+    domain: process.env.NODE_ENV === 'production' ? '.herokuapp.com' : undefined
+  }
 }));
 
 const DISCORD_API_URL = 'https://discord.com/api/v10';
@@ -43,19 +61,9 @@ router.get('/callback', async (req, res) => {
     const { code, state } = req.query;
     console.log('Processing OAuth callback with code');
 
-    // Verify state parameter matches
-    if (state !== req.session.oauthState) {
-      console.error('State mismatch:', { 
-        expected: req.session.oauthState, 
-        received: state 
-      });
-    }
-
+    // Store user data in both session and cookies
     const tokenData = await getOAuthToken(code);
-    console.log('Received token data');
-
     const userData = await getDiscordUser(tokenData.access_token);
-    console.log('Received user data:', userData);
 
     // Set session data
     req.session.user = {
@@ -63,6 +71,31 @@ router.get('/callback', async (req, res) => {
       username: userData.username,
       accessToken: tokenData.access_token
     };
+
+    // Set cookies with longer expiration
+    res.cookie('discord_user', userData.username, {
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      domain: process.env.NODE_ENV === 'production' ? '.herokuapp.com' : undefined
+    });
+
+    res.cookie('discord_id', userData.id, {
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      domain: process.env.NODE_ENV === 'production' ? '.herokuapp.com' : undefined
+    });
+
+    res.cookie('auth_status', 'logged_in', {
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      domain: process.env.NODE_ENV === 'production' ? '.herokuapp.com' : undefined
+    });
 
     // Save session explicitly
     await new Promise((resolve, reject) => {
@@ -76,29 +109,9 @@ router.get('/callback', async (req, res) => {
       });
     });
 
-    console.log('Session saved:', {
-      id: req.session.id,
-      user: req.session.user?.username,
-      cookie: req.session.cookie
-    });
-
-    // Set additional cookies for mobile
-    res.cookie('discord_user', userData.username, {
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax'
-    });
-
-    res.cookie('auth_status', 'logged_in', {
-      maxAge: 24 * 60 * 60 * 1000,
-      httpOnly: false, // Allow JS access
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax'
-    });
-
-    // Redirect with success parameter
-    res.redirect('/holder-verify/?auth=success');
+    // Redirect with success parameter and user data
+    const redirectUrl = `/holder-verify/?auth=success&user=${encodeURIComponent(userData.username)}`;
+    res.redirect(redirectUrl);
 
   } catch (error) {
     console.error('Error in OAuth callback:', error);
@@ -113,11 +126,18 @@ router.get('/status', (req, res) => {
     username: req.session?.user?.username
   };
 
-  console.log('Auth status check:', status);
-
-  // Check cookies as fallback for mobile
+  // Check cookies as primary auth source
   const discordUser = req.cookies?.discord_user;
+  const discordId = req.cookies?.discord_id;
   const authStatus = req.cookies?.auth_status;
+
+  // If cookies exist but session doesn't, recreate session
+  if (discordUser && discordId && authStatus === 'logged_in' && !status.hasUser) {
+    req.session.user = {
+      id: discordId,
+      username: discordUser
+    };
+  }
 
   res.json({
     authenticated: status.hasUser || (authStatus === 'logged_in' && !!discordUser),
