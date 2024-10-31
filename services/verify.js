@@ -446,34 +446,25 @@ async function updateHashlists(newHashlists) {
   });
 }
 
-async function getBUXBalance(walletAddress) {
+export async function getBUXBalance(walletAddress) {
   try {
     console.log('Getting BUX balance for wallet:', walletAddress);
-    console.log('Using BUX token mint:', process.env.BUX_TOKEN_MINT);
+    console.log('Using BUX token mint:', BUX_TOKEN_MINT);
 
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-      new PublicKey(walletAddress),
-      { programId: TOKEN_PROGRAM_ID }
+    const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
+    const tokenAccounts = await retryWithBackoff(() => 
+      connection.getParsedTokenAccountsByOwner(
+        new PublicKey(walletAddress),
+        { mint: new PublicKey(BUX_TOKEN_MINT) }
+      )
     );
 
-    console.log('Found token accounts:', tokenAccounts.value.length);
-
-    let buxBalance = 0;
-    for (const acc of tokenAccounts.value) {
-      const mint = acc.account.data.parsed.info.mint;
-      console.log('Checking token mint:', mint);
-      
-      if (mint === process.env.BUX_TOKEN_MINT) {
-        const amount = parseInt(acc.account.data.parsed.info.tokenAmount.amount);
-        console.log('Found BUX token with amount:', amount);
-        buxBalance += amount;
-      }
+    let totalBalance = 0;
+    for (const account of tokenAccounts.value) {
+      totalBalance += account.account.data.parsed.info.tokenAmount.amount;
     }
 
-    console.log('Final BUX balance:', buxBalance);
-    await redis.set(`bux:${walletAddress}`, buxBalance.toString());
-    
-    return buxBalance;
+    return totalBalance;
   } catch (error) {
     console.error('Error getting BUX balance:', error);
     return 0;

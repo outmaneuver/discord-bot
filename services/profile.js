@@ -42,10 +42,18 @@ export async function updateUserProfile(channel, userId, client) {
     // Get BUX balance and value
     let totalBuxBalance = 0;
     for (const wallet of walletData.walletAddresses) {
-      const chainBalance = await getBUXBalance(wallet);
-      const cachedBalance = parseInt(await redis.get(`bux:${wallet}`) || '0');
-      const balance = chainBalance || cachedBalance;
-      totalBuxBalance += Math.floor(balance / 1e9);
+      try {
+        await sleep(500); // Add delay between wallet checks
+        const chainBalance = await getBUXBalance(wallet);
+        const cachedBalance = parseInt(await redis.get(`bux:${wallet}`) || '0');
+        const balance = chainBalance || cachedBalance;
+        totalBuxBalance += Math.floor(balance / 1e9);
+      } catch (error) {
+        console.error(`Error fetching balance for wallet ${wallet}:`, error);
+        // Use cached balance if available
+        const cachedBalance = parseInt(await redis.get(`bux:${wallet}`) || '0');
+        totalBuxBalance += Math.floor(cachedBalance / 1e9);
+      }
     }
 
     // Fetch current SOL price and BUX value
