@@ -109,23 +109,35 @@ async function startApp() {
       prefix: 'session:'
     });
 
+    // Add cookie-parser before session middleware
+    app.use(cookieParser());
+
     // Add session middleware
     app.use(session({
       store: redisStore,
       secret: process.env.SESSION_SECRET || 'your-secret-key',
-      resave: true,
-      saveUninitialized: true,
+      resave: false,
+      saveUninitialized: false,
       name: 'buxdao.sid',
       proxy: true,
       cookie: {
         secure: true,
         httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000,
-        sameSite: 'none',
-        path: '/',
-        domain: process.env.NODE_ENV === 'production' ? '.herokuapp.com' : undefined
+        sameSite: 'lax',
+        path: '/'
       }
     }));
+
+    // Add session debug middleware
+    app.use((req, res, next) => {
+      console.log('Session Debug:', {
+        id: req.sessionID,
+        user: req.session?.user,
+        cookies: req.cookies
+      });
+      next();
+    });
 
     // Add trust proxy setting
     app.set('trust proxy', 1);
