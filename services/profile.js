@@ -324,107 +324,57 @@ export async function displayHelp(channel) {
 // Update the fetchTensorStats function
 async function fetchTensorStats(collection) {
   try {
-    const slugMap = {
-      'fcked_catz': 'fckedcatz',
-      'celebcatz': 'celebcatz', 
-      'money_monsters': 'moneymonsters',
-      'money_monsters3d': 'moneymonsters3d',
-      'ai_bitbots': 'aibitbots'
-    };
-
-    const slug = slugMap[collection] || collection;
-
-    // Use Tensor's public stats API
-    const response = await fetch(`https://tensor-api-production.up.railway.app/api/v1/collections/${slug}/stats`, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-        'Origin': 'https://tensor.trade',
-        'Referer': 'https://tensor.trade/'
-      }
-    });
-
+    const response = await fetch(`https://api.tensor.so/api/v1/collections/${collection}/stats`);
     if (!response.ok) {
-      console.error('Tensor API error:', await response.text());
+      console.log('Tensor API error:', await response.text());
       throw new Error(`Failed to fetch collection data: ${response.status}`);
     }
-
-    const data = await response.json();
-    console.log('Tensor response:', data);
-
-    return {
-      floor: (data.floor_price || 0) * 1e9,
-      buyNow: (data.floor_price || 0) * 1e9,
-      listed: data.listed_count || 0,
-      totalSupply: data.total_supply || 0,
-      volume24h: (data.volume_24h || 0) * 1e9,
-      volumeAll: (data.volume_all || 0) * 1e9,
-      sales24h: data.sales_24h || 0,
-      priceChange24h: (data.floor_change_24h || 0) / 100
-    };
+    return await response.json();
   } catch (error) {
     console.error('Error fetching Tensor stats:', error);
-    throw error;
+    // Return null instead of throwing to allow fallback display
+    return null;
   }
 }
 
 export async function displayCatzInfo(channel) {
   try {
-    // Fetch real-time data from Tensor
-    const stats = await fetchTensorStats('fcked_catz');
+    // Update collection slug to match Tensor's format
+    const tensorStats = await fetchTensorStats('fcked_catz'); // Changed from fckedcatz
     
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
-      .setTitle('Fcked Catz')
-      .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/fcked_catz_pfp_1646574386909.png')
+      .setTitle('Fcked Catz Collection Info')
+      .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/logo.png')
       .addFields(
-        { 
-          name: 'FLOOR',
-          value: `${(stats.floor/1e9).toFixed(3)} SOL`,
-          inline: true
-        },
-        { 
-          name: 'BUY NOW',
-          value: `${(stats.buyNow/1e9).toFixed(3)} SOL`,
-          inline: true
-        },
         {
-          name: '\u200B',
-          value: '\u200B',
-          inline: true
-        },
-        {
-          name: 'LISTED/SUPPLY',
-          value: `${stats.listed}/${stats.totalSupply} (${((stats.listed/stats.totalSupply)*100).toFixed(2)}%)`,
-          inline: true
-        },
-        {
-          name: 'VOLUME (24H)',
-          value: `${(stats.volume24h/1e9).toFixed(2)} SOL`,
-          inline: true
-        },
-        {
-          name: 'VOLUME (ALL)',
-          value: `${(stats.volumeAll/1e9).toFixed(2)} SOL`,
-          inline: true
-        },
-        {
-          name: 'SALES (24H)',
-          value: `${stats.sales24h || 0}`,
-          inline: true
-        },
-        {
-          name: 'PRICE Δ (24H)',
-          value: `${stats.priceChange24h ? (stats.priceChange24h * 100).toFixed(2) + '%' : '0%'}`,
-          inline: true
+          name: 'Collection Size',
+          value: `${hashlists.fckedCatz.size.toLocaleString()} NFTs`
         }
-      )
-      .setFooter({ text: 'Data from Tensor.Trade' });
+      );
+
+    // Only add Tensor stats if available
+    if (tensorStats) {
+      embed.addFields(
+        {
+          name: 'Floor Price',
+          value: `${tensorStats.floor_price} SOL`
+        },
+        {
+          name: 'Total Volume',
+          value: `${tensorStats.volume.toLocaleString()} SOL`
+        },
+        {
+          name: 'Listed Count',
+          value: `${tensorStats.listed_count.toLocaleString()} NFTs`
+        }
+      );
+    }
 
     await channel.send({ embeds: [embed] });
   } catch (error) {
     console.error('Error displaying Catz info:', error);
-    await channel.send('An error occurred while fetching collection information.');
+    await channel.send('Error fetching Fcked Catz collection information. Please try again later.');
   }
 }
 
