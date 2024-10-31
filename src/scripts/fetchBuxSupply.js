@@ -2,6 +2,8 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 const BUX_TOKEN_ADDRESS = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
+const COMMUNITY_WALLET = '3WNHW6sr1sQdbRjovhPrxgEJdWASZ43egGWMMNrhgoRR';
+const ADDITIONAL_SOL = 17.76;
 const BUX_DECIMALS = 9;
 
 const EXEMPT_WALLETS = [
@@ -62,20 +64,37 @@ async function retryWithBackoff(fn, maxRetries = 5) {
     }
 }
 
+async function getCommunityWalletBalance(connection) {
+    try {
+        const balance = await retryWithBackoff(() =>
+            connection.getBalance(new PublicKey(COMMUNITY_WALLET))
+        );
+        
+        // Convert lamports to SOL and add the additional amount
+        const solBalance = (balance / 1e9) + ADDITIONAL_SOL;
+        console.log('Community Wallet Balance:', solBalance.toLocaleString(), 'SOL');
+        return solBalance;
+    } catch (error) {
+        console.error('Error fetching community wallet balance:', error);
+        return 0;
+    }
+}
+
 export async function fetchBuxPublicSupply() {
     try {
         const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
         
-        // Get token supply
-        const tokenSupply = await retryWithBackoff(() => 
-            connection.getTokenSupply(new PublicKey(BUX_TOKEN_ADDRESS))
-        );
+        // Get token supply and community wallet balance in parallel
+        const [tokenSupply, communityWalletSol] = await Promise.all([
+            retryWithBackoff(() => connection.getTokenSupply(new PublicKey(BUX_TOKEN_ADDRESS))),
+            getCommunityWalletBalance(connection)
+        ]);
 
         // Get balances of exempt wallets with delay between requests
         const exemptBalances = [];
         for (const { wallet, tokenAccount } of EXEMPT_WALLETS) {
             try {
-                await sleep(500); // Add delay between requests
+                await sleep(500);
                 const accountInfo = await retryWithBackoff(() =>
                     connection.getTokenAccountBalance(new PublicKey(tokenAccount))
                 );
@@ -89,19 +108,19 @@ export async function fetchBuxPublicSupply() {
             }
         }
 
-        // Calculate total exempt balance
         const totalExemptBalance = exemptBalances.reduce((acc, curr) => acc + curr, 0);
-
-        // Calculate public supply
         const publicSupply = tokenSupply.value.uiAmount - totalExemptBalance;
 
         console.log('Total Supply:', tokenSupply.value.uiAmount.toLocaleString(), 'BUX');
         console.log('Total Exempt Balance:', totalExemptBalance.toLocaleString(), 'BUX');
         console.log('Public Supply:', publicSupply.toLocaleString(), 'BUX');
-
-        return Math.max(0, publicSupply);
+        
+        return {
+            publicSupply: Math.max(0, publicSupply),
+            communityWalletSol
+        };
     } catch (error) {
-        console.error('Error fetching BUX public supply:', error);
+        console.error('Error fetching BUX supply:', error);
         throw error;
     }
 } 

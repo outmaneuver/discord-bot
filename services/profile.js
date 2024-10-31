@@ -227,12 +227,12 @@ export async function displayRoles(channel, userId, client) {
 export async function displayBuxInfo(channel) {
   try {
     const { fetchBuxPublicSupply } = await import('../src/scripts/fetchBuxSupply.js');
-    const publicSupply = await fetchBuxPublicSupply();
+    const { publicSupply, communityWalletSol } = await fetchBuxPublicSupply();
     
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
       .setTitle('$BUX Token Info')
-      .setThumbnail('https://i.imgur.com/YOUR_BUX_LOGO.png') // Replace with actual BUX logo URL
+      .setThumbnail('https://i.imgur.com/YOUR_BUX_LOGO.png')
       .addFields(
         { 
           name: 'Public Supply',
@@ -241,7 +241,7 @@ export async function displayBuxInfo(channel) {
         },
         { 
           name: 'Community Wallet',
-          value: '25,000,000 BUX',
+          value: `${communityWalletSol.toLocaleString()} SOL`,
           inline: true
         },
         {
