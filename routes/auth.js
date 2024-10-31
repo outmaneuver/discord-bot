@@ -135,39 +135,28 @@ router.get('/callback', async (req, res) => {
 
 router.get('/status', (req, res) => {
   try {
-    // Check cookies first
+    // Log full session data for debugging
+    console.log('Full session data:', {
+      sessionID: req.sessionID,
+      session: req.session,
+      cookies: req.cookies
+    });
+
+    // Check session first
+    const authenticated = !!req.session?.user;
+    const username = req.session?.user?.username;
+
+    // If session auth fails, check cookies as backup
     const discordUser = req.cookies?.discord_user;
     const discordId = req.cookies?.discord_id;
-    const authStatus = req.cookies?.auth_status;
-
-    // If cookies exist but session doesn't, recreate session
-    if (discordUser && discordId && authStatus === 'logged_in' && !req.session?.user) {
-      req.session.user = {
-        id: discordId,
-        username: discordUser
-      };
-      // Save session immediately
-      req.session.save();
-    }
-
-    const status = {
-      hasSession: !!req.session,
-      hasUser: !!req.session?.user || (authStatus === 'logged_in' && !!discordUser),
-      username: req.session?.user?.username || discordUser
-    };
-
-    console.log('Auth status check:', status);
-
-    // Set CORS headers
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
 
     res.json({
-      authenticated: status.hasUser,
-      username: status.username
+      authenticated: authenticated || !!discordUser,
+      username: username || discordUser || null
     });
+
   } catch (error) {
-    console.error('Error checking auth status:', error);
+    console.error('Error in status check:', error);
     res.json({
       authenticated: false,
       username: null
