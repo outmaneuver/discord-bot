@@ -399,11 +399,22 @@ async function getTensorFloor(collection) {
     }
 }
 
-// Update displayCatzInfo function with GIF and new whale status
+// Update displayCatzInfo function with Magic Eden API
 export async function displayCatzInfo(channel) {
     try {
-        // Get floor price
-        const floorPrice = await getTensorFloor('fcked_catz');
+        // Get floor price from Magic Eden API
+        const response = await fetch('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats', {
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Magic Eden API error: ${response.status}`);
+        }
+        
+        const stats = await response.json();
+        const floorPrice = stats.floorPrice / 1e9; // Convert from lamports to SOL
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
@@ -416,7 +427,7 @@ export async function displayCatzInfo(channel) {
                 },
                 {
                     name: 'Floor Price',
-                    value: floorPrice ? `${floorPrice.toFixed(2)} SOL` : 'Unable to fetch floor'
+                    value: `${floorPrice.toFixed(2)} SOL`
                 },
                 {
                     name: 'Daily Reward',
@@ -438,7 +449,38 @@ export async function displayCatzInfo(channel) {
         await channel.send({ embeds: [embed] });
     } catch (error) {
         console.error('Error displaying Catz info:', error);
-        await channel.send('Error fetching Fcked Catz collection information. Please try again later.');
+        // Still show info even if floor price fails
+        const embed = new EmbedBuilder()
+            .setColor('#0099ff')
+            .setTitle('Fcked Catz Collection Info')
+            .setImage('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.mp4')
+            .addFields(
+                {
+                    name: 'Collection Size',
+                    value: `${hashlists.fckedCatz.size.toLocaleString()} NFTs`
+                },
+                {
+                    name: 'Floor Price',
+                    value: 'Unable to fetch floor'
+                },
+                {
+                    name: 'Daily Reward',
+                    value: '5 BUX per NFT'
+                },
+                {
+                    name: 'Whale Status',
+                    value: '25+ NFTs'
+                },
+                {
+                    name: 'Links',
+                    value: [
+                        '[Magic Eden](https://magiceden.io/marketplace/fcked_catz)',
+                        '[Tensor](https://www.tensor.trade/trade/fcked_catz)'
+                    ].join('\n')
+                }
+            );
+
+        await channel.send({ embeds: [embed] });
     }
 }
 
