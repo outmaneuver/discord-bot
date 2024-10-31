@@ -6,6 +6,7 @@ import { config } from '../config/config.js';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Connection } from '@solana/web3.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -467,7 +468,8 @@ async function retryWithBackoff(fn, maxRetries = 5) {
     }
 }
 
-export async function getBUXBalance(walletAddress) {
+// Keep only one getBUXBalance function
+async function getBUXBalance(walletAddress) {
   try {
     console.log('Getting BUX balance for wallet:', walletAddress);
     console.log('Using BUX token mint:', BUX_TOKEN_MINT);
