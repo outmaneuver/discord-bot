@@ -553,7 +553,7 @@ export async function displayMMInfo(channel) {
 
 export async function displayMM3DInfo(channel) {
     try {
-        // Get collection data with retries
+        // Get collection data with retries - using exact same method as Catz
         const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/money_monsters3d/stats');
         
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
