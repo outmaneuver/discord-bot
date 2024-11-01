@@ -198,6 +198,7 @@
         #pageTitle {
             color: #FFD700;
             margin-bottom: 1rem;
+            font-size: 24px;
         }
         button {
             border: 2px solid white;
@@ -244,6 +245,7 @@
             const discordButton = document.getElementById('discordButton');
             const connectButton = document.getElementById('connectButton');
             const welcomeMessage = document.getElementById('welcomeMessage');
+            const pageTitle = document.getElementById('pageTitle');
             const infoMessage = document.querySelector('.info-message');
 
             if (discordButton) {
@@ -259,9 +261,10 @@
                 .then(data => {
                     console.log('Auth status:', data);
                     if (data.authenticated) {
-                        // Hide Discord button and info message
+                        // Hide Discord button, info message, and page title
                         discordButton.style.display = 'none';
                         infoMessage.style.display = 'none';
+                        pageTitle.style.display = 'none';
                         
                         // Show connect button
                         connectButton.style.display = 'inline-block';
