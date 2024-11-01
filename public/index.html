@@ -179,6 +179,22 @@
             display: none;
             font-size: 1.2em;
         }
+        .info-message {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9em;
+            margin-top: 1rem;
+            padding: 0.5rem;
+            text-align: left;
+            line-height: 1.4;
+        }
+        .info-icon {
+            margin-right: 8px;
+            font-size: 1.2em;
+            color: white;
+        }
     </style>
     <script>
         // Show connect button only after Discord auth
@@ -210,6 +226,10 @@
         <p id="welcomeMessage"></p>
         <button id="discordButton" class="discord-button">Sign in with Discord</button>
         <button id="connectButton" class="connect-button">Connect Wallet</button>
+        <div class="info-message">
+            <span class="info-icon">ⓘ</span>
+            By signing into Discord, you are giving BUXBOT permissions to update your roles in BUXDAO server
+        </div>
         <p id="status"></p>
         <p id="verificationResult"></p>
     </div>
