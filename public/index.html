@@ -244,6 +244,7 @@
             const discordButton = document.getElementById('discordButton');
             const connectButton = document.getElementById('connectButton');
             const welcomeMessage = document.getElementById('welcomeMessage');
+            const infoMessage = document.querySelector('.info-message');
 
             if (discordButton) {
                 discordButton.addEventListener('click', () => {
@@ -258,9 +259,14 @@
                 .then(data => {
                     console.log('Auth status:', data);
                     if (data.authenticated) {
-                        discordButton.classList.add('hidden');
-                        connectButton.classList.remove('connect-button');
-                        connectButton.classList.add('discord-button');
+                        // Hide Discord button and info message
+                        discordButton.style.display = 'none';
+                        infoMessage.style.display = 'none';
+                        
+                        // Show connect button
+                        connectButton.style.display = 'inline-block';
+                        
+                        // Show welcome message
                         welcomeMessage.textContent = `Welcome, ${data.username}!`;
                     }
                 })
