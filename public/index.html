@@ -158,6 +158,27 @@
             margin-right: 10px;
             font-size: 14px;
         }
+        .hidden {
+            display: none;
+        }
+        
+        .connect-button {
+            display: none;
+            background-color: #4CAF50;
+        }
+
+        .discord-button {
+            display: inline-block;
+            background-color: #7289DA;
+        }
+
+        .close-message {
+            margin-top: 2rem;
+            color: #ffffff;
+            text-align: center;
+            display: none;
+            font-size: 1.2em;
+        }
     </style>
     <script>
         // Show connect button only after Discord auth
@@ -170,8 +191,9 @@
             .then(response => response.json())
             .then(data => {
                 if (data.authenticated) {
-                    document.getElementById('discordButton').style.display = 'none';
-                    document.getElementById('connectButton').style.display = 'inline-block';
+                    document.getElementById('discordButton').classList.add('hidden');
+                    document.getElementById('connectButton').classList.remove('connect-button');
+                    document.getElementById('connectButton').classList.add('discord-button');
                     document.getElementById('welcomeMessage').textContent = `Welcome, ${data.username}!`;
                 }
             })
@@ -186,12 +208,12 @@
     <div class="container">
         <h1 id="pageTitle">Verify Your Wallet</h1>
         <p id="welcomeMessage"></p>
-        <button id="discordButton">Sign in with Discord</button>
-        <button id="connectButton" style="display: none;">Connect Wallet</button>
+        <button id="discordButton" class="discord-button">Sign in with Discord</button>
+        <button id="connectButton" class="connect-button">Connect Wallet</button>
         <p id="status"></p>
         <p id="verificationResult"></p>
     </div>
-    <div id="closeMessage" style="display: none;">
+    <div id="closeMessage" class="close-message">
         <span class="verified"><i class="checkmark">✓</i> VERIFIED</span><br>
         You can now close this window
     </div>
