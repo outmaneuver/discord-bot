@@ -227,119 +227,37 @@
                 alert(error.message);
             }
         }
-    </script>
-</head>
-<body>
-    <div class="logo-container">
-        <img src="/logo.png" alt="Logo" class="logo">
-        <div class="logo-text">BUX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DAO</div>
-    </div>
-    <div class="container">
-        <h1 id="pageTitle">Verify Your Wallet</h1>
-        <p id="welcomeMessage"></p>
-        <button id="discordButton">Sign in with Discord</button>
-        <button id="connect-button" onclick="handleConnect()" class="connect-button">
-            Connect Wallet
-        </button>
-        <p id="status"></p>
-        <p id="verificationResult"></p>
-    </div>
-    <div id="closeMessage">
-        <span class="verified"><i class="checkmark">✓</i> VERIFIED</span><br>
-        You can now close this window
-    </div>
 
-    <script>
-        const discordButton = document.getElementById('discordButton');
-        const connectButton = document.getElementById('connect-button');
-        const statusElement = document.getElementById('status');
-        const closeMessageElement = document.getElementById('closeMessage');
-        const pageTitle = document.getElementById('pageTitle');
-        const welcomeMessage = document.getElementById('welcomeMessage');
+        const SUPPORTED_WALLETS = (process.env.SUPPORTED_WALLETS || 'phantom,solflare').split(',');
+        const DEFAULT_WALLET = process.env.DEFAULT_WALLET || 'phantom';
 
-        discordButton.addEventListener('click', () => {
-            discordButton.textContent = 'LOADING';
-            discordButton.disabled = true;
-            discordButton.style.backgroundColor = '#4a5568';
-            discordButton.style.cursor = 'default';
-            discordButton.style.opacity = '0.7';
-            window.location.href = '/auth/discord';
-        });
-
-        function updateUIForAuthenticatedUser(username) {
-            discordButton.style.display = 'none';
-            connectButton.style.display = 'inline-block';
-            pageTitle.style.display = 'none';
-            welcomeMessage.textContent = `Hi ${username}!`;
-            welcomeMessage.style.display = 'block';
-            statusElement.textContent = 'You are logged in with Discord. Please connect your wallet.';
-        }
-
-        function checkAuthStatus(retries = 5) {
-            console.log('Checking auth status... Retries left:', retries);
-            setTimeout(() => {
-                fetch('/auth/status', { 
-                    credentials: 'include',
-                    cache: 'no-store',
-                    headers: {
-                        'Cache-Control': 'no-cache, no-store, must-revalidate',
-                        'Pragma': 'no-cache'
-                    }
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Auth status data:', data);
-                        if (data.authenticated && data.username) {
-                            console.log('User authenticated:', data.username);
-                            updateUIForAuthenticatedUser(data.username);
-                        } else {
-                            console.log('User not authenticated');
-                            if (retries > 0) {
-                                checkAuthStatus(retries - 1);
-                            } else {
-                                discordButton.style.display = 'inline-block';
-                                connectButton.style.display = 'none';
-                                pageTitle.style.display = 'block';
-                                welcomeMessage.style.display = 'none';
-                            }
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error checking auth status:', error);
-                        statusElement.textContent = 'Error checking authentication status';
-                        if (retries > 0) {
-                            checkAuthStatus(retries - 1);
-                        }
-                    });
-            }, 3000);
-        }
-
-        console.log('Page loaded, checking auth status...');
-        checkAuthStatus();
-
-        function formatResponse(response) {
-            return response.replace(/\*\*(.*?)\*\*/g, '<span class="yellow-text">$1</span>')
-                           .replace(/\n/g, '<br>');
+        function detectWallet() {
+            for (const walletName of SUPPORTED_WALLETS) {
+                const wallet = window[walletName.toLowerCase()];
+                if (wallet) {
+                    console.log(`Found ${walletName} wallet`);
+                    return {
+                        wallet,
+                        name: walletName.charAt(0).toUpperCase() + walletName.slice(1)
+                    };
+                }
+            }
+            return null;
         }
 
         connectButton.addEventListener('click', async () => {
             try {
                 // Check for any available Solana wallet
-                let wallet;
-                let walletName;
-                
-                if (window.solflare) {
-                    console.log('Found Solflare wallet');
-                    wallet = window.solflare;
-                    walletName = 'Solflare';
-                } else if (window.solana) {
-                    console.log('Found Phantom wallet');
-                    wallet = window.solana;
-                    walletName = 'Phantom';
-                } else {
-                    statusElement.textContent = 'Please install Phantom or Solflare wallet!';
+                const walletInfo = detectWallet();
+                if (!walletInfo) {
+                    const supportedWallets = SUPPORTED_WALLETS.map(w => 
+                        w.charAt(0).toUpperCase() + w.slice(1)
+                    ).join(' or ');
+                    statusElement.textContent = `Please install ${supportedWallets} wallet!`;
                     return;
                 }
+
+                const { wallet, name: walletName } = walletInfo;
 
                 try {
                     statusElement.textContent = `Connecting to ${walletName}...`;
@@ -418,5 +336,25 @@
             });
         }
     </script>
+</head>
+<body>
+    <div class="logo-container">
+        <img src="/logo.png" alt="Logo" class="logo">
+        <div class="logo-text">BUX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DAO</div>
+    </div>
+    <div class="container">
+        <h1 id="pageTitle">Verify Your Wallet</h1>
+        <p id="welcomeMessage"></p>
+        <button id="discordButton">Sign in with Discord</button>
+        <button id="connect-button" onclick="handleConnect()" class="connect-button">
+            Connect Wallet
+        </button>
+        <p id="status"></p>
+        <p id="verificationResult"></p>
+    </div>
+    <div id="closeMessage">
+        <span class="verified"><i class="checkmark">✓</i> VERIFIED</span><br>
+        You can now close this window
+    </div>
 </body>
 </html>
