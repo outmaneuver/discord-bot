@@ -430,7 +430,7 @@ async function fetchWithRetry(url, maxRetries = 3) {
     }
 }
 
-// Update displayCatzInfo function with working image URL
+// Update displayCatzInfo function with integrated footer
 export async function displayCatzInfo(channel) {
     try {
         // Get collection data with retries
@@ -465,7 +465,8 @@ export async function displayCatzInfo(channel) {
                     name: 'Whale Status',
                     value: '25+ NFTs'
                 }
-            );
+            )
+            .setFooter({ text: 'Available on Magic Eden and Tensor' });
 
         // Create buttons for marketplaces
         const row = new ActionRowBuilder()
