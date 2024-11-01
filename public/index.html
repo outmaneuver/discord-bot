@@ -323,47 +323,62 @@
         }
 
         connectButton.addEventListener('click', async () => {
-            if (!window.solana || !window.solana.isPhantom) {
-                statusElement.textContent = 'Phantom wallet is not installed!';
-                return;
-            }
-
             try {
-                const resp = await window.solana.connect();
-                const walletAddress = resp.publicKey.toString();
-                statusElement.textContent = 'Connected! Verifying...';
-                connectButton.disabled = true;
-                connectButton.textContent = 'CONNECTED';
-                connectButton.style.backgroundColor = '#2e7d32';
-                connectButton.style.cursor = 'default';
-                
-                fetch('/holder-verify/verify', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ walletAddress: walletAddress }),
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Full verification response:', data);
-                    if (data.success) {
-                        document.getElementById('verificationResult').innerHTML = formatResponse(data.formattedResponse);
-                        statusElement.textContent = '';
-                        closeMessageElement.style.display = 'block';
-                        storeWalletAddress(walletAddress);
-                    } else {
-                        document.getElementById('verificationResult').textContent = `Verification failed: ${data.error}`;
-                        statusElement.textContent = 'Verification failed.';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    document.getElementById('verificationResult').textContent = `An error occurred: ${error.message}`;
-                    statusElement.textContent = 'Error during verification.';
-                });
-            } catch (err) {
-                statusElement.textContent = `Error: ${err.message}`;
+                // Check for any available Solana wallet
+                let wallet;
+                if (window.solana) {
+                    console.log('Found Phantom wallet');
+                    wallet = window.solana;
+                } else if (window.solflare) {
+                    console.log('Found Solflare wallet');
+                    wallet = window.solflare;
+                } else {
+                    statusElement.textContent = 'Please install Phantom or Solflare wallet!';
+                    return;
+                }
+
+                try {
+                    const resp = await wallet.connect();
+                    const walletAddress = resp.publicKey.toString();
+                    statusElement.textContent = 'Connected! Verifying...';
+                    connectButton.disabled = true;
+                    connectButton.textContent = 'CONNECTED';
+                    connectButton.style.backgroundColor = '#2e7d32';
+                    connectButton.style.cursor = 'default';
+                    
+                    fetch('/holder-verify/verify', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ walletAddress: walletAddress }),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Full verification response:', data);
+                        if (data.success) {
+                            document.getElementById('verificationResult').innerHTML = formatResponse(data.formattedResponse);
+                            statusElement.textContent = '';
+                            closeMessageElement.style.display = 'block';
+                            storeWalletAddress(walletAddress);
+                        } else {
+                            document.getElementById('verificationResult').textContent = `Verification failed: ${data.error}`;
+                            statusElement.textContent = 'Verification failed.';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        document.getElementById('verificationResult').textContent = `An error occurred: ${error.message}`;
+                        statusElement.textContent = 'Error during verification.';
+                    });
+                } catch (err) {
+                    statusElement.textContent = `Error: ${err.message}`;
+                    connectButton.disabled = false;
+                    connectButton.textContent = 'Connect Wallet';
+                }
+            } catch (error) {
+                console.error('Wallet detection error:', error);
+                statusElement.textContent = error.message;
             }
         });
 
