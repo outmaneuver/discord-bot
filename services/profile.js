@@ -430,15 +430,26 @@ async function fetchWithRetry(url, maxRetries = 3) {
     }
 }
 
-// Update displayCatzInfo function with integrated footer
+// Update displayCatzInfo function with detailed logging
 export async function displayCatzInfo(channel) {
     try {
+        console.log('Fetching Catz data from endpoint:', 'https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats');
+        
         // Get collection data with retries
         const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats');
+        
+        console.log('Full ME Response for Catz:', statsData);
         
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         const listedCount = statsData.listedCount || 0;
         const totalSupply = statsData.totalItems || 1231; // From ME stats page
+
+        console.log('Processed Catz data:', {
+            floorPrice,
+            listedCount,
+            totalSupply,
+            rawStats: statsData
+        });
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
