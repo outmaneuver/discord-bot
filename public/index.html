@@ -245,6 +245,7 @@
             return null;
         }
 
+        // Update the connect button event listener
         connectButton.addEventListener('click', async () => {
             try {
                 // Check for any available Solana wallet
@@ -281,20 +282,23 @@
                     connectButton.style.cursor = 'default';
                     
                     // Store wallet with explicit type
-                    const storeResult = await fetch('/store-wallet', {
+                    const storeResponse = await fetch('/store-wallet', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({ 
-                            walletAddress,
+                            walletAddress: walletAddress,
                             walletType: walletName 
                         }),
                         credentials: 'include'
                     });
 
-                    if (!storeResult.ok) {
-                        throw new Error('Failed to store wallet information');
+                    const storeData = await storeResponse.json();
+                    console.log('Store wallet response:', storeData);
+
+                    if (!storeResponse.ok) {
+                        throw new Error(storeData.error || 'Failed to store wallet information');
                     }
 
                     // Then verify
@@ -304,24 +308,25 @@
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({ 
-                            walletAddress,
+                            walletAddress: walletAddress,
                             walletType: walletName
                         }),
                         credentials: 'include'
                     });
                     
-                    const data = await verifyResponse.json();
-                    console.log('Full verification response:', data);
+                    const verifyData = await verifyResponse.json();
+                    console.log('Verification response:', verifyData);
                     
-                    if (data.success) {
-                        document.getElementById('verificationResult').innerHTML = formatResponse(data.formattedResponse);
+                    if (verifyData.success) {
+                        document.getElementById('verificationResult').innerHTML = formatResponse(verifyData.formattedResponse);
                         statusElement.textContent = '';
                         closeMessageElement.style.display = 'block';
                     } else {
-                        document.getElementById('verificationResult').textContent = `Verification failed: ${data.error}`;
+                        document.getElementById('verificationResult').textContent = `Verification failed: ${verifyData.error}`;
                         statusElement.textContent = 'Verification failed.';
                     }
                 } catch (err) {
+                    console.error('Connection error:', err);
                     statusElement.textContent = `Error connecting to ${walletName}: ${err.message}`;
                     connectButton.disabled = false;
                     connectButton.textContent = 'Connect Wallet';
