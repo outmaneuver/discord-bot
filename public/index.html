@@ -326,23 +326,28 @@
             try {
                 // Check for any available Solana wallet
                 let wallet;
-                if (window.solana) {
-                    console.log('Found Phantom wallet');
-                    wallet = window.solana;
-                } else if (window.solflare) {
+                let walletName;
+                
+                if (window.solflare) {
                     console.log('Found Solflare wallet');
                     wallet = window.solflare;
+                    walletName = 'Solflare';
+                } else if (window.solana) {
+                    console.log('Found Phantom wallet');
+                    wallet = window.solana;
+                    walletName = 'Phantom';
                 } else {
                     statusElement.textContent = 'Please install Phantom or Solflare wallet!';
                     return;
                 }
 
                 try {
+                    statusElement.textContent = `Connecting to ${walletName}...`;
                     const resp = await wallet.connect();
                     const walletAddress = resp.publicKey.toString();
-                    statusElement.textContent = 'Connected! Verifying...';
+                    statusElement.textContent = `Connected to ${walletName}! Verifying...`;
                     connectButton.disabled = true;
-                    connectButton.textContent = 'CONNECTED';
+                    connectButton.textContent = `CONNECTED (${walletName})`;
                     connectButton.style.backgroundColor = '#2e7d32';
                     connectButton.style.cursor = 'default';
                     
@@ -351,7 +356,10 @@
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ walletAddress: walletAddress }),
+                        body: JSON.stringify({ 
+                            walletAddress: walletAddress,
+                            walletType: walletName.toLowerCase()
+                        }),
                     })
                     .then(response => response.json())
                     .then(data => {
@@ -360,7 +368,7 @@
                             document.getElementById('verificationResult').innerHTML = formatResponse(data.formattedResponse);
                             statusElement.textContent = '';
                             closeMessageElement.style.display = 'block';
-                            storeWalletAddress(walletAddress);
+                            storeWalletAddress(walletAddress, walletName);
                         } else {
                             document.getElementById('verificationResult').textContent = `Verification failed: ${data.error}`;
                             statusElement.textContent = 'Verification failed.';
@@ -372,7 +380,7 @@
                         statusElement.textContent = 'Error during verification.';
                     });
                 } catch (err) {
-                    statusElement.textContent = `Error: ${err.message}`;
+                    statusElement.textContent = `Error connecting to ${walletName}: ${err.message}`;
                     connectButton.disabled = false;
                     connectButton.textContent = 'Connect Wallet';
                 }
@@ -382,23 +390,26 @@
             }
         });
 
-        function storeWalletAddress(walletAddress) {
+        function storeWalletAddress(walletAddress, walletType) {
             fetch('/store-wallet', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ walletAddress }),
+                body: JSON.stringify({ 
+                    walletAddress,
+                    walletType 
+                }),
             })
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                return response.text(); // Get the raw text first
+                return response.text();
             })
             .then(text => {
                 try {
-                    return JSON.parse(text); // Try to parse it as JSON
+                    return JSON.parse(text);
                 } catch (e) {
                     console.error('Error parsing JSON:', e);
                     console.log('Raw response:', text);
@@ -407,7 +418,7 @@
             })
             .then(data => {
                 if (data.success) {
-                    console.log('Wallet address stored successfully');
+                    console.log(`Wallet address stored successfully (${walletType})`);
                 } else {
                     console.error('Failed to store wallet address');
                 }
