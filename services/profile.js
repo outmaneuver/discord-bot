@@ -908,3 +908,67 @@ export async function displayBuxBalance(channel, userId, client) {
     }
   }
 }
+
+// Add wallet adapter detection and connection
+async function connectWallet() {
+    try {
+        // Check for any Solana wallet
+        if (!window.solana) {
+            throw new Error('No Solana wallet found! Please install Phantom, Solflare, or another Solana wallet.');
+        }
+
+        // Try to connect to the wallet
+        let wallet;
+        try {
+            wallet = window.solana;
+            await wallet.connect();
+        } catch (err) {
+            console.error('Failed to connect to primary wallet:', err);
+            
+            // Try alternative wallets
+            if (window.solflare) {
+                try {
+                    wallet = window.solflare;
+                    await wallet.connect();
+                } catch (err2) {
+                    console.error('Failed to connect to Solflare:', err2);
+                    throw new Error('Failed to connect to wallet. Please try again.');
+                }
+            }
+        }
+
+        // Check if we successfully connected
+        if (!wallet || !wallet.isConnected) {
+            throw new Error('Failed to connect to wallet. Please try again.');
+        }
+
+        // Get the wallet public key
+        const publicKey = wallet.publicKey.toString();
+        console.log('Connected to wallet:', publicKey);
+
+        return {
+            wallet,
+            publicKey
+        };
+
+    } catch (error) {
+        console.error('Error connecting wallet:', error);
+        throw error;
+    }
+}
+
+// Update verify function to use new wallet connection
+export async function verifyWallet(interaction) {
+    try {
+        const { wallet, publicKey } = await connectWallet();
+        
+        // Rest of verify function...
+        
+    } catch (error) {
+        console.error('Verification error:', error);
+        await interaction.reply({
+            content: `Error: ${error.message || 'Failed to verify wallet. Please try again.'}`,
+            ephemeral: true
+        });
+    }
+}
