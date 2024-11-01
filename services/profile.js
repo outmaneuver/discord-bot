@@ -18,7 +18,7 @@ export async function getWalletData(userId) {
 }
 
 // Add caching for profile data
-async function updateUserProfile(channel, userId, client) {
+export async function updateUserProfile(channel, userId, client) {
   const cacheKey = `profile:${userId}`;
   try {
     // Check cache first
@@ -27,10 +27,35 @@ async function updateUserProfile(channel, userId, client) {
       return JSON.parse(cachedProfile);
     }
 
-    // Fetch and cache profile data
-    const profile = await fetchProfileData(userId);
-    await redis.setex(cacheKey, 300, JSON.stringify(profile)); // Cache for 5 minutes
+    // Get NFT counts from updateDiscordRoles
+    const roleUpdate = await updateDiscordRoles(userId, client);
+    console.log('Role update result:', roleUpdate);
+
+    // Extract nftCounts from roleUpdate
+    const nftCounts = roleUpdate?.nftCounts || {
+      fcked_catz: 0,
+      celebcatz: 0,
+      money_monsters: 0,
+      money_monsters3d: 0,
+      ai_bitbots: 0,
+      warriors: 0,
+      squirrels: 0,
+      rjctd_bots: 0,
+      energy_apes: 0,
+      doodle_bots: 0,
+      candy_bots: 0
+    };
+
+    // Create profile data
+    const profile = {
+      nftCounts,
+      // Add other profile data here
+    };
+
+    // Cache the profile
+    await redis.setex(cacheKey, 300, JSON.stringify(profile));
     return profile;
+
   } catch (error) {
     console.error('Profile update error:', error);
     throw error;
