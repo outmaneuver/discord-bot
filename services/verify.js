@@ -67,8 +67,9 @@ async function getBUXBalance(walletAddress) {
 
 async function verifyHolder(walletAddress) {
     try {
-        console.log(`Checking NFTs for wallet: ${walletAddress}`);
-        const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
+        console.log('Verifying wallet:', walletAddress);
+        
+        // Get NFT holdings
         const nftCounts = {
             fcked_catz: 0,
             celebcatz: 0,
@@ -83,76 +84,91 @@ async function verifyHolder(walletAddress) {
             candy_bots: 0
         };
 
-        // Get token accounts with retries
-        const tokenAccounts = await retryWithBackoff(() =>
-            connection.getParsedTokenAccountsByOwner(
-                new PublicKey(walletAddress),
-                { programId: TOKEN_PROGRAM_ID }
-            )
-        );
-
-        console.log(`Found ${tokenAccounts.value.length} token accounts`);
-
-        // Check each token account
-        for (const account of tokenAccounts.value) {
-            const mint = account.account.data.parsed.info.mint;
-            const amount = account.account.data.parsed.info.tokenAmount.uiAmount;
-
-            // Only count tokens with amount > 0
-            if (amount > 0) {
-                if (hashlists.fckedCatz.has(mint)) {
-                    nftCounts.fcked_catz++;
-                    console.log(`Found Fcked Cat: ${mint}`);
-                }
-                if (hashlists.celebCatz.has(mint)) {
-                    nftCounts.celebcatz++;
-                    console.log(`Found Celeb Cat: ${mint}`);
-                }
-                if (hashlists.moneyMonsters.has(mint)) {
-                    nftCounts.money_monsters++;
-                    console.log(`Found Money Monster: ${mint}`);
-                }
-                if (hashlists.moneyMonsters3d.has(mint)) {
-                    nftCounts.money_monsters3d++;
-                    console.log(`Found 3D Monster: ${mint}`);
-                }
-                if (hashlists.aiBitbots.has(mint)) {
-                    nftCounts.ai_bitbots++;
-                    console.log(`Found AI Bitbot: ${mint}`);
-                }
-                if (hashlists.warriors.has(mint)) {
-                    nftCounts.warriors++;
-                    console.log(`Found AI Warrior: ${mint}`);
-                }
-                if (hashlists.squirrels.has(mint)) {
-                    nftCounts.squirrels++;
-                    console.log(`Found AI Squirrel: ${mint}`);
-                }
-                if (hashlists.rjctdBots.has(mint)) {
-                    nftCounts.rjctd_bots++;
-                    console.log(`Found RJCTD Bot: ${mint}`);
-                }
-                if (hashlists.energyApes.has(mint)) {
-                    nftCounts.energy_apes++;
-                    console.log(`Found Energy Ape: ${mint}`);
-                }
-                if (hashlists.doodleBots.has(mint)) {
-                    nftCounts.doodle_bots++;
-                    console.log(`Found Doodle Bot: ${mint}`);
-                }
-                if (hashlists.candyBots.has(mint)) {
-                    nftCounts.candy_bots++;
-                    console.log(`Found Candy Bot: ${mint}`);
+        // Count NFTs from each collection
+        for (const [collection, hashlist] of Object.entries(hashlists)) {
+            if (hashlist.has(walletAddress)) {
+                const collectionKey = collection.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+                if (nftCounts.hasOwnProperty(collectionKey)) {
+                    nftCounts[collectionKey]++;
                 }
             }
         }
 
-        console.log('Final NFT counts:', nftCounts);
-        return nftCounts;
+        // Get BUX balance
+        const buxBalance = await getBUXBalance(walletAddress);
+        console.log('BUX Balance:', buxBalance);
+
+        // Check if wallet has any NFTs or BUX
+        const hasAnyAssets = Object.values(nftCounts).some(count => count > 0) || buxBalance > 0;
+
+        if (!hasAnyAssets) {
+            return {
+                success: true,
+                formattedResponse: 
+                    "**Wallet Verification Complete**\n\n" +
+                    "This wallet currently has:\n" +
+                    "• No BUX$DAO NFTs\n" +
+                    "• No BUX tokens\n\n" +
+                    "To participate in BUX$DAO:\n" +
+                    "1. Get BUX$DAO NFTs from Magic Eden or Tensor\n" +
+                    "2. Hold BUX tokens\n" +
+                    "3. Join our Discord community\n\n" +
+                    "Visit https://buxdao.io for more information.",
+                nftCounts,
+                buxBalance
+            };
+        }
+
+        // Format response for wallets with assets
+        let response = "**Wallet Verification Complete**\n\n";
+        response += "Your wallet contains:\n";
+        
+        // Add NFT counts
+        for (const [collection, count] of Object.entries(nftCounts)) {
+            if (count > 0) {
+                const displayName = getDisplayName(collection);
+                response += `• ${count} ${displayName}\n`;
+            }
+        }
+
+        // Add BUX balance if any
+        if (buxBalance > 0) {
+            response += `• ${buxBalance.toLocaleString()} BUX tokens\n`;
+        }
+
+        return {
+            success: true,
+            formattedResponse: response,
+            nftCounts,
+            buxBalance
+        };
+
     } catch (error) {
-        console.error('Error verifying holder:', error);
-        throw error;
+        console.error('Error in verifyHolder:', error);
+        return {
+            success: false,
+            error: error.message,
+            formattedResponse: "Error verifying wallet. Please try again later."
+        };
     }
+}
+
+// Helper function to get display names
+function getDisplayName(collection) {
+    const displayNames = {
+        fcked_catz: 'Fcked Catz',
+        celebcatz: 'Celeb Catz',
+        money_monsters: 'Money Monsters',
+        money_monsters3d: 'Money Monsters 3D',
+        ai_bitbots: 'AI Bitbots',
+        warriors: 'AI Warriors',
+        squirrels: 'AI Squirrels',
+        rjctd_bots: 'Rjctd Bots',
+        energy_apes: 'Energy Apes',
+        doodle_bots: 'Doodle Bots',
+        candy_bots: 'Candy Bots'
+    };
+    return displayNames[collection] || collection;
 }
 
 async function verifyWallet(userId, walletAddress) {
