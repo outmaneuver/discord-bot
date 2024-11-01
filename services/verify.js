@@ -407,7 +407,7 @@ async function storeWalletAddress(userId, walletAddress, walletType) {
         const key = `user:${userId}:wallet`;
         const walletData = {
             address: walletAddress,
-            type: walletType || 'unknown', // Default to unknown if not provided
+            type: walletType || 'unknown',
             lastUpdated: new Date().toISOString()
         };
 
@@ -427,44 +427,12 @@ async function storeWalletAddress(userId, walletAddress, walletType) {
     }
 }
 
-// Update the store-wallet route handler
-app.post('/store-wallet', async (req, res) => {
-    try {
-        const { walletAddress, walletType } = req.body;
-        const userId = req.session?.user?.id;
-
-        if (!userId) {
-            console.error('No user ID found in session');
-            return res.status(401).json({
-                success: false,
-                error: 'User not authenticated'
-            });
-        }
-
-        if (!walletAddress) {
-            console.error('No wallet address provided');
-            return res.status(400).json({
-                success: false,
-                error: 'Wallet address is required'
-            });
-        }
-
-        const result = await storeWalletAddress(userId, walletAddress, walletType);
-        res.json(result);
-    } catch (error) {
-        console.error('Error in store-wallet endpoint:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-
 export {
     verifyHolder,
     verifyWallet,
     updateDiscordRoles,
     updateHashlists,
     getBUXBalance,
-    hashlists
+    hashlists,
+    storeWalletAddress
 };
