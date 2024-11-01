@@ -290,6 +290,7 @@
                             walletAddress,
                             walletType: walletName 
                         }),
+                        credentials: 'include'
                     });
 
                     if (!storeResult.ok) {
@@ -306,6 +307,7 @@
                             walletAddress,
                             walletType: walletName
                         }),
+                        credentials: 'include'
                     });
                     
                     const data = await verifyResponse.json();
@@ -329,36 +331,6 @@
                 statusElement.textContent = error.message;
             }
         });
-
-        function storeWalletAddress(walletAddress, walletType) {
-            console.log('Storing wallet:', { walletAddress, walletType });
-            
-            return fetch('/store-wallet', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                    walletAddress,
-                    walletType: walletType.toLowerCase()
-                }),
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    console.log(`Wallet address stored successfully (${walletType})`);
-                    return data;
-                } else {
-                    console.error('Failed to store wallet address:', data.error);
-                    throw new Error(data.error);
-                }
-            });
-        }
     </script>
 </head>
 <body>
