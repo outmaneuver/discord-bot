@@ -34,8 +34,7 @@ import {
   displayCelebInfo,
   displayBitbotsInfo,
   displayRewards,
-  displayBuxBalance,
-  displayTestEmbed
+  displayBuxBalance
 } from './services/profile.js';
 
 import verifyRouter from './routes/verify.js';
