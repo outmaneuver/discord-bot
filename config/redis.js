@@ -36,4 +36,19 @@ redis.on('ready', () => {
     timestamp: new Date().toISOString(),
     connectionState: redis.status
   });
+});
+
+// Add reconnection logic
+redis.on('end', () => {
+  console.error('Redis connection ended, attempting to reconnect...');
+  setTimeout(() => {
+    redis.connect().catch(console.error);
+  }, 5000);
+});
+
+// Add graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('Received SIGTERM, closing Redis connection...');
+  await redis.quit();
+  process.exit(0);
 }); 

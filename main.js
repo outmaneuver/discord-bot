@@ -361,3 +361,25 @@ process.on('unhandledRejection', (error) => {
   process.exit(1);
 });
 
+// Add structured logging
+const logger = {
+  info: (message, meta = {}) => {
+    console.log(JSON.stringify({
+      level: 'info',
+      message,
+      timestamp: new Date().toISOString(),
+      ...meta
+    }));
+  },
+  error: (message, error, meta = {}) => {
+    console.error(JSON.stringify({
+      level: 'error',
+      message,
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+      ...meta
+    }));
+  }
+};
+

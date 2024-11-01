@@ -67,6 +67,20 @@ async function getBUXBalance(walletAddress) {
 
 async function verifyHolder(walletAddress) {
     try {
+        // Add input validation
+        if (!walletAddress || typeof walletAddress !== 'string') {
+            throw new Error('Invalid wallet address');
+        }
+
+        // Add rate limiting check
+        const rateLimitKey = `ratelimit:verify:${walletAddress}`;
+        const attempts = await redis.incr(rateLimitKey);
+        await redis.expire(rateLimitKey, 60); // 1 minute expiry
+        
+        if (attempts > 5) {
+            throw new Error('Rate limit exceeded. Please try again later.');
+        }
+
         console.log('Verifying wallet:', walletAddress);
         
         // Get NFT holdings

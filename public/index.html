@@ -272,11 +272,10 @@
                     
                     statusElement.textContent = `Connected to ${walletName}! Verifying...`;
                     connectButton.disabled = true;
-                    connectButton.textContent = `CONNECTED (${walletName})`;
+                    connectButton.textContent = `CONNECTED`;
                     connectButton.style.backgroundColor = '#4CAF50';
-                    connectButton.style.cursor = 'default';
                     
-                    // Store wallet with explicit type
+                    // Store wallet with type
                     await fetch('/store-wallet', {
                         method: 'POST',
                         headers: {
@@ -305,7 +304,7 @@
                     const data = await verifyResponse.json();
                     
                     if (data.success) {
-                        document.getElementById('verificationResult').innerHTML = formatResponse(data.formattedResponse);
+                        document.getElementById('verificationResult').innerHTML = data.formattedResponse;
                         statusElement.textContent = '';
                         closeMessageElement.style.display = 'block';
                     } else {

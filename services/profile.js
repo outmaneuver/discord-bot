@@ -17,140 +17,23 @@ export async function getWalletData(userId) {
   }
 }
 
-export async function updateUserProfile(channel, userId, client) {
+// Add caching for profile data
+async function updateUserProfile(channel, userId, client) {
+  const cacheKey = `profile:${userId}`;
   try {
-    const walletData = await getWalletData(userId);
-    if (!walletData || walletData.walletAddresses.length === 0) {
-      throw new Error('No wallets connected');
+    // Check cache first
+    const cachedProfile = await redis.get(cacheKey);
+    if (cachedProfile) {
+      return JSON.parse(cachedProfile);
     }
 
-    // Get NFT counts from updateDiscordRoles
-    const roleUpdate = await updateDiscordRoles(userId, client);
-    console.log('Role update result:', roleUpdate);
-
-    // Extract nftCounts from roleUpdate - handle both object and boolean returns
-    const nftCounts = roleUpdate?.nftCounts || {
-      fcked_catz: 0,
-      celebcatz: 0,
-      money_monsters: 0,
-      money_monsters3d: 0,
-      ai_bitbots: 0,
-      warriors: 0,
-      squirrels: 0,
-      rjctd_bots: 0,
-      energy_apes: 0,
-      doodle_bots: 0,
-      candy_bots: 0
-    };
-
-    // Get BUX balance and value with retries
-    let totalBuxBalance = 0;
-    for (const wallet of walletData.walletAddresses) {
-      try {
-        await sleep(500); // Add delay between wallet checks
-        const chainBalance = await getBUXBalance(wallet);
-        const cachedBalance = parseInt(await redis.get(`bux:${wallet}`) || '0');
-        const balance = chainBalance || cachedBalance;
-        totalBuxBalance += Math.floor(balance / 1e9);
-      } catch (error) {
-        console.error(`Error fetching balance for wallet ${wallet}:`, error);
-        // Use cached balance if available
-        const cachedBalance = parseInt(await redis.get(`bux:${wallet}`) || '0');
-        totalBuxBalance += Math.floor(cachedBalance / 1e9);
-      }
-    }
-
-    // Fetch current SOL price and BUX value
-    const { fetchBuxPublicSupply } = await import('../src/scripts/fetchBuxSupply.js');
-    const { publicSupply, communityWalletSol } = await fetchBuxPublicSupply();
-    const buxValueInSol = communityWalletSol / publicSupply;
-    
-    const solPriceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
-    const solPriceData = await solPriceResponse.json();
-    const solPrice = solPriceData.solana.usd;
-    
-    // Calculate total BUX value in USD
-    const buxValueInUsd = buxValueInSol * solPrice;
-    const totalBuxValueUsd = totalBuxBalance * buxValueInUsd;
-
-    const guild = client.guilds.cache.get(process.env.GUILD_ID);
-    if (!guild) throw new Error('Guild not found');
-
-    const member = await guild.members.fetch(userId);
-    if (!member) throw new Error('Member not found');
-
-    const roles = member.roles.cache
-      .filter(role => role.name !== '@everyone')
-      .sort((a, b) => b.position - a.position)
-      .map(role => role.name)
-      .join('\n') || 'No roles';
-
-    const dailyReward = await calculateDailyReward(nftCounts, totalBuxBalance);
-    const [timerData, timeUntilNext] = await Promise.all([
-      startOrUpdateDailyTimer(userId, nftCounts, totalBuxBalance),
-      getTimeUntilNextClaim(userId)
-    ]);
-
-    const embed = new EmbedBuilder()
-      .setColor('#0099ff')
-      .setTitle(`${member.user.username}'s BUX DAO Profile`)
-      .addFields(
-        { 
-          name: 'Connected Wallets', 
-          value: walletData.walletAddresses.join('\n') || 'No wallets connected'
-        },
-        { name: '\u200B', value: '─'.repeat(40) },
-        { 
-          name: 'Main Collections', 
-          value: [
-            `Fcked Catz: ${nftCounts.fcked_catz || 0}`,
-            `CelebCatz: ${nftCounts.celebcatz || 0}`,
-            `Money Monsters: ${nftCounts.money_monsters || 0}`,
-            `Money Monsters 3D: ${nftCounts.money_monsters3d || 0}`,
-            `AI Bitbots: ${nftCounts.ai_bitbots || 0}`
-          ].join('\n') || 'No NFTs'
-        },
-        { name: '\u200B', value: '─'.repeat(40) },
-        {
-          name: 'A.I. Collabs',
-          value: [
-            `A.I. Warriors: ${nftCounts.warriors || 0}`,
-            `A.I. Squirrels: ${nftCounts.squirrels || 0}`,
-            `A.I. Energy Apes: ${nftCounts.energy_apes || 0}`,
-            `RJCTD Bots: ${nftCounts.rjctd_bots || 0}`,
-            `Candy Bots: ${nftCounts.candy_bots || 0}`,
-            `Doodle Bots: ${nftCounts.doodle_bots || 0}`
-          ].join('\n') || 'No NFTs'
-        },
-        { name: '\u200B', value: '─'.repeat(40) },
-        {
-          name: 'Server Roles',
-          value: roles
-        },
-        { name: '\u200B', value: '─'.repeat(40) },
-        { 
-          name: 'BUX Balance', 
-          value: `${totalBuxBalance.toLocaleString()} BUX ($${totalBuxValueUsd.toFixed(2)})`
-        },
-        { 
-          name: 'Daily Reward', 
-          value: `${dailyReward.toLocaleString()} BUX` 
-        },
-        { 
-          name: 'BUX Claim', 
-          value: `${(timerData?.claimAmount || 0).toLocaleString()} BUX` 
-        },
-        { 
-          name: 'Claim updates in', 
-          value: timeUntilNext || 'Start timer by verifying wallet'
-        }
-      );
-
-    await channel.send({ embeds: [embed] });
-
+    // Fetch and cache profile data
+    const profile = await fetchProfileData(userId);
+    await redis.setex(cacheKey, 300, JSON.stringify(profile)); // Cache for 5 minutes
+    return profile;
   } catch (error) {
-    console.error('Error updating user profile:', error);
-    await channel.send('An error occurred while processing your command. Please try again later.');
+    console.error('Profile update error:', error);
+    throw error;
   }
 }
 

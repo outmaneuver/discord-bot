@@ -17,3 +17,18 @@ export const config = {
     buxMint: process.env.BUX_TOKEN_MINT
   }
 };
+
+// Add validation for required environment variables
+const requiredEnvVars = [
+  'DISCORD_TOKEN',
+  'DISCORD_CLIENT_ID',
+  'DISCORD_CLIENT_SECRET',
+  'REDIS_URL',
+  'SOLANA_RPC_URL'
+];
+
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    throw new Error(`Missing required environment variable: ${envVar}`);
+  }
+}
