@@ -430,7 +430,7 @@ async function fetchWithRetry(url, maxRetries = 3) {
     }
 }
 
-// Update displayCatzInfo function with direct ME image
+// Update displayCatzInfo function with a different approach
 export async function displayCatzInfo(channel) {
     try {
         // Get collection data with retries
@@ -443,7 +443,7 @@ export async function displayCatzInfo(channel) {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/fcked_catz_pfp_1677595252883.gif')
+            .setImage('https://nftstorage.link/ipfs/bafybeihc2x7lz2og5g3lg7qmemx7zqvtxabzf4vr4wqgk75yw7ebxqhbeu/0.png')
             .addFields(
                 {
                     name: 'Collection Size',
@@ -860,4 +860,26 @@ export async function displayBuxBalance(channel, userId, client) {
       await channel.send('An error occurred while fetching your BUX information. Please try again later.');
     }
   }
+}
+
+// Add this new function to services/profile.js
+export async function displayTestEmbed(channel) {
+    try {
+        const embed = new EmbedBuilder()
+            .setColor('#0099ff')
+            .setTitle('Test Embed')
+            .setDescription('Testing image display')
+            .setImage('https://creator-hub-prod.s3.us-east-2.amazonaws.com/fcked_catz_pfp_1677595252883.gif')
+            .addFields(
+                {
+                    name: 'Test Field',
+                    value: 'This is a test embed to verify image display'
+                }
+            );
+
+        await channel.send({ embeds: [embed] });
+    } catch (error) {
+        console.error('Error displaying test embed:', error);
+        await channel.send('Error displaying test embed.');
+    }
 }

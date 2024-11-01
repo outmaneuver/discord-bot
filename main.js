@@ -34,7 +34,8 @@ import {
   displayCelebInfo,
   displayBitbotsInfo,
   displayRewards,
-  displayBuxBalance
+  displayBuxBalance,
+  displayTestEmbed
 } from './services/profile.js';
 
 import verifyRouter from './routes/verify.js';
@@ -330,6 +331,10 @@ async function startApp() {
 
             case 'info.bux':
               await displayBuxInfo(message.channel);
+              break;
+
+            case 'show':
+              await displayTestEmbed(message.channel);
               break;
           }
         }
