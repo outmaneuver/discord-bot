@@ -437,22 +437,27 @@ async function fetchWithRetry(url, maxRetries = 3) {
 // Update displayCatzInfo function with detailed logging
 export async function displayCatzInfo(channel) {
     try {
-        console.log('Fetching Catz data from endpoint:', 'https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats');
+        console.log('Fetching Catz stats from endpoint:', 'https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats');
+        console.log('Fetching Catz info from endpoint:', 'https://api-mainnet.magiceden.dev/v2/collections/fcked_catz');
         
-        // Get collection data with retries
-        const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats');
+        // Get both stats and collection info
+        const [statsData, collectionData] = await Promise.all([
+            fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz/stats'),
+            fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/fcked_catz')
+        ]);
         
-        console.log('Full ME Response for Catz:', statsData);
+        console.log('Full ME Response for Catz:', { stats: statsData, collection: collectionData });
         
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         const listedCount = statsData.listedCount || 0;
-        const totalSupply = statsData.totalItems || 1231; // From ME stats page
-
+        const totalSupply = collectionData.totalItems; // Get from collection info
+        
         console.log('Processed Catz data:', {
             floorPrice,
             listedCount,
             totalSupply,
-            rawStats: statsData
+            rawStats: statsData,
+            rawCollection: collectionData
         });
         
         const embed = new EmbedBuilder()
