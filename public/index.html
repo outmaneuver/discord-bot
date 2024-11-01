@@ -183,7 +183,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: rgba(255, 255, 255, 0.8);
+            color: #7289DA;
             font-size: 0.9em;
             margin-top: 1rem;
             padding: 0.5rem;
@@ -193,7 +193,14 @@
         .info-icon {
             margin-right: 8px;
             font-size: 2.4em;
-            color: white;
+            color: #7289DA;
+        }
+        #pageTitle {
+            color: #FFD700;
+            margin-bottom: 1rem;
+        }
+        button {
+            border: 2px solid white;
         }
     </style>
     <script>
@@ -224,12 +231,12 @@
     <div class="container">
         <h1 id="pageTitle">Verify Your Wallet</h1>
         <p id="welcomeMessage"></p>
-        <button id="discordButton" class="discord-button">Sign in with Discord</button>
-        <button id="connectButton" class="connect-button">Connect Wallet</button>
         <div class="info-message">
             <span class="info-icon">ⓘ</span>
             By signing into Discord, you are giving BUXBOT permissions to update your roles in BUXDAO server
         </div>
+        <button id="discordButton" class="discord-button">Sign in with Discord</button>
+        <button id="connectButton" class="connect-button">Connect Wallet</button>
         <p id="status"></p>
         <p id="verificationResult"></p>
     </div>
