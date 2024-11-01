@@ -430,7 +430,7 @@ async function fetchWithRetry(url, maxRetries = 3) {
     }
 }
 
-// Update displayCatzInfo function with a different approach
+// Update displayCatzInfo function with working image URL
 export async function displayCatzInfo(channel) {
     try {
         // Get collection data with retries
@@ -443,7 +443,7 @@ export async function displayCatzInfo(channel) {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Fcked Catz Collection Info')
-            .setImage('https://nftstorage.link/ipfs/bafybeihc2x7lz2og5g3lg7qmemx7zqvtxabzf4vr4wqgk75yw7ebxqhbeu/0.png')
+            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.jpg')
             .addFields(
                 {
                     name: 'Collection Size',
@@ -862,14 +862,14 @@ export async function displayBuxBalance(channel, userId, client) {
   }
 }
 
-// Update displayTestEmbed function to use MP4
+// Update displayTestEmbed function to use working JPG
 export async function displayTestEmbed(channel) {
     try {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Test Embed')
             .setDescription('Testing image display')
-            .setImage('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.mp4')
+            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.jpg')
             .addFields(
                 {
                     name: 'Test Field',
