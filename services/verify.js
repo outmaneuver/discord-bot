@@ -411,7 +411,7 @@ async function storeWalletAddress(userId, walletAddress, walletType) {
             lastUpdated: new Date().toISOString()
         };
 
-        await redisClient.set(key, JSON.stringify(walletData));
+        await redis.set(key, JSON.stringify(walletData));
         console.log(`Wallet data stored for user ${userId}:`, walletData);
         
         return {
