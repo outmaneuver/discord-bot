@@ -498,7 +498,7 @@ export async function displayMMInfo(channel) {
         
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         const listedCount = statsData.listedCount || 0;
-        const totalSupply = statsData.totalItems || 666; // From ME stats page
+        const totalSupply = statsData.totalItems || 666; // Fallback if ME fails
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
@@ -520,6 +520,10 @@ export async function displayMMInfo(channel) {
                 {
                     name: 'Daily Reward',
                     value: '5 BUX per NFT'
+                },
+                {
+                    name: 'Whale Status',
+                    value: '25+ NFTs'
                 }
             )
             .setFooter({ text: 'Available on Magic Eden and Tensor' });
@@ -554,7 +558,7 @@ export async function displayMM3DInfo(channel) {
         
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         const listedCount = statsData.listedCount || 0;
-        const totalSupply = statsData.totalItems || 666; // From ME stats page
+        const totalSupply = statsData.totalItems || 666; // Fallback if ME fails
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
@@ -576,6 +580,10 @@ export async function displayMM3DInfo(channel) {
                 {
                     name: 'Daily Reward',
                     value: '10 BUX per NFT'
+                },
+                {
+                    name: 'Whale Status',
+                    value: '25+ NFTs'
                 }
             )
             .setFooter({ text: 'Available on Magic Eden and Tensor' });
@@ -666,7 +674,7 @@ export async function displayBitbotsInfo(channel) {
         
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         const listedCount = statsData.listedCount || 0;
-        const totalSupply = statsData.totalItems || 218; // From ME stats page
+        const totalSupply = statsData.totalItems || 218; // Fallback if ME fails
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
@@ -688,6 +696,10 @@ export async function displayBitbotsInfo(channel) {
                 {
                     name: 'Daily Reward',
                     value: '3 BUX per NFT'
+                },
+                {
+                    name: 'Whale Status',
+                    value: '10+ NFTs'
                 }
             )
             .setFooter({ text: 'Available on Magic Eden and Tensor' });
