@@ -492,121 +492,115 @@ export async function displayCatzInfo(channel) {
 }
 
 export async function displayMMInfo(channel) {
-  try {
-    const stats = await fetchTensorStats('money_monsters');
-    
-    const embed = new EmbedBuilder()
-      .setColor('#0099ff')
-      .setTitle('MONEY MONSTERS')
-      .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/money_monsters_pfp_1646574386909.png')
-      .addFields(
-        { 
-          name: 'FLOOR',
-          value: `${(stats.floor/1e9).toFixed(3)} SOL`,
-          inline: true
-        },
-        { 
-          name: 'BUY NOW',
-          value: `${(stats.buyNow/1e9).toFixed(3)} SOL`,
-          inline: true
-        },
-        {
-          name: '\u200B',
-          value: '\u200B',
-          inline: true
-        },
-        {
-          name: 'LISTED/SUPPLY',
-          value: `${stats.listed}/${stats.totalSupply} (${((stats.listed/stats.totalSupply)*100).toFixed(2)}%)`,
-          inline: true
-        },
-        {
-          name: 'VOLUME (24H)',
-          value: `${(stats.volume24h/1e9).toFixed(2)} SOL`,
-          inline: true
-        },
-        {
-          name: 'VOLUME (ALL)',
-          value: `${(stats.volumeAll/1e9).toFixed(2)} SOL`,
-          inline: true
-        },
-        {
-          name: 'SALES (24H)',
-          value: `${stats.sales24h || 0}`,
-          inline: true
-        },
-        {
-          name: 'PRICE Δ (24H)',
-          value: `${stats.priceChange24h ? (stats.priceChange24h * 100).toFixed(2) + '%' : '0%'}`,
-          inline: true
-        }
-      )
-      .setFooter({ text: 'Data from Tensor.Trade' });
+    try {
+        // Get collection data with retries
+        const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/money_monsters/stats');
+        
+        const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
+        const listedCount = statsData.listedCount || 0;
+        const totalSupply = statsData.totalItems || 666; // From ME stats page
+        
+        const embed = new EmbedBuilder()
+            .setColor('#0099ff')
+            .setTitle('Money Monsters Collection Info')
+            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/mm.jpg')
+            .addFields(
+                {
+                    name: 'Collection Size',
+                    value: `${totalSupply.toLocaleString()} NFTs`
+                },
+                {
+                    name: 'Floor Price',
+                    value: `${floorPrice.toFixed(2)} SOL`
+                },
+                {
+                    name: 'Listed Count',
+                    value: `${listedCount} NFTs (${((listedCount/totalSupply)*100).toFixed(1)}%)`
+                },
+                {
+                    name: 'Daily Reward',
+                    value: '5 BUX per NFT'
+                }
+            )
+            .setFooter({ text: 'Available on Magic Eden and Tensor' });
 
-    await channel.send({ embeds: [embed] });
-  } catch (error) {
-    console.error('Error displaying MM info:', error);
-    await channel.send('An error occurred while fetching collection information.');
-  }
+        // Create buttons for marketplaces
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setLabel('Magic Eden')
+                    .setURL('https://magiceden.io/marketplace/money_monsters')
+                    .setStyle(ButtonStyle.Link),
+                new ButtonBuilder()
+                    .setLabel('Tensor')
+                    .setURL('https://www.tensor.trade/trade/money_monsters')
+                    .setStyle(ButtonStyle.Link)
+            );
+
+        await channel.send({ 
+            embeds: [embed],
+            components: [row]
+        });
+    } catch (error) {
+        console.error('Error displaying Money Monsters info:', error);
+        await channel.send('Error fetching Money Monsters collection information. Please try again later.');
+    }
 }
 
 export async function displayMM3DInfo(channel) {
-  try {
-    const stats = await fetchTensorStats('money_monsters3d');
-    
-    const embed = new EmbedBuilder()
-      .setColor('#0099ff')
-      .setTitle('MONEY MONSTERS 3D')
-      .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/money_monsters3d_pfp_1646574386909.png')
-      .addFields(
-        { 
-          name: 'FLOOR',
-          value: `${(stats.floor/1e9).toFixed(3)} SOL`,
-          inline: true
-        },
-        { 
-          name: 'BUY NOW',
-          value: `${(stats.buyNow/1e9).toFixed(3)} SOL`,
-          inline: true
-        },
-        {
-          name: '\u200B',
-          value: '\u200B',
-          inline: true
-        },
-        {
-          name: 'LISTED/SUPPLY',
-          value: `${stats.listed}/${stats.totalSupply} (${((stats.listed/stats.totalSupply)*100).toFixed(2)}%)`,
-          inline: true
-        },
-        {
-          name: 'VOLUME (24H)',
-          value: `${(stats.volume24h/1e9).toFixed(2)} SOL`,
-          inline: true
-        },
-        {
-          name: 'VOLUME (ALL)',
-          value: `${(stats.volumeAll/1e9).toFixed(2)} SOL`,
-          inline: true
-        },
-        {
-          name: 'SALES (24H)',
-          value: `${stats.sales24h || 0}`,
-          inline: true
-        },
-        {
-          name: 'PRICE Δ (24H)',
-          value: `${stats.priceChange24h ? (stats.priceChange24h * 100).toFixed(2) + '%' : '0%'}`,
-          inline: true
-        }
-      )
-      .setFooter({ text: 'Data from Tensor.Trade' });
+    try {
+        // Get collection data with retries
+        const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/money_monsters3d/stats');
+        
+        const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
+        const listedCount = statsData.listedCount || 0;
+        const totalSupply = statsData.totalItems || 666; // From ME stats page
+        
+        const embed = new EmbedBuilder()
+            .setColor('#0099ff')
+            .setTitle('Money Monsters 3D Collection Info')
+            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/mm3d.jpg')
+            .addFields(
+                {
+                    name: 'Collection Size',
+                    value: `${totalSupply.toLocaleString()} NFTs`
+                },
+                {
+                    name: 'Floor Price',
+                    value: `${floorPrice.toFixed(2)} SOL`
+                },
+                {
+                    name: 'Listed Count',
+                    value: `${listedCount} NFTs (${((listedCount/totalSupply)*100).toFixed(1)}%)`
+                },
+                {
+                    name: 'Daily Reward',
+                    value: '10 BUX per NFT'
+                }
+            )
+            .setFooter({ text: 'Available on Magic Eden and Tensor' });
 
-    await channel.send({ embeds: [embed] });
-  } catch (error) {
-    console.error('Error displaying MM3D info:', error);
-    await channel.send('An error occurred while fetching collection information.');
-  }
+        // Create buttons for marketplaces
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setLabel('Magic Eden')
+                    .setURL('https://magiceden.io/marketplace/money_monsters3d')
+                    .setStyle(ButtonStyle.Link),
+                new ButtonBuilder()
+                    .setLabel('Tensor')
+                    .setURL('https://www.tensor.trade/trade/money_monsters3d')
+                    .setStyle(ButtonStyle.Link)
+            );
+
+        await channel.send({ 
+            embeds: [embed],
+            components: [row]
+        });
+    } catch (error) {
+        console.error('Error displaying Money Monsters 3D info:', error);
+        await channel.send('Error fetching Money Monsters 3D collection information. Please try again later.');
+    }
 }
 
 export async function displayCelebInfo(channel) {
@@ -666,62 +660,59 @@ export async function displayCelebInfo(channel) {
 }
 
 export async function displayBitbotsInfo(channel) {
-  try {
-    const stats = await fetchTensorStats('ai_bitbots');
-    
-    const embed = new EmbedBuilder()
-      .setColor('#0099ff')
-      .setTitle('AI BITBOTS')
-      .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/ai_bitbots_pfp_1646574386909.png')
-      .addFields(
-        { 
-          name: 'FLOOR',
-          value: `${(stats.floor/1e9).toFixed(3)} SOL`,
-          inline: true
-        },
-        { 
-          name: 'BUY NOW',
-          value: `${(stats.buyNow/1e9).toFixed(3)} SOL`,
-          inline: true
-        },
-        {
-          name: '\u200B',
-          value: '\u200B',
-          inline: true
-        },
-        {
-          name: 'LISTED/SUPPLY',
-          value: `${stats.listed}/${stats.totalSupply} (${((stats.listed/stats.totalSupply)*100).toFixed(2)}%)`,
-          inline: true
-        },
-        {
-          name: 'VOLUME (24H)',
-          value: `${(stats.volume24h/1e9).toFixed(2)} SOL`,
-          inline: true
-        },
-        {
-          name: 'VOLUME (ALL)',
-          value: `${(stats.volumeAll/1e9).toFixed(2)} SOL`,
-          inline: true
-        },
-        {
-          name: 'SALES (24H)',
-          value: `${stats.sales24h || 0}`,
-          inline: true
-        },
-        {
-          name: 'PRICE Δ (24H)',
-          value: `${stats.priceChange24h ? (stats.priceChange24h * 100).toFixed(2) + '%' : '0%'}`,
-          inline: true
-        }
-      )
-      .setFooter({ text: 'Data from Tensor.Trade' });
+    try {
+        // Get collection data with retries
+        const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/ai_bitbots/stats');
+        
+        const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
+        const listedCount = statsData.listedCount || 0;
+        const totalSupply = statsData.totalItems || 218; // From ME stats page
+        
+        const embed = new EmbedBuilder()
+            .setColor('#0099ff')
+            .setTitle('AI Bitbots Collection Info')
+            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/bots.jpg')
+            .addFields(
+                {
+                    name: 'Collection Size',
+                    value: `${totalSupply.toLocaleString()} NFTs`
+                },
+                {
+                    name: 'Floor Price',
+                    value: `${floorPrice.toFixed(2)} SOL`
+                },
+                {
+                    name: 'Listed Count',
+                    value: `${listedCount} NFTs (${((listedCount/totalSupply)*100).toFixed(1)}%)`
+                },
+                {
+                    name: 'Daily Reward',
+                    value: '3 BUX per NFT'
+                }
+            )
+            .setFooter({ text: 'Available on Magic Eden and Tensor' });
 
-    await channel.send({ embeds: [embed] });
-  } catch (error) {
-    console.error('Error displaying Bitbots info:', error);
-    await channel.send('An error occurred while fetching collection information.');
-  }
+        // Create buttons for marketplaces
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setLabel('Magic Eden')
+                    .setURL('https://magiceden.io/marketplace/ai_bitbots')
+                    .setStyle(ButtonStyle.Link),
+                new ButtonBuilder()
+                    .setLabel('Tensor')
+                    .setURL('https://www.tensor.trade/trade/ai_bitbots')
+                    .setStyle(ButtonStyle.Link)
+            );
+
+        await channel.send({ 
+            embeds: [embed],
+            components: [row]
+        });
+    } catch (error) {
+        console.error('Error displaying AI Bitbots info:', error);
+        await channel.send('Error fetching AI Bitbots collection information. Please try again later.');
+    }
 }
 
 // Update displayRewards function
