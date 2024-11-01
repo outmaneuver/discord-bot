@@ -351,11 +351,11 @@
                     connectButton.style.backgroundColor = '#2e7d32';
                     connectButton.style.cursor = 'default';
                     
-                    // Store wallet first
+                    // Store wallet first with explicit type
                     await storeWalletAddress(walletAddress, walletName);
                     
                     // Then verify
-                    fetch('/holder-verify/verify', {
+                    const verifyResponse = await fetch('/holder-verify/verify', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -364,24 +364,19 @@
                             walletAddress: walletAddress,
                             walletType: walletName.toLowerCase()
                         }),
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Full verification response:', data);
-                        if (data.success) {
-                            document.getElementById('verificationResult').innerHTML = formatResponse(data.formattedResponse);
-                            statusElement.textContent = '';
-                            closeMessageElement.style.display = 'block';
-                        } else {
-                            document.getElementById('verificationResult').textContent = `Verification failed: ${data.error}`;
-                            statusElement.textContent = 'Verification failed.';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        document.getElementById('verificationResult').textContent = `An error occurred: ${error.message}`;
-                        statusElement.textContent = 'Error during verification.';
                     });
+                    
+                    const data = await verifyResponse.json();
+                    console.log('Full verification response:', data);
+                    
+                    if (data.success) {
+                        document.getElementById('verificationResult').innerHTML = formatResponse(data.formattedResponse);
+                        statusElement.textContent = '';
+                        closeMessageElement.style.display = 'block';
+                    } else {
+                        document.getElementById('verificationResult').textContent = `Verification failed: ${data.error}`;
+                        statusElement.textContent = 'Verification failed.';
+                    }
                 } catch (err) {
                     statusElement.textContent = `Error connecting to ${walletName}: ${err.message}`;
                     connectButton.disabled = false;
@@ -396,7 +391,7 @@
         function storeWalletAddress(walletAddress, walletType) {
             console.log('Storing wallet:', { walletAddress, walletType });
             
-            fetch('/store-wallet', {
+            return fetch('/store-wallet', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -415,12 +410,11 @@
             .then(data => {
                 if (data.success) {
                     console.log(`Wallet address stored successfully (${walletType})`);
+                    return data;
                 } else {
                     console.error('Failed to store wallet address:', data.error);
+                    throw new Error(data.error);
                 }
-            })
-            .catch(error => {
-                console.error('Error storing wallet:', error);
             });
         }
     </script>
