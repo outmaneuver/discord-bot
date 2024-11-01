@@ -517,12 +517,23 @@ export async function displayCatzInfo(channel) {
 
 export async function displayMMInfo(channel) {
     try {
-        // Get collection data with retries - using same pattern as Catz
+        console.log('Fetching MM stats from endpoint:', 'https://api-mainnet.magiceden.dev/v2/collections/money_monsters/stats');
+        
+        // Get collection data with retries
         const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/money_monsters/stats');
+        
+        console.log('Full ME Response for MM:', statsData);
         
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         const listedCount = statsData.listedCount || 0;
-        const totalSupply = statsData.totalItems; // Same as Catz command
+        const totalSupply = 666; // Fixed supply from ME marketplace
+        
+        console.log('Processed MM data:', {
+            floorPrice,
+            listedCount,
+            totalSupply,
+            rawStats: statsData
+        });
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
