@@ -862,14 +862,14 @@ export async function displayBuxBalance(channel, userId, client) {
   }
 }
 
-// Update displayTestEmbed function with Discord CDN URL
+// Update displayTestEmbed function with local image path
 export async function displayTestEmbed(channel) {
     try {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Test Embed')
             .setDescription('Testing image display')
-            .setThumbnail('https://cdn.discordapp.com/attachments/1169387516358824006/1169387611787935744/fckedcatz.png')
+            .setImage('/catz.jpg')
             .addFields(
                 {
                     name: 'Test Field',
