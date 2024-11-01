@@ -399,7 +399,7 @@ async function getTensorFloor(collection) {
     }
 }
 
-// Add retry logic for Magic Eden API calls
+// Update fetchWithRetry function with better rate limit handling
 async function fetchWithRetry(url, maxRetries = 3) {
     console.log('Attempting to fetch:', url);
     for (let i = 0; i < maxRetries; i++) {
@@ -412,11 +412,10 @@ async function fetchWithRetry(url, maxRetries = 3) {
             });
             
             console.log('Response status:', response.status);
-            const data = await response.json();
-            console.log('Response data:', data);
             
             if (response.status === 429) {
-                const delay = Math.pow(2, i) * 1000;
+                const delay = Math.min(1000 * Math.pow(2, i), 10000);
+                console.log(`Rate limited, waiting ${delay}ms before retry ${i + 1}/${maxRetries}`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
             }
@@ -425,11 +424,16 @@ async function fetchWithRetry(url, maxRetries = 3) {
                 throw new Error(`Magic Eden API error: ${response.status}`);
             }
             
+            const data = await response.json();
+            console.log('Response data:', data);
             return data;
+            
         } catch (error) {
             console.log('Fetch attempt error:', error);
             if (i === maxRetries - 1) throw error;
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const delay = Math.min(1000 * Math.pow(2, i), 10000);
+            console.log(`Error, waiting ${delay}ms before retry ${i + 1}/${maxRetries}`);
+            await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
 }
