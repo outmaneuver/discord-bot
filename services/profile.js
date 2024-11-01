@@ -553,12 +553,31 @@ export async function displayMMInfo(channel) {
 
 export async function displayMM3DInfo(channel) {
     try {
-        // Get collection data with retries
-        const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/money_monsters3d/stats');
+        // Try Magic Eden first
+        let floorPrice = 0;
+        let listedCount = 0;
         
-        const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
-        const listedCount = statsData.listedCount || 0;
-        const totalSupply = statsData.totalItems || 666; // Fallback if ME fails
+        try {
+            const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/money_monsters3d/stats');
+            floorPrice = statsData.floorPrice / 1e9;
+            listedCount = statsData.listedCount || 0;
+        } catch (meError) {
+            console.log('Magic Eden API failed, trying Tensor:', meError);
+            // Try Tensor as fallback
+            try {
+                const tensorStats = await fetchTensorStats('money_monsters3d');
+                if (tensorStats?.statistics) {
+                    floorPrice = tensorStats.statistics.floor / 1e9;
+                    listedCount = tensorStats.statistics.listed;
+                }
+            } catch (tensorError) {
+                console.log('Tensor API failed:', tensorError);
+                // If both fail, try scraping Tensor
+                floorPrice = await getTensorFloor('money_monsters3d') || 0;
+            }
+        }
+        
+        const totalSupply = 666; // Fixed supply
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
@@ -571,7 +590,7 @@ export async function displayMM3DInfo(channel) {
                 },
                 {
                     name: 'Floor Price',
-                    value: `${floorPrice.toFixed(2)} SOL`
+                    value: `${floorPrice ? floorPrice.toFixed(2) : '0.00'} SOL`
                 },
                 {
                     name: 'Listed Count',
