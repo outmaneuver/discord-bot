@@ -159,6 +159,75 @@
             font-size: 14px;
         }
     </style>
+    <script>
+        // Function to detect and connect to any available Solana wallet
+        async function connectWallet() {
+            try {
+                // Check for any available Solana wallet
+                if (window.solana) {
+                    console.log('Found Phantom wallet');
+                    return window.solana;
+                } else if (window.solflare) {
+                    console.log('Found Solflare wallet');
+                    return window.solflare;
+                } else {
+                    throw new Error('No Solana wallet found! Please install Phantom, Solflare, or another Solana wallet.');
+                }
+            } catch (error) {
+                console.error('Error detecting wallet:', error);
+                throw error;
+            }
+        }
+
+        // Update the connect button click handler
+        async function handleConnect() {
+            try {
+                const connectButton = document.getElementById('connect-button');
+                connectButton.disabled = true;
+                connectButton.textContent = 'Connecting...';
+
+                // Get any available wallet
+                const wallet = await connectWallet();
+                
+                try {
+                    // Try to connect
+                    await wallet.connect();
+                    const publicKey = wallet.publicKey.toString();
+                    
+                    // Store the wallet address
+                    const response = await fetch('/store-wallet', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ walletAddress: publicKey }),
+                        credentials: 'include'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to store wallet');
+                    }
+
+                    // Update UI
+                    document.getElementById('wallet-address').textContent = `Connected: ${publicKey}`;
+                    connectButton.textContent = 'Connected';
+                    connectButton.disabled = true;
+
+                } catch (error) {
+                    console.error('Connection error:', error);
+                    connectButton.textContent = 'Connect Wallet';
+                    connectButton.disabled = false;
+                    alert('Failed to connect wallet: ' + error.message);
+                }
+
+            } catch (error) {
+                console.error('Wallet detection error:', error);
+                document.getElementById('connect-button').textContent = 'Connect Wallet';
+                document.getElementById('connect-button').disabled = false;
+                alert(error.message);
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="logo-container">
@@ -169,7 +238,9 @@
         <h1 id="pageTitle">Verify Your Wallet</h1>
         <p id="welcomeMessage"></p>
         <button id="discordButton">Sign in with Discord</button>
-        <button id="connectButton">Connect Wallet</button>
+        <button id="connect-button" onclick="handleConnect()" class="connect-button">
+            Connect Wallet
+        </button>
         <p id="status"></p>
         <p id="verificationResult"></p>
     </div>
@@ -180,7 +251,7 @@
 
     <script>
         const discordButton = document.getElementById('discordButton');
-        const connectButton = document.getElementById('connectButton');
+        const connectButton = document.getElementById('connect-button');
         const statusElement = document.getElementById('status');
         const closeMessageElement = document.getElementById('closeMessage');
         const pageTitle = document.getElementById('pageTitle');
