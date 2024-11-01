@@ -332,10 +332,6 @@ async function startApp() {
             case 'info.bux':
               await displayBuxInfo(message.channel);
               break;
-
-            case 'show':
-              await displayTestEmbed(message.channel);
-              break;
           }
         }
       } catch (error) {
