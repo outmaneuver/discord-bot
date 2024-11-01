@@ -558,7 +558,7 @@ export async function displayMM3DInfo(channel) {
         
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         const listedCount = statsData.listedCount || 0;
-        const totalSupply = statsData.totalItems || 666; // From ME stats page
+        const totalSupply = statsData.totalItems; // Get size directly from ME API, no fallback
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
