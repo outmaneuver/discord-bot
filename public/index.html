@@ -248,30 +248,54 @@
         connectButton.addEventListener('click', async () => {
             try {
                 // Check for any available Solana wallet
-                const walletInfo = detectWallet();
-                if (!walletInfo) {
-                    const supportedWallets = SUPPORTED_WALLETS.map(w => 
-                        w.charAt(0).toUpperCase() + w.slice(1)
-                    ).join(' or ');
-                    statusElement.textContent = `Please install ${supportedWallets} wallet!`;
+                let wallet;
+                let walletName;
+                
+                if (window.solflare) {
+                    console.log('Found Solflare wallet');
+                    wallet = window.solflare;
+                    walletName = 'Solflare';
+                } else if (window.solana) {
+                    console.log('Found Phantom wallet');
+                    wallet = window.solana;
+                    walletName = 'Phantom';
+                } else {
+                    statusElement.textContent = 'Please install Phantom or Solflare wallet!';
                     return;
                 }
-
-                const { wallet, name: walletName } = walletInfo;
 
                 try {
                     statusElement.textContent = `Connecting to ${walletName}...`;
                     const resp = await wallet.connect();
                     const walletAddress = resp.publicKey.toString();
+                    
+                    console.log('Connected to wallet:', {
+                        address: walletAddress,
+                        type: walletName
+                    });
+                    
                     statusElement.textContent = `Connected to ${walletName}! Verifying...`;
                     connectButton.disabled = true;
                     connectButton.textContent = `CONNECTED (${walletName})`;
                     connectButton.style.backgroundColor = '#2e7d32';
                     connectButton.style.cursor = 'default';
                     
-                    // Store wallet first with explicit type
-                    await storeWalletAddress(walletAddress, walletName);
-                    
+                    // Store wallet with explicit type
+                    const storeResult = await fetch('/store-wallet', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            walletAddress,
+                            walletType: walletName 
+                        }),
+                    });
+
+                    if (!storeResult.ok) {
+                        throw new Error('Failed to store wallet information');
+                    }
+
                     // Then verify
                     const verifyResponse = await fetch('/holder-verify/verify', {
                         method: 'POST',
@@ -279,8 +303,8 @@
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({ 
-                            walletAddress: walletAddress,
-                            walletType: walletName.toLowerCase()
+                            walletAddress,
+                            walletType: walletName
                         }),
                     });
                     
