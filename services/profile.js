@@ -401,6 +401,7 @@ async function getTensorFloor(collection) {
 
 // Add retry logic for Magic Eden API calls
 async function fetchWithRetry(url, maxRetries = 3) {
+    console.log('Attempting to fetch:', url);
     for (let i = 0; i < maxRetries; i++) {
         try {
             const response = await fetch(url, {
@@ -410,8 +411,11 @@ async function fetchWithRetry(url, maxRetries = 3) {
                 }
             });
             
+            console.log('Response status:', response.status);
+            const data = await response.json();
+            console.log('Response data:', data);
+            
             if (response.status === 429) {
-                // Rate limited - wait longer between retries
                 const delay = Math.pow(2, i) * 1000;
                 await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
@@ -421,10 +425,10 @@ async function fetchWithRetry(url, maxRetries = 3) {
                 throw new Error(`Magic Eden API error: ${response.status}`);
             }
             
-            return await response.json();
+            return data;
         } catch (error) {
+            console.log('Fetch attempt error:', error);
             if (i === maxRetries - 1) throw error;
-            // Wait before retry
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
@@ -564,12 +568,23 @@ export async function displayMMInfo(channel) {
 
 export async function displayMM3DInfo(channel) {
     try {
-        // Get collection data with retries - using same pattern as Catz
+        console.log('Fetching MM3D data from endpoint:', 'https://api-mainnet.magiceden.dev/v2/collections/moneymonsters3d/stats');
+        
+        // Get collection data with retries
         const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/moneymonsters3d/stats');
+        
+        console.log('Full ME Response for MM3D:', statsData);
         
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         const listedCount = statsData.listedCount || 0;
-        const totalSupply = statsData.totalItems; // Same as Catz command
+        const totalSupply = 626; // Actual supply from ME marketplace
+        
+        console.log('Processed MM3D data:', {
+            floorPrice,
+            listedCount,
+            totalSupply,
+            rawStats: statsData
+        });
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
