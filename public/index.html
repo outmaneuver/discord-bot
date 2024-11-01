@@ -270,36 +270,24 @@
                     const resp = await wallet.connect();
                     const walletAddress = resp.publicKey.toString();
                     
-                    console.log('Connected to wallet:', {
-                        address: walletAddress,
-                        type: walletName
-                    });
-                    
                     statusElement.textContent = `Connected to ${walletName}! Verifying...`;
                     connectButton.disabled = true;
                     connectButton.textContent = `CONNECTED (${walletName})`;
-                    connectButton.style.backgroundColor = '#2e7d32';
+                    connectButton.style.backgroundColor = '#4CAF50';
                     connectButton.style.cursor = 'default';
                     
                     // Store wallet with explicit type
-                    const storeResponse = await fetch('/store-wallet', {
+                    await fetch('/store-wallet', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({ 
-                            walletAddress: walletAddress,
+                            walletAddress,
                             walletType: walletName 
                         }),
                         credentials: 'include'
                     });
-
-                    const storeData = await storeResponse.json();
-                    console.log('Store wallet response:', storeData);
-
-                    if (!storeResponse.ok) {
-                        throw new Error(storeData.error || 'Failed to store wallet information');
-                    }
 
                     // Then verify
                     const verifyResponse = await fetch('/holder-verify/verify', {
@@ -308,25 +296,23 @@
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({ 
-                            walletAddress: walletAddress,
+                            walletAddress,
                             walletType: walletName
                         }),
                         credentials: 'include'
                     });
                     
-                    const verifyData = await verifyResponse.json();
-                    console.log('Verification response:', verifyData);
+                    const data = await verifyResponse.json();
                     
-                    if (verifyData.success) {
-                        document.getElementById('verificationResult').innerHTML = formatResponse(verifyData.formattedResponse);
+                    if (data.success) {
+                        document.getElementById('verificationResult').innerHTML = formatResponse(data.formattedResponse);
                         statusElement.textContent = '';
                         closeMessageElement.style.display = 'block';
                     } else {
-                        document.getElementById('verificationResult').textContent = `Verification failed: ${verifyData.error}`;
+                        document.getElementById('verificationResult').textContent = `Verification failed: ${data.error}`;
                         statusElement.textContent = 'Verification failed.';
                     }
                 } catch (err) {
-                    console.error('Connection error:', err);
                     statusElement.textContent = `Error connecting to ${walletName}: ${err.message}`;
                     connectButton.disabled = false;
                     connectButton.textContent = 'Connect Wallet';
