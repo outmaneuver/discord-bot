@@ -553,8 +553,8 @@ export async function displayMMInfo(channel) {
 
 export async function displayMM3DInfo(channel) {
     try {
-        // Get collection data with retries - using exact same method as Catz
-        const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/money_monsters3d/stats');
+        // Get collection data with retries - using correct ME slug
+        const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/moneymonsters3d/stats');
         
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         const listedCount = statsData.listedCount || 0;
@@ -593,11 +593,11 @@ export async function displayMM3DInfo(channel) {
             .addComponents(
                 new ButtonBuilder()
                     .setLabel('Magic Eden')
-                    .setURL('https://magiceden.io/marketplace/money_monsters3d')
+                    .setURL('https://magiceden.io/marketplace/moneymonsters3d')
                     .setStyle(ButtonStyle.Link),
                 new ButtonBuilder()
                     .setLabel('Tensor')
-                    .setURL('https://www.tensor.trade/trade/money_monsters3d')
+                    .setURL('https://www.tensor.trade/trade/moneymonsters3d')
                     .setStyle(ButtonStyle.Link)
             );
 
