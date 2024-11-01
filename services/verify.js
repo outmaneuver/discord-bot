@@ -395,6 +395,71 @@ async function updateHashlists(newHashlists) {
     hashlists = newHashlists;
 }
 
+// Update storeWalletAddress function to handle wallet type
+async function storeWalletAddress(userId, walletAddress, walletType) {
+    try {
+        console.log('Storing wallet:', {
+            userId,
+            walletAddress,
+            walletType
+        });
+
+        const key = `user:${userId}:wallet`;
+        const walletData = {
+            address: walletAddress,
+            type: walletType || 'unknown', // Default to unknown if not provided
+            lastUpdated: new Date().toISOString()
+        };
+
+        await redisClient.set(key, JSON.stringify(walletData));
+        console.log(`Wallet data stored for user ${userId}:`, walletData);
+        
+        return {
+            success: true,
+            message: 'Wallet address stored successfully'
+        };
+    } catch (error) {
+        console.error('Error storing wallet address:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+// Update the store-wallet route handler
+app.post('/store-wallet', async (req, res) => {
+    try {
+        const { walletAddress, walletType } = req.body;
+        const userId = req.session?.user?.id;
+
+        if (!userId) {
+            console.error('No user ID found in session');
+            return res.status(401).json({
+                success: false,
+                error: 'User not authenticated'
+            });
+        }
+
+        if (!walletAddress) {
+            console.error('No wallet address provided');
+            return res.status(400).json({
+                success: false,
+                error: 'Wallet address is required'
+            });
+        }
+
+        const result = await storeWalletAddress(userId, walletAddress, walletType);
+        res.json(result);
+    } catch (error) {
+        console.error('Error in store-wallet endpoint:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 export {
     verifyHolder,
     verifyWallet,
