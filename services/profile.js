@@ -493,12 +493,12 @@ export async function displayCatzInfo(channel) {
 
 export async function displayMMInfo(channel) {
     try {
-        // Get collection data with retries
+        // Get collection data with retries - using same pattern as Catz
         const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/money_monsters/stats');
         
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         const listedCount = statsData.listedCount || 0;
-        const totalSupply = statsData.totalItems || 666; // Fallback if ME fails
+        const totalSupply = statsData.totalItems; // Same as Catz command
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
