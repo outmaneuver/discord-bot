@@ -621,7 +621,7 @@ export async function displayCelebInfo(channel) {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Celeb Catz Collection Info')
-            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/celebs.png')
+            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/celeb.jpg')
             .addFields(
                 {
                     name: 'Collection Size',
