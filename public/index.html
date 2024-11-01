@@ -351,6 +351,10 @@
                     connectButton.style.backgroundColor = '#2e7d32';
                     connectButton.style.cursor = 'default';
                     
+                    // Store wallet first
+                    await storeWalletAddress(walletAddress, walletName);
+                    
+                    // Then verify
                     fetch('/holder-verify/verify', {
                         method: 'POST',
                         headers: {
@@ -368,7 +372,6 @@
                             document.getElementById('verificationResult').innerHTML = formatResponse(data.formattedResponse);
                             statusElement.textContent = '';
                             closeMessageElement.style.display = 'block';
-                            storeWalletAddress(walletAddress, walletName);
                         } else {
                             document.getElementById('verificationResult').textContent = `Verification failed: ${data.error}`;
                             statusElement.textContent = 'Verification failed.';
@@ -391,6 +394,8 @@
         });
 
         function storeWalletAddress(walletAddress, walletType) {
+            console.log('Storing wallet:', { walletAddress, walletType });
+            
             fetch('/store-wallet', {
                 method: 'POST',
                 headers: {
@@ -398,33 +403,24 @@
                 },
                 body: JSON.stringify({ 
                     walletAddress,
-                    walletType 
+                    walletType: walletType.toLowerCase()
                 }),
             })
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                return response.text();
-            })
-            .then(text => {
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error('Error parsing JSON:', e);
-                    console.log('Raw response:', text);
-                    throw new Error('Invalid JSON response');
-                }
+                return response.json();
             })
             .then(data => {
                 if (data.success) {
                     console.log(`Wallet address stored successfully (${walletType})`);
                 } else {
-                    console.error('Failed to store wallet address');
+                    console.error('Failed to store wallet address:', data.error);
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('Error storing wallet:', error);
             });
         }
     </script>
