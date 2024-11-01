@@ -862,14 +862,14 @@ export async function displayBuxBalance(channel, userId, client) {
   }
 }
 
-// Update displayTestEmbed function with full URL
+// Update displayTestEmbed function to use MP4
 export async function displayTestEmbed(channel) {
     try {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Test Embed')
             .setDescription('Testing image display')
-            .setImage('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.jpg')
+            .setImage('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.mp4')
             .addFields(
                 {
                     name: 'Test Field',
