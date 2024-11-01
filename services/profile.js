@@ -862,14 +862,14 @@ export async function displayBuxBalance(channel, userId, client) {
   }
 }
 
-// Update displayTestEmbed function with local image path
+// Update displayTestEmbed function with full URL
 export async function displayTestEmbed(channel) {
     try {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Test Embed')
             .setDescription('Testing image display')
-            .setImage('/catz.jpg')
+            .setImage('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.jpg')
             .addFields(
                 {
                     name: 'Test Field',
