@@ -556,9 +556,12 @@ export async function displayMM3DInfo(channel) {
         // Get collection data with retries - using correct ME slug
         const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/moneymonsters3d/stats');
         
+        // Log the full response to see what we're getting
+        console.log('Full ME Response for MM3D:', statsData);
+        
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         const listedCount = statsData.listedCount || 0;
-        const totalSupply = statsData.totalItems; // Get size directly from ME API, no fallback
+        const totalSupply = statsData.totalSupply; // Use the correct field from ME API
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
