@@ -183,18 +183,17 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #1e0e2d;
-            font-size: 0.9em;
+            color: white;
+            font-size: 0.8em;
             margin-top: 1rem;
             padding: 0.5rem;
             text-align: left;
             line-height: 1.4;
-            font-weight: bold;
         }
         .info-icon {
             margin-right: 8px;
             font-size: 2.4em;
-            color: #1e0e2d;
+            color: white;
         }
         #pageTitle {
             color: #FFD700;
@@ -243,14 +242,14 @@
     <div class="container">
         <h1 id="pageTitle">Verify Your Wallet</h1>
         <p id="welcomeMessage"></p>
-        <div class="info-message">
-            <span class="info-icon">ⓘ</span>
-            By signing into Discord, you are giving BUXBOT permissions to update your roles in BUXDAO server
-        </div>
         <button id="discordButton" class="discord-button">
             <span class="discord-icon"></span>
             Sign in with Discord
         </button>
+        <div class="info-message">
+            <span class="info-icon">ⓘ</span>
+            By signing into Discord, you are giving BUXBOT permissions to update your roles in BUXDAO server
+        </div>
         <button id="connectButton" class="connect-button">Connect Wallet</button>
         <p id="status"></p>
         <p id="verificationResult"></p>
