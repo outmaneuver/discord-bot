@@ -610,62 +610,59 @@ export async function displayMM3DInfo(channel) {
 }
 
 export async function displayCelebInfo(channel) {
-  try {
-    const stats = await fetchTensorStats('celebcatz');
-    
-    const embed = new EmbedBuilder()
-      .setColor('#0099ff')
-      .setTitle('Celeb Catz')
-      .setThumbnail('https://creator-hub-prod.s3.us-east-2.amazonaws.com/celebcatz_pfp_1646574386909.png')
-      .addFields(
-        { 
-          name: 'FLOOR',
-          value: `${(stats.floor/1e9).toFixed(3)} SOL`,
-          inline: true
-        },
-        { 
-          name: 'BUY NOW',
-          value: `${(stats.buyNow/1e9).toFixed(3)} SOL`,
-          inline: true
-        },
-        {
-          name: '\u200B',
-          value: '\u200B',
-          inline: true
-        },
-        {
-          name: 'LISTED/SUPPLY',
-          value: `${stats.listed}/${stats.totalSupply} (${((stats.listed/stats.totalSupply)*100).toFixed(2)}%)`,
-          inline: true
-        },
-        {
-          name: 'VOLUME (24H)',
-          value: `${(stats.volume24h/1e9).toFixed(2)} SOL`,
-          inline: true
-        },
-        {
-          name: 'VOLUME (ALL)',
-          value: `${(stats.volumeAll/1e9).toFixed(2)} SOL`,
-          inline: true
-        },
-        {
-          name: 'SALES (24H)',
-          value: `${stats.sales24h || 0}`,
-          inline: true
-        },
-        {
-          name: 'PRICE Δ (24H)',
-          value: `${stats.priceChange24h ? (stats.priceChange24h * 100).toFixed(2) + '%' : '0%'}`,
-          inline: true
-        }
-      )
-      .setFooter({ text: 'Data from Tensor.Trade' });
+    try {
+        // Get collection data with retries
+        const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/celebcatz/stats');
+        
+        const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
+        const listedCount = statsData.listedCount || 0;
+        const totalSupply = statsData.totalItems || 130; // From ME stats page
+        
+        const embed = new EmbedBuilder()
+            .setColor('#0099ff')
+            .setTitle('Celeb Catz Collection Info')
+            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/celebs.png')
+            .addFields(
+                {
+                    name: 'Collection Size',
+                    value: `${totalSupply.toLocaleString()} NFTs`
+                },
+                {
+                    name: 'Floor Price',
+                    value: `${floorPrice.toFixed(2)} SOL`
+                },
+                {
+                    name: 'Listed Count',
+                    value: `${listedCount} NFTs (${((listedCount/totalSupply)*100).toFixed(1)}%)`
+                },
+                {
+                    name: 'Daily Reward',
+                    value: '15 BUX per NFT'
+                }
+            )
+            .setFooter({ text: 'Available on Magic Eden and Tensor' });
 
-    await channel.send({ embeds: [embed] });
-  } catch (error) {
-    console.error('Error displaying CelebCatz info:', error);
-    await channel.send('An error occurred while fetching collection information.');
-  }
+        // Create buttons for marketplaces
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setLabel('Magic Eden')
+                    .setURL('https://magiceden.io/marketplace/celebcatz')
+                    .setStyle(ButtonStyle.Link),
+                new ButtonBuilder()
+                    .setLabel('Tensor')
+                    .setURL('https://www.tensor.trade/trade/celebcatz')
+                    .setStyle(ButtonStyle.Link)
+            );
+
+        await channel.send({ 
+            embeds: [embed],
+            components: [row]
+        });
+    } catch (error) {
+        console.error('Error displaying Celeb Catz info:', error);
+        await channel.send('Error fetching Celeb Catz collection information. Please try again later.');
+    }
 }
 
 export async function displayBitbotsInfo(channel) {
@@ -861,26 +858,4 @@ export async function displayBuxBalance(channel, userId, client) {
       await channel.send('An error occurred while fetching your BUX information. Please try again later.');
     }
   }
-}
-
-// Update displayTestEmbed function to use working JPG
-export async function displayTestEmbed(channel) {
-    try {
-        const embed = new EmbedBuilder()
-            .setColor('#0099ff')
-            .setTitle('Test Embed')
-            .setDescription('Testing image display')
-            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.jpg')
-            .addFields(
-                {
-                    name: 'Test Field',
-                    value: 'This is a test embed to verify image display'
-                }
-            );
-
-        await channel.send({ embeds: [embed] });
-    } catch (error) {
-        console.error('Error displaying test embed:', error);
-        await channel.send('Error displaying test embed.');
-    }
 }
