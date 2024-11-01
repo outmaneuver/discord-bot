@@ -862,14 +862,14 @@ export async function displayBuxBalance(channel, userId, client) {
   }
 }
 
-// Add this new function to services/profile.js
+// Update displayTestEmbed function with Discord CDN URL
 export async function displayTestEmbed(channel) {
     try {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Test Embed')
             .setDescription('Testing image display')
-            .setImage('https://creator-hub-prod.s3.us-east-2.amazonaws.com/fcked_catz_pfp_1677595252883.gif')
+            .setThumbnail('https://cdn.discordapp.com/attachments/1169387516358824006/1169387611787935744/fckedcatz.png')
             .addFields(
                 {
                     name: 'Test Field',
