@@ -553,17 +553,12 @@ export async function displayMMInfo(channel) {
 
 export async function displayMM3DInfo(channel) {
     try {
-        // Get collection data with retries - using correct ME slug
-        const [statsData, collectionData] = await Promise.all([
-            fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/moneymonsters3d/stats'),
-            fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/moneymonsters3d')
-        ]);
-        
-        console.log('Full ME Response for MM3D:', { stats: statsData, collection: collectionData });
+        // Get collection data with retries - using same pattern as Catz
+        const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/moneymonsters3d/stats');
         
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         const listedCount = statsData.listedCount || 0;
-        const totalSupply = collectionData.totalItems; // Get supply from collection endpoint
+        const totalSupply = statsData.totalItems; // Same as Catz command
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
