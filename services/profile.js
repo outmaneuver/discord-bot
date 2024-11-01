@@ -578,26 +578,21 @@ export async function displayMMInfo(channel) {
 export async function displayMM3DInfo(channel) {
     try {
         console.log('Fetching MM3D stats from endpoint:', 'https://api-mainnet.magiceden.dev/v2/collections/moneymonsters3d/stats');
-        console.log('Fetching MM3D info from endpoint:', 'https://api-mainnet.magiceden.dev/v2/collections/moneymonsters3d');
         
-        // Get both stats and collection info
-        const [statsData, collectionData] = await Promise.all([
-            fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/moneymonsters3d/stats'),
-            fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/moneymonsters3d')
-        ]);
+        // Get collection data with retries - using correct ME slug
+        const statsData = await fetchWithRetry('https://api-mainnet.magiceden.dev/v2/collections/moneymonsters3d/stats');
         
-        console.log('Full ME Response for MM3D:', { stats: statsData, collection: collectionData });
+        console.log('Full ME Response for MM3D:', statsData);
         
         const floorPrice = statsData.floorPrice / 1e9; // Convert from lamports to SOL
         const listedCount = statsData.listedCount || 0;
-        const totalSupply = collectionData.totalItems; // Get from collection info
+        const totalSupply = 626; // Fixed supply from ME marketplace
         
         console.log('Processed MM3D data:', {
             floorPrice,
             listedCount,
             totalSupply,
-            rawStats: statsData,
-            rawCollection: collectionData
+            rawStats: statsData
         });
         
         const embed = new EmbedBuilder()
