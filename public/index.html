@@ -517,35 +517,26 @@
                         if (data.success) {
                             const formattedResponse = `
                                 <div class="verification-container">
-                                    <div class="verification-header">
-                                        <span class="checkmark">✓</span>
-                                        <span>Wallet Verification Successful!</span>
-                                    </div>
-                                    
-                                    <div class="nft-container">
-                                        <div class="nft-section">
-                                            <h3>VERIFIED NFTs</h3>
-                                            <div class="nft-list">
-                                                <div class="nft-item">Fcked Catz: ${data.data.nftCounts.fcked_catz}</div>
-                                                <div class="nft-item">Celeb Catz: ${data.data.nftCounts.celebcatz}</div>
-                                                <div class="nft-item">Monsters: ${data.data.nftCounts.money_monsters}</div>
-                                                <div class="nft-item">3D Monsters: ${data.data.nftCounts.money_monsters3d}</div>
-                                                <div class="nft-item">BitBots: ${data.data.nftCounts.ai_bitbots}</div>
-                                                <div class="nft-item">A.I. Collabs: ${
-                                                    data.data.nftCounts.warriors + 
-                                                    data.data.nftCounts.squirrels + 
-                                                    data.data.nftCounts.rjctd_bots + 
-                                                    data.data.nftCounts.energy_apes + 
-                                                    data.data.nftCounts.doodle_bots + 
-                                                    data.data.nftCounts.candy_bots
-                                                }</div>
-                                            </div>
+                                    <div class="verification-header">✓ Wallet Verification Successful!</div>
+                                    <div class="nft-section">
+                                        <h3>VERIFIED NFTs</h3>
+                                        <div class="nft-counts">
+                                            Fcked Catz - ${data.data.nftCounts.fcked_catz}
+                                            Celeb Catz - ${data.data.nftCounts.celebcatz}
+                                            Monsters - ${data.data.nftCounts.money_monsters}
+                                            3D Monsters - ${data.data.nftCounts.money_monsters3d}
+                                            BitBots - ${data.data.nftCounts.ai_bitbots}
+                                            A.I. collabs - ${
+                                                data.data.nftCounts.warriors + 
+                                                data.data.nftCounts.squirrels + 
+                                                data.data.nftCounts.rjctd_bots + 
+                                                data.data.nftCounts.energy_apes + 
+                                                data.data.nftCounts.doodle_bots + 
+                                                data.data.nftCounts.candy_bots
+                                            }
                                         </div>
                                     </div>
-
-                                    <div class="reward-container">
-                                        <div class="daily-reward">Daily Reward: ${data.data.dailyReward || 0} BUX</div>
-                                    </div>
+                                    <div class="daily-reward">Daily reward - ${data.data.dailyReward} BUX</div>
                                 </div>`;
 
                             document.getElementById('verificationResult').innerHTML = formattedResponse;
