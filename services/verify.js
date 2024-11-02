@@ -199,9 +199,16 @@ function updateHashlists(newHashlists) {
     if (newHashlists.candyBots) hashlists.candyBots = new Set(newHashlists.candyBots);
 }
 
-// Add getBUXBalance function
+// Add back getBUXBalance function
 async function getBUXBalance(walletAddress) {
     try {
+        // Check cache first
+        const cacheKey = `bux:${walletAddress}`;
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+            return parseInt(cached);
+        }
+
         const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
         const buxAccounts = await connection.getParsedTokenAccountsByOwner(
             new PublicKey(walletAddress),
@@ -212,10 +219,14 @@ async function getBUXBalance(walletAddress) {
         for (const account of buxAccounts.value) {
             const tokenAmount = account.account.data.parsed.info.tokenAmount;
             if (tokenAmount.decimals === 9) {
-                totalBalance += Number(tokenAmount.uiAmount);
+                totalBalance += Number(tokenAmount.amount);
             }
         }
-        return totalBalance;
+
+        // Cache the result for 5 minutes
+        await redis.setex(cacheKey, 300, totalBalance.toString());
+        
+        return totalBalance / Math.pow(10, 9); // Convert to decimal
     } catch (error) {
         console.error('Error getting BUX balance:', error);
         return 0;
