@@ -24,6 +24,66 @@ const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Add updateDiscordRoles function
+async function updateDiscordRoles(userId, client) {
+    try {
+        // Get user's wallet data
+        const walletData = await redis.get(`wallet:${userId}`);
+        if (!walletData) {
+            console.log('No wallet data found for user:', userId);
+            return {
+                success: false,
+                error: 'No wallet data found',
+                nftCounts: {
+                    fcked_catz: 0,
+                    celebcatz: 0,
+                    money_monsters: 0,
+                    money_monsters3d: 0,
+                    ai_bitbots: 0,
+                    warriors: 0,
+                    squirrels: 0,
+                    rjctd_bots: 0,
+                    energy_apes: 0,
+                    doodle_bots: 0,
+                    candy_bots: 0
+                }
+            };
+        }
+
+        const { address: walletAddress } = JSON.parse(walletData);
+        
+        // Verify wallet holdings
+        const verificationResult = await verifyWallet(userId, walletAddress);
+        
+        console.log('Role assignment check:', {
+            nftCounts: verificationResult.nftCounts,
+            eligibleRoles: []  // Add role logic here if needed
+        });
+
+        return verificationResult;
+
+    } catch (error) {
+        console.error('Error updating Discord roles:', error);
+        return {
+            success: false,
+            error: error.message,
+            nftCounts: {
+                fcked_catz: 0,
+                celebcatz: 0,
+                money_monsters: 0,
+                money_monsters3d: 0,
+                ai_bitbots: 0,
+                warriors: 0,
+                squirrels: 0,
+                rjctd_bots: 0,
+                energy_apes: 0,
+                doodle_bots: 0,
+                candy_bots: 0
+            }
+        };
+    }
+}
+
 // Add storeWalletAddress function
 async function storeWalletAddress(userId, walletAddress, walletType) {
     try {
@@ -84,7 +144,6 @@ async function getBUXBalance(walletAddress) {
     }
 }
 
-// Rename verifyHolder to verifyWallet
 async function verifyWallet(userId, walletAddress) {
     try {
         // Add input validation
@@ -170,5 +229,6 @@ export {
     getBUXBalance,
     hashlists,
     updateHashlists,
-    storeWalletAddress
+    storeWalletAddress,
+    updateDiscordRoles
 };
