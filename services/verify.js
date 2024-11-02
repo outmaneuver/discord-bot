@@ -143,45 +143,13 @@ async function retryWithBackoff(fn, maxRetries = 5, maxDelay = 8000) {
     throw lastError;
 }
 
+// Update verifyWallet function to always get fresh data
 async function verifyWallet(userId, walletAddress) {
     try {
-        // Check cache first
-        const cacheKey = `verify:${walletAddress}`;
-        const cached = await redis.get(cacheKey);
-        if (cached) {
-            console.log('Cache hit for wallet:', walletAddress);
-            return JSON.parse(cached);
-        }
-
-        console.log('Cache miss for wallet:', walletAddress);
+        console.log(`Checking wallet ${walletAddress} for user ${userId}`);
         
-        // Get NFT accounts with retries
-        let nftAccounts;
-        let retryCount = 0;
-        
-        while (retryCount < MAX_RETRIES) {
-            try {
-                await sleep(RATE_LIMIT_DELAY);
-                const connection = createConnection(); // Create new connection each try
-                nftAccounts = await connection.getParsedTokenAccountsByOwner(
-                    new PublicKey(walletAddress),
-                    { programId: TOKEN_PROGRAM_ID }
-                );
-                break;
-            } catch (error) {
-                retryCount++;
-                console.log(`RPC error (attempt ${retryCount}/${MAX_RETRIES}):`, error.message);
-                
-                if (retryCount === MAX_RETRIES) throw error;
-                
-                // Exponential backoff
-                const delay = Math.min(1000 * Math.pow(2, retryCount), 8000);
-                await sleep(delay);
-            }
-        }
-
-        // Process NFT accounts
-        const nftCounts = {
+        // Initialize counters
+        let nftCounts = {
             fcked_catz: 0,
             celebcatz: 0,
             money_monsters: 0,
@@ -194,6 +162,34 @@ async function verifyWallet(userId, walletAddress) {
             doodle_bots: 0,
             candy_bots: 0
         };
+
+        // Always get fresh BUX balance
+        const buxBalance = await getBUXBalance(walletAddress);
+        console.log(`BUX balance for ${walletAddress}:`, buxBalance);
+
+        // Get fresh NFT data with retries
+        let nftAccounts;
+        let retryCount = 0;
+        
+        while (retryCount < MAX_RETRIES) {
+            try {
+                await sleep(RATE_LIMIT_DELAY);
+                const connection = createConnection();
+                nftAccounts = await connection.getParsedTokenAccountsByOwner(
+                    new PublicKey(walletAddress),
+                    { programId: TOKEN_PROGRAM_ID }
+                );
+                break;
+            } catch (error) {
+                retryCount++;
+                console.log(`RPC error (attempt ${retryCount}/${MAX_RETRIES}):`, error.message);
+                
+                if (retryCount === MAX_RETRIES) throw error;
+                
+                const delay = Math.min(1000 * Math.pow(2, retryCount), 8000);
+                await sleep(delay);
+            }
+        }
 
         // Count NFTs
         for (const account of nftAccounts.value) {
@@ -214,17 +210,14 @@ async function verifyWallet(userId, walletAddress) {
         // Calculate daily reward
         const dailyReward = await calculateDailyReward(nftCounts);
 
-        // Cache results
-        const result = {
+        return {
             success: true,
             data: {
                 nftCounts,
+                buxBalance,
                 dailyReward
             }
         };
-
-        await redis.setex(cacheKey, WALLET_CACHE_TTL, JSON.stringify(result));
-        return result;
 
     } catch (error) {
         console.error('Error in verifyWallet:', error);
