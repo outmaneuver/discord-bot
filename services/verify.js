@@ -199,9 +199,48 @@ function updateHashlists(newHashlists) {
     if (newHashlists.candyBots) hashlists.candyBots = new Set(newHashlists.candyBots);
 }
 
+// Add getBUXBalance function
+async function getBUXBalance(walletAddress) {
+    try {
+        const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
+        const buxAccounts = await connection.getParsedTokenAccountsByOwner(
+            new PublicKey(walletAddress),
+            { mint: new PublicKey(BUX_TOKEN_MINT) }
+        );
+
+        let totalBalance = 0;
+        for (const account of buxAccounts.value) {
+            const tokenAmount = account.account.data.parsed.info.tokenAmount;
+            if (tokenAmount.decimals === 9) {
+                totalBalance += Number(tokenAmount.uiAmount);
+            }
+        }
+        return totalBalance;
+    } catch (error) {
+        console.error('Error getting BUX balance:', error);
+        return 0;
+    }
+}
+
+// Add storeWalletAddress function
+async function storeWalletAddress(userId, walletAddress, walletType) {
+    try {
+        await redis.sadd(`wallets:${userId}`, walletAddress);
+        return {
+            success: true,
+            message: 'Wallet stored successfully'
+        };
+    } catch (error) {
+        console.error('Error storing wallet:', error);
+        throw error;
+    }
+}
+
 export {
     verifyWallet,
     updateDiscordRoles,
     hashlists,
-    updateHashlists
+    updateHashlists,
+    getBUXBalance,
+    storeWalletAddress
 };

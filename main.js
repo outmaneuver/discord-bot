@@ -17,8 +17,8 @@ import {
   verifyWallet,
   updateDiscordRoles,
   updateHashlists,
-  getBUXBalance,
   hashlists,
+  getBUXBalance,
   storeWalletAddress
 } from './services/verify.js';
 
