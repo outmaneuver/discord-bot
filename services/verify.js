@@ -148,6 +148,16 @@ async function verifyWallet(userId, walletAddress) {
         if (hashlists.doodleBots.has(walletAddress)) nftCounts.doodle_bots++;
         if (hashlists.candyBots.has(walletAddress)) nftCounts.candy_bots++;
 
+        console.log('Checking wallet:', walletAddress);
+        console.log('Hashlist sizes:', {
+            fckedCatz: hashlists.fckedCatz.size,
+            celebCatz: hashlists.celebCatz.size,
+            moneyMonsters: hashlists.moneyMonsters.size,
+            moneyMonsters3d: hashlists.moneyMonsters3d.size,
+            aiBitbots: hashlists.aiBitbots.size
+        });
+        console.log('NFT counts:', nftCounts);
+
         const buxBalance = await getBUXBalance(walletAddress);
         const dailyReward = await calculateDailyReward(nftCounts, buxBalance);
 
