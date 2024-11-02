@@ -436,11 +436,77 @@ async function updateDiscordRoles(userId, client) {
     }
 }
 
+// Add storeWalletAddress function
+async function storeWalletAddress(userId, walletAddress, walletType) {
+    try {
+        console.log('Storing wallet:', {
+            userId,
+            walletAddress,
+            walletType
+        });
+
+        // Store in Redis with timestamp
+        const walletData = {
+            address: walletAddress,
+            type: walletType,
+            lastUpdated: new Date().toISOString()
+        };
+
+        await redis.set(`wallet:${userId}`, JSON.stringify(walletData));
+        console.log('Wallet data stored for user', userId, ':', walletData);
+
+        return {
+            success: true,
+            message: 'Wallet stored successfully'
+        };
+    } catch (error) {
+        console.error('Error storing wallet:', error);
+        throw error;
+    }
+}
+
+// Update hashlist function
+function updateHashlists(newHashlists) {
+    console.log('Updating hashlists with:', {
+        fckedCatz: newHashlists.fckedCatz?.size || 0,
+        celebCatz: newHashlists.celebCatz?.size || 0,
+        moneyMonsters: newHashlists.moneyMonsters?.size || 0,
+        moneyMonsters3d: newHashlists.moneyMonsters3d?.size || 0,
+        aiBitbots: newHashlists.aiBitbots?.size || 0,
+        warriors: newHashlists.warriors?.size || 0,
+        squirrels: newHashlists.squirrels?.size || 0,
+        rjctdBots: newHashlists.rjctdBots?.size || 0,
+        energyApes: newHashlists.energyApes?.size || 0,
+        doodleBots: newHashlists.doodleBots?.size || 0,
+        candyBots: newHashlists.candyBots?.size || 0,
+        mmTop10: newHashlists.mmTop10?.size || 0,
+        mm3dTop10: newHashlists.mm3dTop10?.size || 0
+    });
+    
+    hashlists = {
+        fckedCatz: newHashlists.fckedCatz || new Set(),
+        celebCatz: newHashlists.celebCatz || new Set(),
+        moneyMonsters: newHashlists.moneyMonsters || new Set(),
+        moneyMonsters3d: newHashlists.moneyMonsters3d || new Set(),
+        aiBitbots: newHashlists.aiBitbots || new Set(),
+        warriors: newHashlists.warriors || new Set(),
+        squirrels: newHashlists.squirrels || new Set(),
+        rjctdBots: newHashlists.rjctdBots || new Set(),
+        energyApes: newHashlists.energyApes || new Set(),
+        doodleBots: newHashlists.doodleBots || new Set(),
+        candyBots: newHashlists.candyBots || new Set(),
+        mmTop10: newHashlists.mmTop10 || new Set(),
+        mm3dTop10: newHashlists.mm3dTop10 || new Set()
+    };
+}
+
+// Single export statement at the end
 export {
     verifyHolder,
     verifyWallet,
     updateDiscordRoles,
     getBUXBalance,
     hashlists,
-    storeWalletAddress
+    storeWalletAddress,
+    updateHashlists
 };
