@@ -44,19 +44,22 @@ const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
 // Add rate limiting with exponential backoff
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-async function retryWithBackoff(fn, maxRetries = 3) {
+async function retryWithBackoff(fn, maxRetries = 5, maxDelay = 8000) {
+    let lastError;
     for (let i = 0; i < maxRetries; i++) {
         try {
             return await fn();
         } catch (error) {
+            lastError = error;
             if (!error.message.includes('429 Too Many Requests') || i === maxRetries - 1) {
                 throw error;
             }
-            const delay = Math.min(1000 * Math.pow(2, i), 8000);
+            const delay = Math.min(1000 * Math.pow(2, i), maxDelay);
             console.log(`Rate limited, waiting ${delay}ms before retry ${i + 1}/${maxRetries}`);
             await sleep(delay);
         }
     }
+    throw lastError;
 }
 
 async function verifyWallet(userId, walletAddress) {
@@ -65,17 +68,24 @@ async function verifyWallet(userId, walletAddress) {
         const cacheKey = `verify:${walletAddress}`;
         const cached = await redis.get(cacheKey);
         if (cached) {
+            console.log('Cache hit for wallet:', walletAddress);
             return JSON.parse(cached);
         }
 
+        console.log('Cache miss for wallet:', walletAddress);
         const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
         
-        // Get NFTs with retry
-        const nftAccounts = await retryWithBackoff(() => 
-            connection.getParsedTokenAccountsByOwner(
+        // Add delay between RPC calls
+        await sleep(RATE_LIMIT_DELAY);
+
+        // Get NFTs with retry and longer backoff
+        const nftAccounts = await retryWithBackoff(
+            () => connection.getParsedTokenAccountsByOwner(
                 new PublicKey(walletAddress),
                 { programId: TOKEN_PROGRAM_ID }
-            )
+            ),
+            5, // More retries
+            8000 // Longer max delay
         );
 
         const nftCounts = {
@@ -128,7 +138,8 @@ async function verifyWallet(userId, walletAddress) {
 
         const dailyReward = await calculateDailyReward(nftCounts, buxBalance);
 
-        return {
+        // Cache the result
+        const result = {
             success: true,
             data: {
                 nftCounts,
@@ -136,6 +147,9 @@ async function verifyWallet(userId, walletAddress) {
                 dailyReward
             }
         };
+
+        await redis.setex(cacheKey, WALLET_CACHE_TTL, JSON.stringify(result));
+        return result;
 
     } catch (error) {
         console.error('Error in verifyWallet:', error);
