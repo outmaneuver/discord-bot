@@ -84,7 +84,8 @@ async function getBUXBalance(walletAddress) {
     }
 }
 
-async function verifyHolder(walletAddress) {
+// Rename verifyHolder to verifyWallet
+async function verifyWallet(userId, walletAddress) {
     try {
         // Add input validation
         if (!walletAddress || typeof walletAddress !== 'string') {
@@ -124,17 +125,21 @@ async function verifyHolder(walletAddress) {
         // Get BUX balance
         const buxBalance = await getBUXBalance(walletAddress);
 
+        // Calculate daily reward
+        const dailyReward = await calculateDailyReward(nftCounts, buxBalance);
+
         console.log('BUX Balance:', buxBalance);
         console.log('Final NFT counts:', nftCounts);
 
         return {
             success: true,
             nftCounts,
-            buxBalance
+            buxBalance,
+            dailyReward
         };
 
     } catch (error) {
-        console.error('Error in verifyHolder:', error);
+        console.error('Error in verifyWallet:', error);
         throw error;
     }
 }
@@ -161,7 +166,7 @@ function updateHashlists(newHashlists) {
 
 // Export functions
 export {
-    verifyHolder,
+    verifyWallet,
     getBUXBalance,
     hashlists,
     updateHashlists,
