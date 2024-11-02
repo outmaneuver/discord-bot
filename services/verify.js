@@ -120,8 +120,8 @@ async function verifyWallet(userId, walletAddress) {
     try {
         const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
         
-        // Get all NFTs owned by the wallet
-        const nftAccounts = await connection.getParsedTokenAccountsByOwner(
+        // Get all token accounts owned by the wallet
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
             new PublicKey(walletAddress),
             { programId: TOKEN_PROGRAM_ID }
         );
@@ -140,22 +140,25 @@ async function verifyWallet(userId, walletAddress) {
             candy_bots: 0
         };
 
-        // Check each NFT owned by the wallet
-        for (const account of nftAccounts.value) {
-            const tokenAddress = account.account.data.parsed.info.mint;
-            
-            // Check which collection this NFT belongs to
-            if (hashlists.fckedCatz.has(tokenAddress)) nftCounts.fcked_catz++;
-            if (hashlists.celebCatz.has(tokenAddress)) nftCounts.celebcatz++;
-            if (hashlists.moneyMonsters.has(tokenAddress)) nftCounts.money_monsters++;
-            if (hashlists.moneyMonsters3d.has(tokenAddress)) nftCounts.money_monsters3d++;
-            if (hashlists.aiBitbots.has(tokenAddress)) nftCounts.ai_bitbots++;
-            if (hashlists.warriors.has(tokenAddress)) nftCounts.warriors++;
-            if (hashlists.squirrels.has(tokenAddress)) nftCounts.squirrels++;
-            if (hashlists.rjctdBots.has(tokenAddress)) nftCounts.rjctd_bots++;
-            if (hashlists.energyApes.has(tokenAddress)) nftCounts.energy_apes++;
-            if (hashlists.doodleBots.has(tokenAddress)) nftCounts.doodle_bots++;
-            if (hashlists.candyBots.has(tokenAddress)) nftCounts.candy_bots++;
+        // Check each token account
+        for (const account of tokenAccounts.value) {
+            // Only count tokens with amount = 1 (NFTs)
+            if (account.account.data.parsed.info.tokenAmount.amount === "1") {
+                const mintAddress = account.account.data.parsed.info.mint;
+                
+                // Check which collection this NFT belongs to
+                if (hashlists.fckedCatz.has(mintAddress)) nftCounts.fcked_catz++;
+                if (hashlists.celebCatz.has(mintAddress)) nftCounts.celebcatz++;
+                if (hashlists.moneyMonsters.has(mintAddress)) nftCounts.money_monsters++;
+                if (hashlists.moneyMonsters3d.has(mintAddress)) nftCounts.money_monsters3d++;
+                if (hashlists.aiBitbots.has(mintAddress)) nftCounts.ai_bitbots++;
+                if (hashlists.warriors.has(mintAddress)) nftCounts.warriors++;
+                if (hashlists.squirrels.has(mintAddress)) nftCounts.squirrels++;
+                if (hashlists.rjctdBots.has(mintAddress)) nftCounts.rjctd_bots++;
+                if (hashlists.energyApes.has(mintAddress)) nftCounts.energy_apes++;
+                if (hashlists.doodleBots.has(mintAddress)) nftCounts.doodle_bots++;
+                if (hashlists.candyBots.has(mintAddress)) nftCounts.candy_bots++;
+            }
         }
 
         const buxBalance = await getBUXBalance(walletAddress);
@@ -171,7 +174,7 @@ async function verifyWallet(userId, walletAddress) {
         };
 
     } catch (error) {
-        console.error('Error in verifyWallet:', error.message);
+        console.error('Error in verifyWallet:', error);
         throw error;
     }
 }
