@@ -50,6 +50,23 @@ const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
 // Add rate limiting with exponential backoff
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Add RPC endpoints array
+const RPC_ENDPOINTS = [
+    process.env.SOLANA_RPC_URL,
+    'https://api.mainnet-beta.solana.com',
+    'https://solana-api.projectserum.com',
+    'https://rpc.ankr.com/solana'
+].filter(Boolean); // Remove any undefined endpoints
+
+let currentRpcIndex = 0;
+
+// Add RPC rotation function
+function getNextRpcEndpoint() {
+    currentRpcIndex = (currentRpcIndex + 1) % RPC_ENDPOINTS.length;
+    return RPC_ENDPOINTS[currentRpcIndex];
+}
+
+// Update retryWithBackoff function
 async function retryWithBackoff(fn, maxRetries = 5, maxDelay = 8000) {
     let lastError;
     for (let i = 0; i < maxRetries; i++) {
@@ -60,8 +77,13 @@ async function retryWithBackoff(fn, maxRetries = 5, maxDelay = 8000) {
             if (!error.message.includes('429 Too Many Requests') || i === maxRetries - 1) {
                 throw error;
             }
+            
+            // Switch RPC endpoint on rate limit
+            const nextEndpoint = getNextRpcEndpoint();
+            console.log(`Rate limited, switching to RPC endpoint: ${nextEndpoint}`);
+            
             const delay = Math.min(1000 * Math.pow(2, i), maxDelay);
-            console.log(`Rate limited, waiting ${delay}ms before retry ${i + 1}/${maxRetries}`);
+            console.log(`Waiting ${delay}ms before retry ${i + 1}/${maxRetries}`);
             await sleep(delay);
         }
     }
@@ -79,7 +101,7 @@ async function verifyWallet(userId, walletAddress) {
         }
 
         console.log('Cache miss for wallet:', walletAddress);
-        const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
+        const connection = new Connection(getNextRpcEndpoint());
         
         // Add delay between RPC calls
         await sleep(RATE_LIMIT_DELAY);
