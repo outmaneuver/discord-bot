@@ -25,6 +25,12 @@ const BUX_ROLES = {
     [process.env.ROLE_ID_50000_BUX]: 50000
 };
 
+// Add rate limiting constants
+const RATE_LIMIT_DELAY = 1000; // 1 second between RPC calls
+const WALLET_CACHE_TTL = 300; // 5 minutes cache TTL
+const MAX_RETRIES = 5;
+const MAX_BACKOFF = 8000; // 8 seconds max delay
+
 let hashlists = {
     fckedCatz: new Set(),
     celebCatz: new Set(),
