@@ -515,15 +515,19 @@
                         const data = await verifyResponse.json();
                         
                         if (data.success) {
-                            const formattedResponse = `<div class="verification-container">✓ Wallet Verification Successful!
+                            const formattedResponse = `<div class="verification-container">
+✓ Wallet Verification Successful!
+
 VERIFIED NFTs
+
 Fcked Catz - ${data.nftCounts.fcked_catz}
 Celeb Catz - ${data.nftCounts.celebcatz}
 Monsters - ${data.nftCounts.money_monsters}
 3D Monsters - ${data.nftCounts.money_monsters3d}
 BitBots - ${data.nftCounts.ai_bitbots}
 A.I. collabs - ${data.nftCounts.warriors + data.nftCounts.squirrels + data.nftCounts.rjctd_bots + data.nftCounts.energy_apes + data.nftCounts.doodle_bots + data.nftCounts.candy_bots}
-Daily reward - ${data.dailyReward} BUX</div>`;
+
+Daily reward - ${data.nftCounts.dailyReward} BUX</div>`;
 
                             document.getElementById('verificationResult').innerHTML = formattedResponse;
                             status.textContent = '';
