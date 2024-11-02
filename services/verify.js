@@ -148,19 +148,13 @@ async function verifyWallet(userId, walletAddress) {
     try {
         console.log(`Checking wallet ${walletAddress} for user ${userId}`);
         
-        // Get BUX balance first since it's a simpler query
-        const buxBalance = await getBUXBalance(walletAddress);
+        // Get BUX balance and NFTs in parallel with separate connections
+        const [buxBalance, nftAccounts] = await Promise.all([
+            getBUXBalance(walletAddress),
+            getNFTAccounts(walletAddress)
+        ]);
+
         console.log(`BUX balance for ${walletAddress}:`, buxBalance);
-
-        // Add delay between RPC calls
-        await sleep(1000);
-
-        // Get NFT accounts with single RPC call
-        const connection = createConnection();
-        const nftAccounts = await connection.getParsedTokenAccountsByOwner(
-            new PublicKey(walletAddress),
-            { programId: TOKEN_PROGRAM_ID }
-        );
 
         // Count NFTs
         const nftCounts = {
@@ -211,7 +205,16 @@ async function verifyWallet(userId, walletAddress) {
     }
 }
 
-// Update updateDiscordRoles to verify one wallet at a time
+// Add separate function for NFT account fetching
+async function getNFTAccounts(walletAddress) {
+    const connection = createConnection();
+    return await connection.getParsedTokenAccountsByOwner(
+        new PublicKey(walletAddress),
+        { programId: TOKEN_PROGRAM_ID }
+    );
+}
+
+// Update updateDiscordRoles to handle one wallet at a time
 async function updateDiscordRoles(userId, client) {
     try {
         console.log('Starting role update for user:', userId);
@@ -253,7 +256,7 @@ async function updateDiscordRoles(userId, client) {
                     });
                     totalBuxBalance += result.data.buxBalance;
                 }
-                await sleep(2000); // Add delay between wallet checks
+                await sleep(1000); // Reduced delay between wallet checks
             } catch (error) {
                 console.error(`Error verifying wallet ${wallet}:`, error);
                 // Continue with next wallet
