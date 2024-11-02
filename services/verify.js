@@ -22,6 +22,26 @@ let hashlists = {
 
 const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
 
+// Add updateHashlists function
+function updateHashlists(newHashlists) {
+    console.log('Updating hashlists with:', newHashlists);
+    
+    // Update each collection's hashlist
+    if (newHashlists.fckedCatz) hashlists.fckedCatz = new Set(newHashlists.fckedCatz);
+    if (newHashlists.celebCatz) hashlists.celebCatz = new Set(newHashlists.celebCatz);
+    if (newHashlists.moneyMonsters) hashlists.moneyMonsters = new Set(newHashlists.moneyMonsters);
+    if (newHashlists.moneyMonsters3d) hashlists.moneyMonsters3d = new Set(newHashlists.moneyMonsters3d);
+    if (newHashlists.aiBitbots) hashlists.aiBitbots = new Set(newHashlists.aiBitbots);
+    if (newHashlists.warriors) hashlists.warriors = new Set(newHashlists.warriors);
+    if (newHashlists.squirrels) hashlists.squirrels = new Set(newHashlists.squirrels);
+    if (newHashlists.rjctdBots) hashlists.rjctdBots = new Set(newHashlists.rjctdBots);
+    if (newHashlists.energyApes) hashlists.energyApes = new Set(newHashlists.energyApes);
+    if (newHashlists.doodleBots) hashlists.doodleBots = new Set(newHashlists.doodleBots);
+    if (newHashlists.candyBots) hashlists.candyBots = new Set(newHashlists.candyBots);
+    if (newHashlists.mmTop10) hashlists.mmTop10 = new Set(newHashlists.mmTop10);
+    if (newHashlists.mm3dTop10) hashlists.mm3dTop10 = new Set(newHashlists.mm3dTop10);
+}
+
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function getBUXBalance(walletAddress) {
