@@ -139,7 +139,13 @@ async function verifyWallet(userId, walletAddress) {
         if (hashlists.fckedCatz.has(walletAddress)) nftCounts.fcked_catz++;
         if (hashlists.celebCatz.has(walletAddress)) nftCounts.celebcatz++;
         if (hashlists.moneyMonsters.has(walletAddress)) nftCounts.money_monsters++;
-        if (hashlists.moneyMonsters3d.has(walletAddress)) nftCounts.money_monsters3d++;
+        console.log('Wallet address type:', typeof walletAddress);
+        console.log('Sample from moneyMonsters3d hashlist:', Array.from(hashlists.moneyMonsters3d).slice(0, 5));
+        console.log('Is wallet in hashlist?', hashlists.moneyMonsters3d.has(walletAddress));
+        if (hashlists.moneyMonsters3d.has(walletAddress)) {
+            console.log('Found 3D Monster!');
+            nftCounts.money_monsters3d++;
+        }
         if (hashlists.aiBitbots.has(walletAddress)) nftCounts.ai_bitbots++;
         if (hashlists.warriors.has(walletAddress)) nftCounts.warriors++;
         if (hashlists.squirrels.has(walletAddress)) nftCounts.squirrels++;
