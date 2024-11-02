@@ -276,6 +276,48 @@
             height: 20px;
             margin-right: 10px;
         }
+        .verification-title {
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .verification-title .checkmark {
+            margin-right: 10px;
+            background-color: #4CAF50;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .nft-list {
+            text-align: left;
+            margin: 1rem 0;
+        }
+
+        .nft-section-title {
+            font-weight: bold;
+            margin: 1rem 0 0.5rem 0;
+        }
+
+        .daily-reward {
+            color: #FFD700;
+            font-weight: bold;
+            margin: 1rem 0;
+        }
+
+        /* Hide wallet info after connection */
+        .wallet-info.hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -386,9 +428,35 @@
                         const data = await verifyResponse.json();
                         
                         if (data.success) {
-                            document.getElementById('verificationResult').innerHTML = data.formattedResponse;
+                            const formattedResponse = `
+                                <div class="verification-title">
+                                    <span class="checkmark">✓</span>
+                                    Wallet Verification Successful!
+                                </div>
+                                
+                                <div class="nft-section-title">VERIFIED NFTs</div>
+                                <div class="nft-list">
+                                    Fcked Catz - ${data.nftCounts.fcked_catz}
+                                    Celeb Catz - ${data.nftCounts.celebcatz}
+                                    Monsters - ${data.nftCounts.money_monsters}
+                                    3D Monsters - ${data.nftCounts.money_monsters3d}
+                                    BitBots - ${data.nftCounts.ai_bitbots}
+                                    
+                                    A.I. collabs - ${data.nftCounts.warriors + data.nftCounts.squirrels + 
+                                                   data.nftCounts.rjctd_bots + data.nftCounts.energy_apes + 
+                                                   data.nftCounts.doodle_bots + data.nftCounts.candy_bots}
+                                </div>
+
+                                <div class="daily-reward">
+                                    Daily reward - ${data.dailyReward || 0} BUX
+                                </div>`;
+
+                            document.getElementById('verificationResult').innerHTML = formattedResponse;
                             status.textContent = '';
                             document.getElementById('closeMessage').style.display = 'block';
+                            
+                            // Hide wallet info after successful verification
+                            document.querySelector('.wallet-info').classList.add('hidden');
                         } else {
                             document.getElementById('verificationResult').textContent = `Verification failed: ${data.error}`;
                             status.textContent = 'Verification failed.';
