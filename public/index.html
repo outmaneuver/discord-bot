@@ -214,6 +214,9 @@
             background-position: center;
             background-size: contain;
         }
+        .wallet-info {
+            display: none;  /* Hidden by default */
+        }
     </style>
 </head>
 <body>
@@ -228,11 +231,15 @@
             <span class="discord-icon"></span>
             Sign in with Discord
         </button>
-        <div class="info-message">
+        <div class="info-message discord-info">
             <span class="info-icon">ⓘ</span>
             By signing into Discord, you are giving BUXBOT permissions to update your roles in BUXDAO server
         </div>
         <button id="connectButton" class="connect-button">Connect Wallet</button>
+        <div class="info-message wallet-info">
+            <span class="info-icon">ⓘ</span>
+            When connecting your wallet you are simply assigning your wallet address to BUXBOT for tracking and role assignment. The bot has NO access to the contents of your wallet and merely performs onchain checks to see which BUXDAO NFTs and tokens you hold. Connection is a sign of ownership rather than a transaction and encurs no transaction fee
+        </div>
         <p id="status"></p>
         <p id="verificationResult"></p>
     </div>
@@ -246,7 +253,8 @@
             const connectButton = document.getElementById('connectButton');
             const welcomeMessage = document.getElementById('welcomeMessage');
             const pageTitle = document.getElementById('pageTitle');
-            const infoMessage = document.querySelector('.info-message');
+            const discordInfo = document.querySelector('.discord-info');
+            const walletInfo = document.querySelector('.wallet-info');
 
             if (discordButton) {
                 discordButton.addEventListener('click', () => {
@@ -261,13 +269,14 @@
                 .then(data => {
                     console.log('Auth status:', data);
                     if (data.authenticated) {
-                        // Hide Discord button, info message, and page title
+                        // Hide Discord button and its info
                         discordButton.style.display = 'none';
-                        infoMessage.style.display = 'none';
+                        discordInfo.style.display = 'none';
                         pageTitle.style.display = 'none';
                         
-                        // Show connect button
+                        // Show connect button and its info
                         connectButton.style.display = 'inline-block';
+                        walletInfo.style.display = 'flex';
                         
                         // Show welcome message
                         welcomeMessage.textContent = `Welcome, ${data.username}!`;
