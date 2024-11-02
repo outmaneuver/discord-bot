@@ -118,25 +118,12 @@ async function getBUXBalance(walletAddress) {
 
 async function verifyWallet(userId, walletAddress) {
     try {
-        // First check Redis cache
-        const cacheKey = `nfts:${walletAddress}`;
-        const cached = await redis.get(cacheKey);
-        if (cached) {
-            return JSON.parse(cached);
-        }
-
-        const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com', {
-            commitment: 'confirmed',
-            confirmTransactionInitialTimeout: 60000
-        });
-
-        // Get all token accounts with retry logic
-        const tokenAccounts = await retryWithBackoff(async () => {
-            return await connection.getParsedTokenAccountsByOwner(
-                new PublicKey(walletAddress),
-                { programId: TOKEN_PROGRAM_ID }
-            );
-        });
+        const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
+        
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+            new PublicKey(walletAddress),
+            { programId: TOKEN_PROGRAM_ID }
+        );
 
         console.log('Token accounts response:', tokenAccounts);
 
@@ -155,9 +142,9 @@ async function verifyWallet(userId, walletAddress) {
         };
 
         // Process token accounts
-        for (const account of tokenAccounts.value) {
-            const tokenAmount = account.account.data.parsed.info.tokenAmount;
-            const mintAddress = account.account.data.parsed.info.mint;
+        for (const { account } of tokenAccounts.value) {
+            const tokenAmount = account.data.parsed.info.tokenAmount;
+            const mintAddress = account.data.parsed.info.mint;
 
             // Only count tokens with amount = 1 and decimals = 0 (NFTs)
             if (tokenAmount.amount === "1" && tokenAmount.decimals === 0) {
@@ -194,14 +181,10 @@ async function verifyWallet(userId, walletAddress) {
 
         console.log('Final NFT counts:', nftCounts);
 
-        // Get BUX balance with retry
-        const buxBalance = await retryWithBackoff(async () => {
-            return await getBUXBalance(walletAddress);
-        });
-
+        const buxBalance = await getBUXBalance(walletAddress);
         const dailyReward = await calculateDailyReward(nftCounts, buxBalance);
 
-        const result = {
+        return {
             success: true,
             data: {
                 nftCounts,
@@ -209,11 +192,6 @@ async function verifyWallet(userId, walletAddress) {
                 dailyReward
             }
         };
-
-        // Cache the result
-        await redis.setex(cacheKey, 300, JSON.stringify(result));
-
-        return result;
 
     } catch (error) {
         console.error('Error in verifyWallet:', error);
