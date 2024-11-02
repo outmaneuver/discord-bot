@@ -1,7 +1,6 @@
 import express from 'express';
-import { verifyWallet } from '../services/verify.js';
+import { verifyWallet, updateDiscordRoles } from '../services/verify.js';
 import { redis } from '../config/redis.js';
-import { updateDiscordRoles } from '../services/discord.js';
 
 const router = express.Router();
 
