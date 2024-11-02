@@ -309,6 +309,41 @@ async function updateDiscordRoles(userId, client) {
             }))
         });
 
+        console.log('BUX balance check:', {
+            userId,
+            username: member.user.username,
+            totalBuxBalance,
+            currentBuxRoles: member.roles.cache
+                .filter(role => Object.keys(BUX_ROLES).includes(role.id))
+                .map(r => ({
+                    id: r.id,
+                    name: r.name,
+                    threshold: BUX_ROLES[r.id]
+                }))
+        });
+
+        console.log('BUX roles to assign:', {
+            userId,
+            username: member.user.username,
+            totalBuxBalance,
+            rolesToAdd: Array.from(buxRoleIds).map(id => ({
+                id,
+                threshold: BUX_ROLES[id]
+            }))
+        });
+
+        console.log('Final BUX roles:', {
+            userId,
+            username: member.user.username,
+            roles: member.roles.cache
+                .filter(role => Object.keys(BUX_ROLES).includes(role.id))
+                .map(r => ({
+                    id: r.id,
+                    name: r.name,
+                    threshold: BUX_ROLES[r.id]
+                }))
+        });
+
         return {
             success: true,
             nftCounts,
