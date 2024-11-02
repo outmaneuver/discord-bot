@@ -118,14 +118,31 @@ async function getBUXBalance(walletAddress) {
 
 async function verifyWallet(userId, walletAddress) {
     try {
-        const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
-        
-        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-            new PublicKey(walletAddress),
-            { programId: TOKEN_PROGRAM_ID }
-        );
+        // Check cache first
+        const cacheKey = `verify:${walletAddress}`;
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+            return JSON.parse(cached);
+        }
 
-        console.log('Token accounts response:', tokenAccounts);
+        const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com', {
+            commitment: 'confirmed',
+            confirmTransactionInitialTimeout: 60000
+        });
+
+        // Get token accounts with retry and proper error handling
+        const tokenAccounts = await retryWithBackoff(async () => {
+            try {
+                const accounts = await connection.getParsedTokenAccountsByOwner(
+                    new PublicKey(walletAddress),
+                    { programId: TOKEN_PROGRAM_ID }
+                );
+                return accounts;
+            } catch (error) {
+                console.error('Token account fetch error:', error);
+                throw error;
+            }
+        }, 5);
 
         const nftCounts = {
             fcked_catz: 0,
@@ -141,50 +158,61 @@ async function verifyWallet(userId, walletAddress) {
             candy_bots: 0
         };
 
-        // Process token accounts
+        // Process token accounts with proper error handling
         for (const { account } of tokenAccounts.value) {
-            const tokenAmount = account.data.parsed.info.tokenAmount;
-            const mintAddress = account.data.parsed.info.mint;
+            try {
+                const parsedData = account.data.parsed;
+                const tokenAmount = parsedData.info.tokenAmount;
+                const mintAddress = parsedData.info.mint;
 
-            // Only count tokens with amount = 1 and decimals = 0 (NFTs)
-            if (tokenAmount.amount === "1" && tokenAmount.decimals === 0) {
-                console.log('Found NFT:', mintAddress);
-                
-                if (hashlists.fckedCatz.has(mintAddress)) {
-                    console.log('Found Fcked Cat');
-                    nftCounts.fcked_catz++;
+                // Only count tokens with amount = 1 and decimals = 0 (NFTs)
+                if (tokenAmount.amount === "1" && tokenAmount.decimals === 0) {
+                    console.log('Found NFT:', mintAddress);
+                    
+                    // Check each collection
+                    if (hashlists.moneyMonsters3d.has(mintAddress)) {
+                        console.log('Found 3D Monster');
+                        nftCounts.money_monsters3d++;
+                    }
+                    if (hashlists.fckedCatz.has(mintAddress)) {
+                        console.log('Found Fcked Cat');
+                        nftCounts.fcked_catz++;
+                    }
+                    if (hashlists.celebCatz.has(mintAddress)) {
+                        console.log('Found Celeb Cat');
+                        nftCounts.celebcatz++;
+                    }
+                    if (hashlists.moneyMonsters.has(mintAddress)) {
+                        console.log('Found Money Monster');
+                        nftCounts.money_monsters++;
+                    }
+                    if (hashlists.aiBitbots.has(mintAddress)) {
+                        console.log('Found BitBot');
+                        nftCounts.ai_bitbots++;
+                    }
+                    if (hashlists.warriors.has(mintAddress)) nftCounts.warriors++;
+                    if (hashlists.squirrels.has(mintAddress)) nftCounts.squirrels++;
+                    if (hashlists.rjctdBots.has(mintAddress)) nftCounts.rjctd_bots++;
+                    if (hashlists.energyApes.has(mintAddress)) nftCounts.energy_apes++;
+                    if (hashlists.doodleBots.has(mintAddress)) nftCounts.doodle_bots++;
+                    if (hashlists.candyBots.has(mintAddress)) nftCounts.candy_bots++;
                 }
-                if (hashlists.celebCatz.has(mintAddress)) {
-                    console.log('Found Celeb Cat');
-                    nftCounts.celebcatz++;
-                }
-                if (hashlists.moneyMonsters.has(mintAddress)) {
-                    console.log('Found Money Monster');
-                    nftCounts.money_monsters++;
-                }
-                if (hashlists.moneyMonsters3d.has(mintAddress)) {
-                    console.log('Found 3D Monster');
-                    nftCounts.money_monsters3d++;
-                }
-                if (hashlists.aiBitbots.has(mintAddress)) {
-                    console.log('Found BitBot');
-                    nftCounts.ai_bitbots++;
-                }
-                if (hashlists.warriors.has(mintAddress)) nftCounts.warriors++;
-                if (hashlists.squirrels.has(mintAddress)) nftCounts.squirrels++;
-                if (hashlists.rjctdBots.has(mintAddress)) nftCounts.rjctd_bots++;
-                if (hashlists.energyApes.has(mintAddress)) nftCounts.energy_apes++;
-                if (hashlists.doodleBots.has(mintAddress)) nftCounts.doodle_bots++;
-                if (hashlists.candyBots.has(mintAddress)) nftCounts.candy_bots++;
+            } catch (error) {
+                console.error('Error processing token account:', error);
+                continue; // Skip problematic accounts
             }
         }
 
         console.log('Final NFT counts:', nftCounts);
 
-        const buxBalance = await getBUXBalance(walletAddress);
+        // Get BUX balance with retry
+        const buxBalance = await retryWithBackoff(async () => {
+            return await getBUXBalance(walletAddress);
+        });
+
         const dailyReward = await calculateDailyReward(nftCounts, buxBalance);
 
-        return {
+        const result = {
             success: true,
             data: {
                 nftCounts,
@@ -193,26 +221,34 @@ async function verifyWallet(userId, walletAddress) {
             }
         };
 
+        // Cache the result for 5 minutes
+        await redis.setex(cacheKey, 300, JSON.stringify(result));
+
+        return result;
+
     } catch (error) {
         console.error('Error in verifyWallet:', error);
         throw error;
     }
 }
 
-// Add retry logic
-async function retryWithBackoff(fn, maxRetries = 5) {
+// Update retry logic
+async function retryWithBackoff(fn, maxRetries = 5, initialDelay = 1000) {
     let retries = 0;
+    let delay = initialDelay;
+
     while (true) {
         try {
             return await fn();
         } catch (error) {
-            if (!error.message.includes('429 Too Many Requests') || retries >= maxRetries) {
+            retries++;
+            if (retries > maxRetries || !error.message.includes('429 Too Many Requests')) {
                 throw error;
             }
-            retries++;
-            const delay = Math.min(1000 * Math.pow(2, retries), 10000);
-            console.log(`Rate limited, retrying in ${delay}ms...`);
-            await sleep(delay);
+
+            console.log(`Rate limited (attempt ${retries}/${maxRetries}), retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay = Math.min(delay * 2, 10000); // Exponential backoff, max 10s
         }
     }
 }
