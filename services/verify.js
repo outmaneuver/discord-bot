@@ -50,40 +50,88 @@ const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
 // Add rate limiting with exponential backoff
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Add RPC endpoints array
+// Update RPC endpoints with timeouts
 const RPC_ENDPOINTS = [
-    process.env.SOLANA_RPC_URL,
-    'https://api.mainnet-beta.solana.com',
-    'https://solana-api.projectserum.com',
-    'https://rpc.ankr.com/solana'
-].filter(Boolean); // Remove any undefined endpoints
+    { url: process.env.SOLANA_RPC_URL, weight: 10 },
+    { url: 'https://api.mainnet-beta.solana.com', weight: 5 },
+    { url: 'https://solana-api.projectserum.com', weight: 3 },
+    { url: 'https://rpc.ankr.com/solana', weight: 2 }
+].filter(endpoint => endpoint.url); // Remove any undefined endpoints
 
 let currentRpcIndex = 0;
+const RPC_TIMEOUT = 10000; // 10 second timeout
+const CONNECTION_CONFIG = {
+    commitment: 'confirmed',
+    confirmTransactionInitialTimeout: RPC_TIMEOUT,
+    disableRetryOnRateLimit: true,
+    fetch: (url, options) => {
+        return fetch(url, {
+            ...options,
+            timeout: RPC_TIMEOUT,
+            keepalive: true
+        });
+    }
+};
 
-// Add RPC rotation function
+// Add weighted RPC selection
 function getNextRpcEndpoint() {
-    currentRpcIndex = (currentRpcIndex + 1) % RPC_ENDPOINTS.length;
-    return RPC_ENDPOINTS[currentRpcIndex];
+    // Sort endpoints by weight and success rate
+    const sortedEndpoints = [...RPC_ENDPOINTS].sort((a, b) => 
+        (b.weight * (b.successRate || 1)) - (a.weight * (a.successRate || 1))
+    );
+    
+    currentRpcIndex = (currentRpcIndex + 1) % sortedEndpoints.length;
+    const endpoint = sortedEndpoints[currentRpcIndex];
+    
+    console.log(`Using RPC endpoint: ${endpoint.url} (weight: ${endpoint.weight})`);
+    return endpoint.url;
+}
+
+// Update connection creation
+function createConnection() {
+    const endpoint = getNextRpcEndpoint();
+    return new Connection(endpoint, CONNECTION_CONFIG);
 }
 
 // Update retryWithBackoff function
 async function retryWithBackoff(fn, maxRetries = 5, maxDelay = 8000) {
     let lastError;
+    let currentEndpoint;
+    
     for (let i = 0; i < maxRetries; i++) {
         try {
-            return await fn();
+            // Create new connection for each retry
+            const connection = createConnection();
+            return await Promise.race([
+                fn(connection),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('RPC Timeout')), RPC_TIMEOUT)
+                )
+            ]);
         } catch (error) {
             lastError = error;
-            if (!error.message.includes('429 Too Many Requests') || i === maxRetries - 1) {
+            
+            // Update endpoint success rate on error
+            if (currentEndpoint) {
+                currentEndpoint.successRate = (currentEndpoint.successRate || 1) * 0.9;
+            }
+
+            if (i === maxRetries - 1) {
                 throw error;
             }
-            
-            // Switch RPC endpoint on rate limit
-            const nextEndpoint = getNextRpcEndpoint();
-            console.log(`Rate limited, switching to RPC endpoint: ${nextEndpoint}`);
-            
+
+            const isRateLimit = error.message.includes('429') || 
+                              error.message.includes('Too Many Requests');
+            const isTimeout = error.message.includes('timeout') || 
+                            error.message.includes('Timeout') ||
+                            error.code === 'UND_ERR_CONNECT_TIMEOUT';
+
+            if (!isRateLimit && !isTimeout) {
+                throw error;
+            }
+
             const delay = Math.min(1000 * Math.pow(2, i), maxDelay);
-            console.log(`Waiting ${delay}ms before retry ${i + 1}/${maxRetries}`);
+            console.log(`RPC ${isTimeout ? 'timeout' : 'rate limit'}, waiting ${delay}ms before retry ${i + 1}/${maxRetries}`);
             await sleep(delay);
         }
     }
