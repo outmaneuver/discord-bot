@@ -118,9 +118,13 @@ async function getBUXBalance(walletAddress) {
 
 async function verifyWallet(userId, walletAddress) {
     try {
-        if (!walletAddress || typeof walletAddress !== 'string') {
-            throw new Error('Invalid wallet address');
-        }
+        const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
+        
+        // Get all NFTs owned by the wallet
+        const nftAccounts = await connection.getParsedTokenAccountsByOwner(
+            new PublicKey(walletAddress),
+            { programId: TOKEN_PROGRAM_ID }
+        );
 
         const nftCounts = {
             fcked_catz: 0,
@@ -136,47 +140,34 @@ async function verifyWallet(userId, walletAddress) {
             candy_bots: 0
         };
 
-        if (hashlists.fckedCatz.has(walletAddress)) nftCounts.fcked_catz++;
-        if (hashlists.celebCatz.has(walletAddress)) nftCounts.celebcatz++;
-        if (hashlists.moneyMonsters.has(walletAddress)) nftCounts.money_monsters++;
-        console.log('Wallet address type:', typeof walletAddress);
-        console.log('Sample from moneyMonsters3d hashlist:', Array.from(hashlists.moneyMonsters3d).slice(0, 5));
-        console.log('Is wallet in hashlist?', hashlists.moneyMonsters3d.has(walletAddress));
-        if (hashlists.moneyMonsters3d.has(walletAddress)) {
-            console.log('Found 3D Monster!');
-            nftCounts.money_monsters3d++;
+        // Check each NFT owned by the wallet
+        for (const account of nftAccounts.value) {
+            const tokenAddress = account.account.data.parsed.info.mint;
+            
+            // Check which collection this NFT belongs to
+            if (hashlists.fckedCatz.has(tokenAddress)) nftCounts.fcked_catz++;
+            if (hashlists.celebCatz.has(tokenAddress)) nftCounts.celebcatz++;
+            if (hashlists.moneyMonsters.has(tokenAddress)) nftCounts.money_monsters++;
+            if (hashlists.moneyMonsters3d.has(tokenAddress)) nftCounts.money_monsters3d++;
+            if (hashlists.aiBitbots.has(tokenAddress)) nftCounts.ai_bitbots++;
+            if (hashlists.warriors.has(tokenAddress)) nftCounts.warriors++;
+            if (hashlists.squirrels.has(tokenAddress)) nftCounts.squirrels++;
+            if (hashlists.rjctdBots.has(tokenAddress)) nftCounts.rjctd_bots++;
+            if (hashlists.energyApes.has(tokenAddress)) nftCounts.energy_apes++;
+            if (hashlists.doodleBots.has(tokenAddress)) nftCounts.doodle_bots++;
+            if (hashlists.candyBots.has(tokenAddress)) nftCounts.candy_bots++;
         }
-        if (hashlists.aiBitbots.has(walletAddress)) nftCounts.ai_bitbots++;
-        if (hashlists.warriors.has(walletAddress)) nftCounts.warriors++;
-        if (hashlists.squirrels.has(walletAddress)) nftCounts.squirrels++;
-        if (hashlists.rjctdBots.has(walletAddress)) nftCounts.rjctd_bots++;
-        if (hashlists.energyApes.has(walletAddress)) nftCounts.energy_apes++;
-        if (hashlists.doodleBots.has(walletAddress)) nftCounts.doodle_bots++;
-        if (hashlists.candyBots.has(walletAddress)) nftCounts.candy_bots++;
-
-        console.log('Checking wallet:', walletAddress);
-        console.log('Full moneyMonsters3d hashlist:', Array.from(hashlists.moneyMonsters3d));
-        console.log('Hashlist includes wallet?', hashlists.moneyMonsters3d.has(walletAddress));
-        console.log('Case-sensitive check:', Array.from(hashlists.moneyMonsters3d).includes(walletAddress));
-        console.log('Case-insensitive check:', Array.from(hashlists.moneyMonsters3d).some(addr => addr.toLowerCase() === walletAddress.toLowerCase()));
-
-        console.log('Hashlist sizes:', {
-            fckedCatz: hashlists.fckedCatz.size,
-            celebCatz: hashlists.celebCatz.size,
-            moneyMonsters: hashlists.moneyMonsters.size,
-            moneyMonsters3d: hashlists.moneyMonsters3d.size,
-            aiBitbots: hashlists.aiBitbots.size
-        });
-        console.log('NFT counts:', nftCounts);
 
         const buxBalance = await getBUXBalance(walletAddress);
         const dailyReward = await calculateDailyReward(nftCounts, buxBalance);
 
         return {
             success: true,
-            nftCounts,
-            buxBalance,
-            dailyReward
+            data: {
+                nftCounts,
+                buxBalance,
+                dailyReward
+            }
         };
 
     } catch (error) {
