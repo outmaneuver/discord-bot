@@ -50,47 +50,48 @@ const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
 // Add rate limiting with exponential backoff
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Update RPC endpoints with timeouts
+// Update RPC endpoints with API keys and better error handling
 const RPC_ENDPOINTS = [
-    { url: process.env.SOLANA_RPC_URL, weight: 10 },
-    { url: 'https://api.mainnet-beta.solana.com', weight: 5 },
-    { url: 'https://solana-api.projectserum.com', weight: 3 },
-    { url: 'https://rpc.ankr.com/solana', weight: 2 }
+    { 
+        url: process.env.SOLANA_RPC_URL, 
+        weight: 10,
+        headers: {
+            'x-api-key': process.env.SOLANA_RPC_API_KEY
+        }
+    },
+    { 
+        url: 'https://api.mainnet-beta.solana.com', 
+        weight: 5
+    },
+    { 
+        url: 'https://solana-api.projectserum.com', 
+        weight: 3
+    }
 ].filter(endpoint => endpoint.url); // Remove any undefined endpoints
 
 let currentRpcIndex = 0;
 const RPC_TIMEOUT = 10000; // 10 second timeout
-const CONNECTION_CONFIG = {
-    commitment: 'confirmed',
-    confirmTransactionInitialTimeout: RPC_TIMEOUT,
-    disableRetryOnRateLimit: true,
-    fetch: (url, options) => {
-        return fetch(url, {
-            ...options,
-            timeout: RPC_TIMEOUT,
-            keepalive: true
-        });
-    }
-};
 
-// Add weighted RPC selection
-function getNextRpcEndpoint() {
-    // Sort endpoints by weight and success rate
-    const sortedEndpoints = [...RPC_ENDPOINTS].sort((a, b) => 
-        (b.weight * (b.successRate || 1)) - (a.weight * (a.successRate || 1))
-    );
+// Update connection creation with headers
+function createConnection(endpoint) {
+    const connectionConfig = {
+        commitment: 'confirmed',
+        confirmTransactionInitialTimeout: RPC_TIMEOUT,
+        disableRetryOnRateLimit: true,
+        fetch: (url, options = {}) => {
+            return fetch(url, {
+                ...options,
+                headers: {
+                    ...options.headers,
+                    ...(endpoint.headers || {})
+                },
+                timeout: RPC_TIMEOUT,
+                keepalive: true
+            });
+        }
+    };
     
-    currentRpcIndex = (currentRpcIndex + 1) % sortedEndpoints.length;
-    const endpoint = sortedEndpoints[currentRpcIndex];
-    
-    console.log(`Using RPC endpoint: ${endpoint.url} (weight: ${endpoint.weight})`);
-    return endpoint.url;
-}
-
-// Update connection creation
-function createConnection() {
-    const endpoint = getNextRpcEndpoint();
-    return new Connection(endpoint, CONNECTION_CONFIG);
+    return new Connection(endpoint.url, connectionConfig);
 }
 
 // Update retryWithBackoff function
@@ -100,8 +101,15 @@ async function retryWithBackoff(fn, maxRetries = 5, maxDelay = 8000) {
     
     for (let i = 0; i < maxRetries; i++) {
         try {
-            // Create new connection for each retry
-            const connection = createConnection();
+            // Get next endpoint
+            currentEndpoint = RPC_ENDPOINTS[currentRpcIndex];
+            currentRpcIndex = (currentRpcIndex + 1) % RPC_ENDPOINTS.length;
+            
+            console.log(`Using RPC endpoint: ${currentEndpoint.url} (weight: ${currentEndpoint.weight})`);
+            
+            // Create connection with current endpoint
+            const connection = createConnection(currentEndpoint);
+            
             return await Promise.race([
                 fn(connection),
                 new Promise((_, reject) => 
@@ -125,13 +133,16 @@ async function retryWithBackoff(fn, maxRetries = 5, maxDelay = 8000) {
             const isTimeout = error.message.includes('timeout') || 
                             error.message.includes('Timeout') ||
                             error.code === 'UND_ERR_CONNECT_TIMEOUT';
+            const isApiKeyError = error.message.includes('API key') ||
+                                error.message.includes('-32052');
 
-            if (!isRateLimit && !isTimeout) {
+            // Skip retry for API key errors
+            if (!isRateLimit && !isTimeout && !isApiKeyError) {
                 throw error;
             }
 
             const delay = Math.min(1000 * Math.pow(2, i), maxDelay);
-            console.log(`RPC ${isTimeout ? 'timeout' : 'rate limit'}, waiting ${delay}ms before retry ${i + 1}/${maxRetries}`);
+            console.log(`RPC error (${isApiKeyError ? 'API key' : isTimeout ? 'timeout' : 'rate limit'}), waiting ${delay}ms before retry ${i + 1}/${maxRetries}`);
             await sleep(delay);
         }
     }
