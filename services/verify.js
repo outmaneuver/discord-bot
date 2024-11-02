@@ -315,13 +315,23 @@ async function updateDiscordRoles(userId, client) {
 
         // Remove roles that shouldn't be there
         for (const role of currentRoles.values()) {
-            const isNftRole = Object.values(process.env).includes(role.id);
-            const isBuxRole = Object.values(BUX_ROLES).includes(role.id);
+            if (role.id === process.env.ROLE_ID_FCKED_CATZ && !shouldHaveRoles.has(process.env.ROLE_ID_FCKED_CATZ)) rolesToRemove.push(role);
+            if (role.id === process.env.ROLE_ID_CELEBCATZ && !shouldHaveRoles.has(process.env.ROLE_ID_CELEBCATZ)) rolesToRemove.push(role);
+            if (role.id === process.env.ROLE_ID_MONEY_MONSTERS && !shouldHaveRoles.has(process.env.ROLE_ID_MONEY_MONSTERS)) rolesToRemove.push(role);
+            if (role.id === process.env.ROLE_ID_MONEY_MONSTERS3D && !shouldHaveRoles.has(process.env.ROLE_ID_MONEY_MONSTERS3D)) rolesToRemove.push(role);
+            if (role.id === process.env.ROLE_ID_AI_BITBOTS && !shouldHaveRoles.has(process.env.ROLE_ID_AI_BITBOTS)) rolesToRemove.push(role);
+            if (role.id === process.env.ROLE_ID_WARRIORS && !shouldHaveRoles.has(process.env.ROLE_ID_WARRIORS)) rolesToRemove.push(role);
+            if (role.id === process.env.ROLE_ID_SQUIRRELS && !shouldHaveRoles.has(process.env.ROLE_ID_SQUIRRELS)) rolesToRemove.push(role);
+            if (role.id === process.env.ROLE_ID_RJCTD_BOTS && !shouldHaveRoles.has(process.env.ROLE_ID_RJCTD_BOTS)) rolesToRemove.push(role);
+            if (role.id === process.env.ROLE_ID_ENERGY_APES && !shouldHaveRoles.has(process.env.ROLE_ID_ENERGY_APES)) rolesToRemove.push(role);
+            if (role.id === process.env.ROLE_ID_DOODLE_BOTS && !shouldHaveRoles.has(process.env.ROLE_ID_DOODLE_BOTS)) rolesToRemove.push(role);
+            if (role.id === process.env.ROLE_ID_CANDY_BOTS && !shouldHaveRoles.has(process.env.ROLE_ID_CANDY_BOTS)) rolesToRemove.push(role);
             
-            if ((isNftRole && !shouldHaveRoles.has(role.id)) || 
-                (isBuxRole && !buxRoleIds.has(role.id))) {
-                rolesToRemove.push(role);
-            }
+            // BUX roles
+            if (role.id === process.env.ROLE_ID_50000_BUX && !buxRoleIds.has(process.env.ROLE_ID_50000_BUX)) rolesToRemove.push(role);
+            if (role.id === process.env.ROLE_ID_25000_BUX && !buxRoleIds.has(process.env.ROLE_ID_25000_BUX)) rolesToRemove.push(role);
+            if (role.id === process.env.ROLE_ID_10000_BUX && !buxRoleIds.has(process.env.ROLE_ID_10000_BUX)) rolesToRemove.push(role);
+            if (role.id === process.env.ROLE_ID_2500_BUX && !buxRoleIds.has(process.env.ROLE_ID_2500_BUX)) rolesToRemove.push(role);
         }
 
         // Apply role changes
