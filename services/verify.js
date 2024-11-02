@@ -152,35 +152,15 @@ async function verifyWallet(userId, walletAddress) {
         const buxBalance = await getBUXBalance(walletAddress);
         console.log(`BUX balance for ${walletAddress}:`, buxBalance);
 
-        // Get NFT accounts with single RPC call and proper retry logic
-        let nftAccounts;
-        let retryCount = 0;
-        
-        while (retryCount < MAX_RETRIES) {
-            try {
-                const connection = createConnection();
-                nftAccounts = await Promise.race([
-                    connection.getParsedTokenAccountsByOwner(
-                        new PublicKey(walletAddress),
-                        { programId: TOKEN_PROGRAM_ID }
-                    ),
-                    new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('RPC Timeout')), 15000)
-                    )
-                ]);
-                break;
-            } catch (error) {
-                retryCount++;
-                console.log(`RPC error (attempt ${retryCount}/${MAX_RETRIES}):`, error.message);
-                
-                if (retryCount === MAX_RETRIES) throw error;
-                
-                // Exponential backoff with jitter
-                const baseDelay = Math.min(1000 * Math.pow(2, retryCount), 8000);
-                const jitter = Math.random() * 1000;
-                await sleep(baseDelay + jitter);
-            }
-        }
+        // Add delay between RPC calls
+        await sleep(1000);
+
+        // Get NFT accounts with single RPC call
+        const connection = createConnection();
+        const nftAccounts = await connection.getParsedTokenAccountsByOwner(
+            new PublicKey(walletAddress),
+            { programId: TOKEN_PROGRAM_ID }
+        );
 
         // Count NFTs
         const nftCounts = {
@@ -231,7 +211,7 @@ async function verifyWallet(userId, walletAddress) {
     }
 }
 
-// Update updateDiscordRoles to handle one wallet at a time
+// Update updateDiscordRoles to verify one wallet at a time
 async function updateDiscordRoles(userId, client) {
     try {
         console.log('Starting role update for user:', userId);
@@ -263,6 +243,7 @@ async function updateDiscordRoles(userId, client) {
 
         let totalBuxBalance = 0;
 
+        // Verify each wallet with delay between checks
         for (const wallet of wallets) {
             try {
                 const result = await verifyWallet(userId, wallet);
@@ -272,7 +253,7 @@ async function updateDiscordRoles(userId, client) {
                     });
                     totalBuxBalance += result.data.buxBalance;
                 }
-                await sleep(2000); // Add delay between wallets
+                await sleep(2000); // Add delay between wallet checks
             } catch (error) {
                 console.error(`Error verifying wallet ${wallet}:`, error);
                 // Continue with next wallet
@@ -283,33 +264,33 @@ async function updateDiscordRoles(userId, client) {
         const rolesToAdd = [];
 
         // Add NFT roles
-        if (totalNftCounts.fcked_catz > 0) rolesToAdd.push('CAT');
-        if (totalNftCounts.celebcatz > 0) rolesToAdd.push('CELEB');
-        if (totalNftCounts.money_monsters > 0) rolesToAdd.push('MONSTER');
-        if (totalNftCounts.money_monsters3d > 0) rolesToAdd.push('MONSTER 3D');
-        if (totalNftCounts.ai_bitbots > 0) rolesToAdd.push('BITBOT');
-        if (totalNftCounts.warriors > 0) rolesToAdd.push('AI warrior');
-        if (totalNftCounts.squirrels > 0) rolesToAdd.push('AI squirrel');
-        if (totalNftCounts.rjctd_bots > 0) rolesToAdd.push('Rjctd bot');
-        if (totalNftCounts.energy_apes > 0) rolesToAdd.push('AI energy ape');
-        if (totalNftCounts.doodle_bots > 0) rolesToAdd.push('Doodle bot');
-        if (totalNftCounts.candy_bots > 0) rolesToAdd.push('Candy bot');
+        if (totalNftCounts.fcked_catz > 0) rolesToAdd.push(process.env.ROLE_ID_FCKED_CATZ);
+        if (totalNftCounts.celebcatz > 0) rolesToAdd.push(process.env.ROLE_ID_CELEBCATZ);
+        if (totalNftCounts.money_monsters > 0) rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS);
+        if (totalNftCounts.money_monsters3d > 0) rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
+        if (totalNftCounts.ai_bitbots > 0) rolesToAdd.push(process.env.ROLE_ID_AI_BITBOTS);
+        if (totalNftCounts.warriors > 0) rolesToAdd.push(process.env.ROLE_ID_WARRIORS);
+        if (totalNftCounts.squirrels > 0) rolesToAdd.push(process.env.ROLE_ID_SQUIRRELS);
+        if (totalNftCounts.rjctd_bots > 0) rolesToAdd.push(process.env.ROLE_ID_RJCTD_BOTS);
+        if (totalNftCounts.energy_apes > 0) rolesToAdd.push(process.env.ROLE_ID_ENERGY_APES);
+        if (totalNftCounts.doodle_bots > 0) rolesToAdd.push(process.env.ROLE_ID_DOODLE_BOTS);
+        if (totalNftCounts.candy_bots > 0) rolesToAdd.push(process.env.ROLE_ID_CANDY_BOTS);
 
         // Add BUX roles based on total balance
-        if (totalBuxBalance >= 50000) rolesToAdd.push('BUX BANKER');
-        if (totalBuxBalance >= 25000) rolesToAdd.push('BUX SAVER');
-        if (totalBuxBalance >= 10000) rolesToAdd.push('BUX BUILDER');
-        if (totalBuxBalance >= 2500) rolesToAdd.push('BUX BEGINNER');
+        if (totalBuxBalance >= 50000) rolesToAdd.push(process.env.ROLE_ID_50000_BUX);
+        if (totalBuxBalance >= 25000) rolesToAdd.push(process.env.ROLE_ID_25000_BUX);
+        if (totalBuxBalance >= 10000) rolesToAdd.push(process.env.ROLE_ID_10000_BUX);
+        if (totalBuxBalance >= 2500) rolesToAdd.push(process.env.ROLE_ID_2500_BUX);
 
         // Add roles
         if (rolesToAdd.length > 0) {
             const roles = rolesToAdd
-                .map(name => guild.roles.cache.find(r => r.name === name))
+                .map(id => guild.roles.cache.get(id))
                 .filter(r => r);
             
             if (roles.length > 0) {
                 await member.roles.add(roles);
-                console.log('Added roles:', rolesToAdd);
+                console.log('Added roles:', roles.map(r => r.name));
             }
         }
 
