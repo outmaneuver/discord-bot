@@ -155,6 +155,11 @@ async function verifyWallet(userId, walletAddress) {
         if (hashlists.candyBots.has(walletAddress)) nftCounts.candy_bots++;
 
         console.log('Checking wallet:', walletAddress);
+        console.log('Full moneyMonsters3d hashlist:', Array.from(hashlists.moneyMonsters3d));
+        console.log('Hashlist includes wallet?', hashlists.moneyMonsters3d.has(walletAddress));
+        console.log('Case-sensitive check:', Array.from(hashlists.moneyMonsters3d).includes(walletAddress));
+        console.log('Case-insensitive check:', Array.from(hashlists.moneyMonsters3d).some(addr => addr.toLowerCase() === walletAddress.toLowerCase()));
+
         console.log('Hashlist sizes:', {
             fckedCatz: hashlists.fckedCatz.size,
             celebCatz: hashlists.celebCatz.size,
