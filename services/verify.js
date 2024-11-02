@@ -143,18 +143,72 @@ async function retryWithBackoff(fn, maxRetries = 5, maxDelay = 8000) {
     throw lastError;
 }
 
-// Update verifyWallet function to be more efficient
+// Update verifyWallet function to be more resilient
 async function verifyWallet(userId, walletAddress) {
     try {
         console.log(`Checking wallet ${walletAddress} for user ${userId}`);
         
-        // Get BUX balance and NFTs in parallel with separate connections
-        const [buxBalance, nftAccounts] = await Promise.all([
-            getBUXBalance(walletAddress),
-            getNFTAccounts(walletAddress)
-        ]);
-
+        // Get BUX balance first
+        const buxBalance = await getBUXBalance(walletAddress);
         console.log(`BUX balance for ${walletAddress}:`, buxBalance);
+
+        // Add delay before NFT check
+        await sleep(1000);
+
+        // Get NFT accounts with retries
+        let nftAccounts;
+        let retryCount = 0;
+        let lastError;
+
+        while (retryCount < 3) {
+            try {
+                const connection = createConnection();
+                nftAccounts = await Promise.race([
+                    connection.getParsedTokenAccountsByOwner(
+                        new PublicKey(walletAddress),
+                        { programId: TOKEN_PROGRAM_ID }
+                    ),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('RPC Timeout')), 10000)
+                    )
+                ]);
+                break;
+            } catch (error) {
+                retryCount++;
+                lastError = error;
+                console.log(`RPC error (attempt ${retryCount}/3):`, error.message);
+                
+                if (retryCount === 3) break;
+                
+                // Exponential backoff
+                await sleep(Math.min(1000 * Math.pow(2, retryCount), 5000));
+            }
+        }
+
+        // If we couldn't get NFT accounts after retries, return just BUX balance
+        if (!nftAccounts) {
+            console.log('Failed to get NFT accounts after retries:', lastError);
+            return {
+                success: true,
+                data: {
+                    nftCounts: {
+                        fcked_catz: 0,
+                        celebcatz: 0,
+                        money_monsters: 0,
+                        money_monsters3d: 0,
+                        ai_bitbots: 0,
+                        warriors: 0,
+                        squirrels: 0,
+                        rjctd_bots: 0,
+                        energy_apes: 0,
+                        doodle_bots: 0,
+                        candy_bots: 0
+                    },
+                    buxBalance,
+                    dailyReward: 0
+                }
+            };
+        }
 
         // Count NFTs
         const nftCounts = {
@@ -205,16 +259,7 @@ async function verifyWallet(userId, walletAddress) {
     }
 }
 
-// Add separate function for NFT account fetching
-async function getNFTAccounts(walletAddress) {
-    const connection = createConnection();
-    return await connection.getParsedTokenAccountsByOwner(
-        new PublicKey(walletAddress),
-        { programId: TOKEN_PROGRAM_ID }
-    );
-}
-
-// Update updateDiscordRoles to handle one wallet at a time
+// Update updateDiscordRoles to handle errors better
 async function updateDiscordRoles(userId, client) {
     try {
         console.log('Starting role update for user:', userId);
@@ -256,7 +301,7 @@ async function updateDiscordRoles(userId, client) {
                     });
                     totalBuxBalance += result.data.buxBalance;
                 }
-                await sleep(1000); // Reduced delay between wallet checks
+                await sleep(1000); // Add delay between wallet checks
             } catch (error) {
                 console.error(`Error verifying wallet ${wallet}:`, error);
                 // Continue with next wallet
