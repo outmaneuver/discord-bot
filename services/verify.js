@@ -24,13 +24,10 @@ const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Add updateDiscordRoles function
 async function updateDiscordRoles(userId, client) {
     try {
-        // Get user's wallet data
         const walletData = await redis.get(`wallet:${userId}`);
         if (!walletData) {
-            console.log('No wallet data found for user:', userId);
             return {
                 success: false,
                 error: 'No wallet data found',
@@ -51,19 +48,10 @@ async function updateDiscordRoles(userId, client) {
         }
 
         const { address: walletAddress } = JSON.parse(walletData);
-        
-        // Verify wallet holdings
-        const verificationResult = await verifyWallet(userId, walletAddress);
-        
-        console.log('Role assignment check:', {
-            nftCounts: verificationResult.nftCounts,
-            eligibleRoles: []  // Add role logic here if needed
-        });
-
-        return verificationResult;
+        return await verifyWallet(userId, walletAddress);
 
     } catch (error) {
-        console.error('Error updating Discord roles:', error);
+        console.error('Error updating Discord roles:', error.message);
         return {
             success: false,
             error: error.message,
@@ -84,7 +72,6 @@ async function updateDiscordRoles(userId, client) {
     }
 }
 
-// Add storeWalletAddress function
 async function storeWalletAddress(userId, walletAddress, walletType) {
     try {
         const data = {
@@ -93,21 +80,10 @@ async function storeWalletAddress(userId, walletAddress, walletType) {
             lastUpdated: new Date().toISOString()
         };
         
-        console.log('Storing wallet:', {
-            userId,
-            walletAddress,
-            walletType
-        });
-
         await redis.set(`wallet:${userId}`, JSON.stringify(data));
-        console.log('Wallet data stored for user', userId, ':', data);
-        
-        return {
-            success: true,
-            message: 'Wallet stored successfully'
-        };
+        return { success: true };
     } catch (error) {
-        console.error('Error storing wallet:', error);
+        console.error('Error storing wallet:', error.message);
         throw error;
     }
 }
@@ -115,11 +91,8 @@ async function storeWalletAddress(userId, walletAddress, walletType) {
 async function getBUXBalance(walletAddress) {
     const cacheKey = `bux:${walletAddress}`;
     try {
-        // Check cache first
         const cached = await redis.get(cacheKey);
-        if (cached) {
-            return parseInt(cached);
-        }
+        if (cached) return parseInt(cached);
 
         const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
         const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
@@ -134,26 +107,21 @@ async function getBUXBalance(walletAddress) {
             }
         }
 
-        // Cache BUX balance for 5 minutes
         await redis.setex(cacheKey, 300, totalBalance.toString());
         return totalBalance;
 
     } catch (error) {
-        console.error('Error getting BUX balance:', error);
+        console.error('Error getting BUX balance:', error.message);
         return 0;
     }
 }
 
 async function verifyWallet(userId, walletAddress) {
     try {
-        // Add input validation
         if (!walletAddress || typeof walletAddress !== 'string') {
             throw new Error('Invalid wallet address');
         }
 
-        console.log('Verifying wallet:', walletAddress);
-
-        // Initialize NFT counts
         const nftCounts = {
             fcked_catz: 0,
             celebcatz: 0,
@@ -168,7 +136,6 @@ async function verifyWallet(userId, walletAddress) {
             candy_bots: 0
         };
 
-        // Check NFTs against hashlists
         if (hashlists.fckedCatz.has(walletAddress)) nftCounts.fcked_catz++;
         if (hashlists.celebCatz.has(walletAddress)) nftCounts.celebcatz++;
         if (hashlists.moneyMonsters.has(walletAddress)) nftCounts.money_monsters++;
@@ -181,14 +148,8 @@ async function verifyWallet(userId, walletAddress) {
         if (hashlists.doodleBots.has(walletAddress)) nftCounts.doodle_bots++;
         if (hashlists.candyBots.has(walletAddress)) nftCounts.candy_bots++;
 
-        // Get BUX balance
         const buxBalance = await getBUXBalance(walletAddress);
-
-        // Calculate daily reward
         const dailyReward = await calculateDailyReward(nftCounts, buxBalance);
-
-        console.log('BUX Balance:', buxBalance);
-        console.log('Final NFT counts:', nftCounts);
 
         return {
             success: true,
@@ -198,14 +159,12 @@ async function verifyWallet(userId, walletAddress) {
         };
 
     } catch (error) {
-        console.error('Error in verifyWallet:', error);
+        console.error('Error in verifyWallet:', error.message);
         throw error;
     }
 }
 
-// Add updateHashlists function
 function updateHashlists(newHashlists) {
-    // Update each collection's hashlist silently
     if (newHashlists.fckedCatz) hashlists.fckedCatz = new Set(newHashlists.fckedCatz);
     if (newHashlists.celebCatz) hashlists.celebCatz = new Set(newHashlists.celebCatz);
     if (newHashlists.moneyMonsters) hashlists.moneyMonsters = new Set(newHashlists.moneyMonsters);
@@ -221,7 +180,6 @@ function updateHashlists(newHashlists) {
     if (newHashlists.mm3dTop10) hashlists.mm3dTop10 = new Set(newHashlists.mm3dTop10);
 }
 
-// Export functions
 export {
     verifyWallet,
     getBUXBalance,
