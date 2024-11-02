@@ -123,62 +123,41 @@ async function verifyWallet(userId, walletAddress) {
 
 async function updateDiscordRoles(userId, client) {
     try {
+        console.log('Starting role update for user:', userId);
+        
         const guild = client.guilds.cache.get(process.env.GUILD_ID);
         if (!guild) {
-            console.error('Guild not found:', process.env.GUILD_ID);
+            console.error('Guild not found:', {
+                guildId: process.env.GUILD_ID,
+                availableGuilds: Array.from(client.guilds.cache.keys())
+            });
             throw new Error('Guild not found');
         }
 
         const member = await guild.members.fetch(userId);
         if (!member) {
-            console.error('Member not found:', userId);
+            console.error('Member not found:', {
+                userId,
+                guildId: guild.id,
+                guildName: guild.name
+            });
             throw new Error('Member not found');
         }
 
-        console.log('Updating roles for user:', {
+        console.log('Current roles:', {
             userId,
             username: member.user.username,
-            currentRoles: member.roles.cache.map(r => r.name)
+            roles: member.roles.cache.map(r => ({
+                id: r.id,
+                name: r.name
+            }))
         });
-
-        // Define all possible NFT and BUX roles
-        const ALL_NFT_ROLES = [
-            'Fcked Catz Holder',
-            'Celeb Catz Holder',
-            'Money Monsters Holder',
-            '3D Monsters Holder',
-            'AI Bitbots Holder',
-            'Warriors Holder',
-            'Squirrels Holder',
-            'RJCTD Bots Holder',
-            'Energy Apes Holder',
-            'Doodle Bots Holder',
-            'Candy Bots Holder'
-        ];
-
-        const BUX_ROLES = {
-            [process.env.ROLE_ID_2500_BUX]: 2500,
-            [process.env.ROLE_ID_10000_BUX]: 10000,
-            [process.env.ROLE_ID_25000_BUX]: 25000,
-            [process.env.ROLE_ID_50000_BUX]: 50000
-        };
 
         // Get wallets and verify
         const wallets = await redis.smembers(`wallets:${userId}`);
         console.log('Found wallets:', wallets);
 
-        if (!wallets || wallets.length === 0) {
-            console.log('No wallets found, removing all roles');
-            const rolesToRemove = member.roles.cache.filter(role => 
-                ALL_NFT_ROLES.includes(role.name) || 
-                Object.keys(BUX_ROLES).includes(role.id)
-            );
-            console.log('Removing roles:', rolesToRemove.map(r => r.name));
-            await member.roles.remove(rolesToRemove);
-            return { success: true, nftCounts: {}, roles: [] };
-        }
-
-        // Calculate total BUX balance across all wallets
+        // Calculate total BUX balance and NFT counts
         let totalBuxBalance = 0;
         const nftCounts = {
             fcked_catz: 0,
@@ -204,9 +183,17 @@ async function updateDiscordRoles(userId, client) {
             }
         }
 
-        // Determine which roles the user should have
+        console.log('Verification results:', {
+            userId,
+            username: member.user.username,
+            nftCounts,
+            totalBuxBalance
+        });
+
+        // Determine roles
         const shouldHaveRoles = new Set();
-        
+        const buxRoleIds = new Set();
+
         // Add NFT roles
         if (nftCounts.fcked_catz > 0) shouldHaveRoles.add('Fcked Catz Holder');
         if (nftCounts.celebcatz > 0) shouldHaveRoles.add('Celeb Catz Holder');
@@ -221,80 +208,83 @@ async function updateDiscordRoles(userId, client) {
         if (nftCounts.candy_bots > 0) shouldHaveRoles.add('Candy Bots Holder');
 
         // Add BUX roles based on balance
-        const buxRoleIds = new Set();
         if (totalBuxBalance >= 50000) buxRoleIds.add(process.env.ROLE_ID_50000_BUX);
         if (totalBuxBalance >= 25000) buxRoleIds.add(process.env.ROLE_ID_25000_BUX);
         if (totalBuxBalance >= 10000) buxRoleIds.add(process.env.ROLE_ID_10000_BUX);
         if (totalBuxBalance >= 2500) buxRoleIds.add(process.env.ROLE_ID_2500_BUX);
 
-        // Get current roles
-        const currentNftRoles = new Set(
-            member.roles.cache
-                .filter(role => ALL_NFT_ROLES.includes(role.name))
-                .map(role => role.name)
-        );
-
-        const currentBuxRoles = new Set(
-            member.roles.cache
-                .filter(role => Object.keys(BUX_ROLES).includes(role.id))
-                .map(role => role.id)
-        );
-
-        // Determine roles to add and remove
-        const nftRolesToAdd = [...shouldHaveRoles].filter(role => !currentNftRoles.has(role));
-        const nftRolesToRemove = [...currentNftRoles].filter(role => !shouldHaveRoles.has(role));
-        const buxRolesToAdd = [...buxRoleIds].filter(id => !currentBuxRoles.has(id));
-        const buxRolesToRemove = [...currentBuxRoles].filter(id => !buxRoleIds.has(id));
-
-        // Log role changes in detail
-        console.log('Role update details:', {
+        console.log('Role calculation:', {
+            userId,
             username: member.user.username,
-            nftCounts,
-            totalBuxBalance,
-            currentRoles: member.roles.cache.map(r => r.name),
-            nftRolesToAdd,
-            nftRolesToRemove,
-            buxRolesToAdd,
-            buxRolesToRemove
+            shouldHaveRoles: Array.from(shouldHaveRoles),
+            buxRoleIds: Array.from(buxRoleIds),
+            buxBalance: totalBuxBalance
         });
 
-        // Perform role updates with logging
-        const rolePromises = [];
-        
-        if (nftRolesToAdd.length > 0) {
-            const addNftRoles = nftRolesToAdd
-                .map(roleName => guild.roles.cache.find(r => r.name === roleName))
-                .filter(role => role);
-            console.log('Adding NFT roles:', addNftRoles.map(r => r.name));
-            rolePromises.push(member.roles.add(addNftRoles));
-        }
-        
-        if (nftRolesToRemove.length > 0) {
-            const removeNftRoles = nftRolesToRemove
-                .map(roleName => guild.roles.cache.find(r => r.name === roleName))
-                .filter(role => role);
-            console.log('Removing NFT roles:', removeNftRoles.map(r => r.name));
-            rolePromises.push(member.roles.remove(removeNftRoles));
-        }
+        // Get current roles
+        const currentRoles = member.roles.cache;
+        console.log('Current roles:', {
+            userId,
+            username: member.user.username,
+            roles: currentRoles.map(r => ({
+                id: r.id,
+                name: r.name
+            }))
+        });
 
-        if (buxRolesToAdd.length > 0) {
-            console.log('Adding BUX roles:', buxRolesToAdd);
-            rolePromises.push(member.roles.add(buxRolesToAdd));
-        }
+        // Update roles
+        const rolesToAdd = [];
+        const rolesToRemove = [];
 
-        if (buxRolesToRemove.length > 0) {
-            console.log('Removing BUX roles:', buxRolesToRemove);
-            rolePromises.push(member.roles.remove(buxRolesToRemove));
+        // Handle NFT roles
+        for (const roleName of shouldHaveRoles) {
+            const role = guild.roles.cache.find(r => r.name === roleName);
+            if (role && !currentRoles.has(role.id)) {
+                rolesToAdd.push(role);
+            }
         }
 
-        // Wait for all role updates to complete
-        await Promise.all(rolePromises);
+        // Handle BUX roles
+        for (const roleId of buxRoleIds) {
+            const role = guild.roles.cache.get(roleId);
+            if (role && !currentRoles.has(roleId)) {
+                rolesToAdd.push(role);
+            }
+        }
 
-        // Log final roles after update
+        // Remove roles that shouldn't be there
+        for (const role of currentRoles.values()) {
+            const isNftRole = shouldHaveRoles.has(role.name);
+            const isBuxRole = buxRoleIds.has(role.id);
+            if ((isNftRole || isBuxRole) && !shouldHaveRoles.has(role.name) && !buxRoleIds.has(role.id)) {
+                rolesToRemove.push(role);
+            }
+        }
+
+        console.log('Role updates:', {
+            userId,
+            username: member.user.username,
+            adding: rolesToAdd.map(r => ({ id: r.id, name: r.name })),
+            removing: rolesToRemove.map(r => ({ id: r.id, name: r.name }))
+        });
+
+        // Apply role changes
+        if (rolesToAdd.length > 0) {
+            await member.roles.add(rolesToAdd);
+        }
+        if (rolesToRemove.length > 0) {
+            await member.roles.remove(rolesToRemove);
+        }
+
+        // Verify final roles
         const updatedMember = await guild.members.fetch(userId);
-        console.log('Final roles after update:', {
+        console.log('Final roles:', {
+            userId,
             username: updatedMember.user.username,
-            roles: updatedMember.roles.cache.map(r => r.name)
+            roles: updatedMember.roles.cache.map(r => ({
+                id: r.id,
+                name: r.name
+            }))
         });
 
         return {
@@ -305,7 +295,11 @@ async function updateDiscordRoles(userId, client) {
         };
 
     } catch (error) {
-        console.error('Error updating Discord roles:', error);
+        console.error('Error updating Discord roles:', {
+            userId,
+            error: error.message,
+            stack: error.stack
+        });
         throw error;
     }
 }
