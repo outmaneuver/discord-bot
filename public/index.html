@@ -365,12 +365,21 @@
             async function connectWallet() {
                 try {
                     const connectButton = document.getElementById('connectButton');
+                    const walletInfo = document.querySelector('.wallet-info');
+                    const status = document.getElementById('status');
+
+                    // Disable button and show loading state immediately
                     connectButton.classList.add('loading');
                     connectButton.disabled = true;
+                    
+                    // Hide wallet info text
+                    walletInfo.style.display = 'none';
 
-                    // Check for any available Solana wallet
+                    // Check for wallets
                     if (!window.solana && !window.solflare) {
                         status.textContent = 'Please install Phantom or Solflare wallet!';
+                        connectButton.classList.remove('loading');
+                        connectButton.disabled = false;
                         return;
                     }
 
@@ -392,8 +401,8 @@
                         const resp = await wallet.connect();
                         const walletAddress = resp.publicKey.toString();
                         
-                        status.textContent = `Connected to ${walletName}! Verifying...`;
-                        connectButton.disabled = true;
+                        // Update status to show NFT check is in progress
+                        status.textContent = 'NFT check in progress... Please wait';
                         
                         // Store wallet with type
                         const storeResponse = await fetch('/store-wallet', {
@@ -412,7 +421,7 @@
                             throw new Error('Failed to store wallet');
                         }
 
-                        // Then verify
+                        // Verify wallet
                         const verifyResponse = await fetch('/holder-verify/verify', {
                             method: 'POST',
                             headers: {
@@ -436,47 +445,52 @@
                                 
                                 <div class="nft-section-title">VERIFIED NFTs</div>
                                 <div class="nft-list">
-                                    Fcked Catz - ${data.nftCounts.fcked_catz}
-                                    Celeb Catz - ${data.nftCounts.celebcatz}
-                                    Monsters - ${data.nftCounts.money_monsters}
-                                    3D Monsters - ${data.nftCounts.money_monsters3d}
-                                    BitBots - ${data.nftCounts.ai_bitbots}
+                                    Fcked Catz - ${data.data.nftCounts.fcked_catz}
+                                    Celeb Catz - ${data.data.nftCounts.celebcatz}
+                                    Monsters - ${data.data.nftCounts.money_monsters}
+                                    3D Monsters - ${data.data.nftCounts.money_monsters3d}
+                                    BitBots - ${data.data.nftCounts.ai_bitbots}
                                     
-                                    A.I. collabs - ${data.nftCounts.warriors + data.nftCounts.squirrels + 
-                                                   data.nftCounts.rjctd_bots + data.nftCounts.energy_apes + 
-                                                   data.nftCounts.doodle_bots + data.nftCounts.candy_bots}
+                                    A.I. collabs - ${data.data.nftCounts.warriors + data.data.nftCounts.squirrels + 
+                                                    data.data.nftCounts.rjctd_bots + data.data.nftCounts.energy_apes + 
+                                                    data.data.nftCounts.doodle_bots + data.data.nftCounts.candy_bots}
                                 </div>
 
                                 <div class="daily-reward">
-                                    Daily reward - ${data.dailyReward || 0} BUX
+                                    Daily reward - ${data.data.dailyReward || 0} BUX
                                 </div>`;
 
                             document.getElementById('verificationResult').innerHTML = formattedResponse;
                             status.textContent = '';
                             document.getElementById('closeMessage').style.display = 'block';
                             
-                            // Hide wallet info after successful verification
-                            document.querySelector('.wallet-info').classList.add('hidden');
+                            // Keep button disabled and update text
+                            connectButton.classList.remove('loading');
+                            connectButton.textContent = 'Connected';
+                            connectButton.disabled = true;
+                            
+                            // Ensure wallet info stays hidden
+                            walletInfo.style.display = 'none';
                         } else {
-                            document.getElementById('verificationResult').textContent = `Verification failed: ${data.error}`;
-                            status.textContent = 'Verification failed.';
-                            connectButton.disabled = false;
+                            throw new Error(data.error || 'Verification failed');
                         }
                     } catch (err) {
-                        status.textContent = `Error connecting to ${walletName}: ${err.message}`;
+                        status.textContent = `Error: ${err.message}`;
+                        connectButton.classList.remove('loading');
                         connectButton.disabled = false;
+                        connectButton.textContent = 'Connect Wallet';
+                        walletInfo.style.display = 'flex'; // Show info again on error
                     }
-
-                    // On success
-                    connectButton.classList.remove('loading');
-                    connectButton.textContent = 'Connected';
 
                 } catch (error) {
                     console.error('Wallet connection error:', error);
                     const connectButton = document.getElementById('connectButton');
+                    const walletInfo = document.querySelector('.wallet-info');
                     connectButton.classList.remove('loading');
                     connectButton.disabled = false;
+                    connectButton.textContent = 'Connect Wallet';
                     status.textContent = error.message;
+                    walletInfo.style.display = 'flex'; // Show info again on error
                 }
             }
 
