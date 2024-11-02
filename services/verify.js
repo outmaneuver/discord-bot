@@ -72,143 +72,42 @@ const RPC_ENDPOINTS = [
 let currentRpcIndex = 0;
 const RPC_TIMEOUT = 10000; // 10 second timeout
 
-// Update connection creation with proper endpoint handling
-function createConnection() {
-    const endpoint = RPC_ENDPOINTS[currentRpcIndex];
-    currentRpcIndex = (currentRpcIndex + 1) % RPC_ENDPOINTS.length;
-    
-    console.log(`Using RPC endpoint: ${endpoint.url} (weight: ${endpoint.weight})`);
-    
-    const connectionConfig = {
-        commitment: 'confirmed',
-        confirmTransactionInitialTimeout: RPC_TIMEOUT,
-        disableRetryOnRateLimit: true
-    };
+// Add connection pool and caching
+const CONNECTION_POOL = [];
+const CACHE_TTL = 300; // 5 minutes
+const MAX_POOL_SIZE = 3;
 
-    return new Connection(endpoint.url, connectionConfig);
+// Initialize connection pool
+for (let i = 0; i < MAX_POOL_SIZE; i++) {
+    CONNECTION_POOL.push(new Connection(process.env.SOLANA_RPC_URL));
 }
 
-// Update retryWithBackoff function
-async function retryWithBackoff(fn, maxRetries = 5, maxDelay = 8000) {
-    let lastError;
-    let currentEndpoint;
-    
-    for (let i = 0; i < maxRetries; i++) {
-        try {
-            // Get next endpoint
-            currentEndpoint = RPC_ENDPOINTS[currentRpcIndex];
-            currentRpcIndex = (currentRpcIndex + 1) % RPC_ENDPOINTS.length;
-            
-            console.log(`Using RPC endpoint: ${currentEndpoint.url} (weight: ${currentEndpoint.weight})`);
-            
-            // Create connection with current endpoint
-            const connection = createConnection(currentEndpoint);
-            
-            return await Promise.race([
-                fn(connection),
-                new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('RPC Timeout')), RPC_TIMEOUT)
-                )
-            ]);
-        } catch (error) {
-            lastError = error;
-            
-            // Update endpoint success rate on error
-            if (currentEndpoint) {
-                currentEndpoint.successRate = (currentEndpoint.successRate || 1) * 0.9;
-            }
-
-            if (i === maxRetries - 1) {
-                throw error;
-            }
-
-            const isRateLimit = error.message.includes('429') || 
-                              error.message.includes('Too Many Requests');
-            const isTimeout = error.message.includes('timeout') || 
-                            error.message.includes('Timeout') ||
-                            error.code === 'UND_ERR_CONNECT_TIMEOUT';
-            const isApiKeyError = error.message.includes('API key') ||
-                                error.message.includes('-32052');
-
-            // Skip retry for API key errors
-            if (!isRateLimit && !isTimeout && !isApiKeyError) {
-                throw error;
-            }
-
-            const delay = Math.min(1000 * Math.pow(2, i), maxDelay);
-            console.log(`RPC error (${isApiKeyError ? 'API key' : isTimeout ? 'timeout' : 'rate limit'}), waiting ${delay}ms before retry ${i + 1}/${maxRetries}`);
-            await sleep(delay);
-        }
-    }
-    throw lastError;
+// Get connection from pool
+function getConnection() {
+    return CONNECTION_POOL[Math.floor(Math.random() * CONNECTION_POOL.length)];
 }
 
-// Update verifyWallet function to be more resilient
+// Update verifyWallet function with better caching and connection handling
 async function verifyWallet(userId, walletAddress) {
     try {
         console.log(`Checking wallet ${walletAddress} for user ${userId}`);
         
-        // Get BUX balance first
-        const buxBalance = await getBUXBalance(walletAddress);
+        // Check cache first
+        const cacheKey = `wallet:${walletAddress}`;
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+            console.log('Using cached wallet data');
+            return JSON.parse(cached);
+        }
+
+        // Get BUX balance and NFTs in parallel with single connection
+        const connection = getConnection();
+        const [buxBalance, nftAccounts] = await Promise.all([
+            getBUXBalance(walletAddress),
+            getNFTAccounts(walletAddress, connection)
+        ]);
+
         console.log(`BUX balance for ${walletAddress}:`, buxBalance);
-
-        // Add delay before NFT check
-        await sleep(1000);
-
-        // Get NFT accounts with retries
-        let nftAccounts;
-        let retryCount = 0;
-        let lastError;
-
-        while (retryCount < 3) {
-            try {
-                const connection = createConnection();
-                nftAccounts = await Promise.race([
-                    connection.getParsedTokenAccountsByOwner(
-                        new PublicKey(walletAddress),
-                        { programId: TOKEN_PROGRAM_ID }
-                    ),
-                    new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('RPC Timeout')), 10000)
-                    )
-                ]);
-                break;
-            } catch (error) {
-                retryCount++;
-                lastError = error;
-                console.log(`RPC error (attempt ${retryCount}/3):`, error.message);
-                
-                if (retryCount === 3) break;
-                
-                // Exponential backoff
-                await sleep(Math.min(1000 * Math.pow(2, retryCount), 5000));
-            }
-        }
-
-        // If we couldn't get NFT accounts after retries, return just BUX balance
-        if (!nftAccounts) {
-            console.log('Failed to get NFT accounts after retries:', lastError);
-            return {
-                success: true,
-                data: {
-                    nftCounts: {
-                        fcked_catz: 0,
-                        celebcatz: 0,
-                        money_monsters: 0,
-                        money_monsters3d: 0,
-                        ai_bitbots: 0,
-                        warriors: 0,
-                        squirrels: 0,
-                        rjctd_bots: 0,
-                        energy_apes: 0,
-                        doodle_bots: 0,
-                        candy_bots: 0
-                    },
-                    buxBalance,
-                    dailyReward: 0
-                }
-            };
-        }
 
         // Count NFTs
         const nftCounts = {
@@ -225,37 +124,70 @@ async function verifyWallet(userId, walletAddress) {
             candy_bots: 0
         };
 
-        // Single pass through NFT accounts
-        for (const account of nftAccounts.value) {
-            const mint = account.account.data.parsed.info.mint;
-            if (hashlists.fckedCatz.has(mint)) nftCounts.fcked_catz++;
-            if (hashlists.celebCatz.has(mint)) nftCounts.celebcatz++;
-            if (hashlists.moneyMonsters.has(mint)) nftCounts.money_monsters++;
-            if (hashlists.moneyMonsters3d.has(mint)) nftCounts.money_monsters3d++;
-            if (hashlists.aiBitbots.has(mint)) nftCounts.ai_bitbots++;
-            if (hashlists.warriors.has(mint)) nftCounts.warriors++;
-            if (hashlists.squirrels.has(mint)) nftCounts.squirrels++;
-            if (hashlists.rjctdBots.has(mint)) nftCounts.rjctd_bots++;
-            if (hashlists.energyApes.has(mint)) nftCounts.energy_apes++;
-            if (hashlists.doodleBots.has(mint)) nftCounts.doodle_bots++;
-            if (hashlists.candyBots.has(mint)) nftCounts.candy_bots++;
+        if (nftAccounts?.value) {
+            for (const account of nftAccounts.value) {
+                const mint = account.account.data.parsed.info.mint;
+                if (hashlists.fckedCatz.has(mint)) nftCounts.fcked_catz++;
+                if (hashlists.celebCatz.has(mint)) nftCounts.celebcatz++;
+                if (hashlists.moneyMonsters.has(mint)) nftCounts.money_monsters++;
+                if (hashlists.moneyMonsters3d.has(mint)) nftCounts.money_monsters3d++;
+                if (hashlists.aiBitbots.has(mint)) nftCounts.ai_bitbots++;
+                if (hashlists.warriors.has(mint)) nftCounts.warriors++;
+                if (hashlists.squirrels.has(mint)) nftCounts.squirrels++;
+                if (hashlists.rjctdBots.has(mint)) nftCounts.rjctd_bots++;
+                if (hashlists.energyApes.has(mint)) nftCounts.energy_apes++;
+                if (hashlists.doodleBots.has(mint)) nftCounts.doodle_bots++;
+                if (hashlists.candyBots.has(mint)) nftCounts.candy_bots++;
+            }
         }
 
-        // Calculate daily reward
-        const dailyReward = await calculateDailyReward(nftCounts);
-
-        return {
+        const result = {
             success: true,
             data: {
                 nftCounts,
                 buxBalance,
-                dailyReward
+                dailyReward: await calculateDailyReward(nftCounts)
             }
         };
+
+        // Cache the result
+        await redis.setex(cacheKey, CACHE_TTL, JSON.stringify(result));
+
+        return result;
 
     } catch (error) {
         console.error('Error in verifyWallet:', error);
         throw error;
+    }
+}
+
+// Add separate function for NFT account fetching with retries
+async function getNFTAccounts(walletAddress, connection) {
+    let retries = 0;
+    const maxRetries = 3;
+    
+    while (retries < maxRetries) {
+        try {
+            return await Promise.race([
+                connection.getParsedTokenAccountsByOwner(
+                    new PublicKey(walletAddress),
+                    { programId: TOKEN_PROGRAM_ID }
+                ),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('RPC Timeout')), 8000)
+                )
+            ]);
+        } catch (error) {
+            retries++;
+            console.log(`RPC error (attempt ${retries}/${maxRetries}):`, error.message);
+            
+            if (retries === maxRetries) {
+                console.log('Max retries reached, returning empty result');
+                return { value: [] };
+            }
+            
+            await sleep(Math.min(1000 * Math.pow(2, retries), 4000));
+        }
     }
 }
 
@@ -274,7 +206,21 @@ async function updateDiscordRoles(userId, client) {
         const wallets = await redis.smembers(`wallets:${userId}`);
         console.log('Found wallets:', wallets);
 
-        // Process one wallet at a time
+        // Process wallets with rate limiting
+        const results = [];
+        for (const wallet of wallets) {
+            try {
+                const result = await verifyWallet(userId, wallet);
+                if (result.success) {
+                    results.push(result);
+                }
+                await sleep(1000); // Rate limit between wallets
+            } catch (error) {
+                console.error(`Error verifying wallet ${wallet}:`, error);
+            }
+        }
+
+        // Calculate totals
         const totalNftCounts = {
             fcked_catz: 0,
             celebcatz: 0,
@@ -291,22 +237,12 @@ async function updateDiscordRoles(userId, client) {
 
         let totalBuxBalance = 0;
 
-        // Verify each wallet with delay between checks
-        for (const wallet of wallets) {
-            try {
-                const result = await verifyWallet(userId, wallet);
-                if (result.success) {
-                    Object.keys(totalNftCounts).forEach(key => {
-                        totalNftCounts[key] += result.data.nftCounts[key];
-                    });
-                    totalBuxBalance += result.data.buxBalance;
-                }
-                await sleep(1000); // Add delay between wallet checks
-            } catch (error) {
-                console.error(`Error verifying wallet ${wallet}:`, error);
-                // Continue with next wallet
-            }
-        }
+        results.forEach(result => {
+            Object.keys(totalNftCounts).forEach(key => {
+                totalNftCounts[key] += result.data.nftCounts[key];
+            });
+            totalBuxBalance += result.data.buxBalance;
+        });
 
         // Update roles using role IDs
         const rolesToAdd = [];
