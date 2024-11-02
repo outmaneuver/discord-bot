@@ -69,11 +69,24 @@
             font-weight: bold;
         }
         button {
-            border: 2px solid white;
-            margin: 10px 0;
+            background-color: #7289DA;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px auto;
             min-width: 200px;
-            position: relative;
-            transition: all 0.3s ease;
+        }
+        button:hover {
+            opacity: 0.9;
         }
         button:disabled {
             opacity: 0.7;
@@ -257,6 +270,11 @@
         }
         .info-message {
             margin: 15px 0;
+        }
+        .discord-icon, .wallet-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
         }
     </style>
 </head>
