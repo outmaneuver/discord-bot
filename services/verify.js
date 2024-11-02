@@ -62,45 +62,29 @@ const RPC_ENDPOINTS = [
     {
         url: 'https://api.mainnet-beta.solana.com',
         weight: 5
+    },
+    {
+        url: 'https://solana-api.projectserum.com',
+        weight: 3
     }
-].filter(endpoint => endpoint.url);
+].filter(endpoint => endpoint.url); // Remove any undefined endpoints
 
 let currentRpcIndex = 0;
 const RPC_TIMEOUT = 10000; // 10 second timeout
 
-// Add RPC endpoint selection function
-function getNextEndpoint() {
-    // Sort endpoints by weight and success rate
-    const sortedEndpoints = [...RPC_ENDPOINTS].sort((a, b) => 
-        (b.weight * (b.successRate || 1)) - (a.weight * (a.successRate || 1))
-    );
-    
-    currentRpcIndex = (currentRpcIndex + 1) % sortedEndpoints.length;
-    const endpoint = sortedEndpoints[currentRpcIndex];
+// Update connection creation with proper endpoint handling
+function createConnection() {
+    const endpoint = RPC_ENDPOINTS[currentRpcIndex];
+    currentRpcIndex = (currentRpcIndex + 1) % RPC_ENDPOINTS.length;
     
     console.log(`Using RPC endpoint: ${endpoint.url} (weight: ${endpoint.weight})`);
-    return endpoint;
-}
-
-// Update connection creation with headers
-function createConnection(endpoint) {
+    
     const connectionConfig = {
         commitment: 'confirmed',
         confirmTransactionInitialTimeout: RPC_TIMEOUT,
-        disableRetryOnRateLimit: true,
-        fetch: (url, options = {}) => {
-            return fetch(url, {
-                ...options,
-                headers: {
-                    ...options.headers,
-                    ...(endpoint.headers || {})
-                },
-                timeout: RPC_TIMEOUT,
-                keepalive: true
-            });
-        }
+        disableRetryOnRateLimit: true
     };
-    
+
     return new Connection(endpoint.url, connectionConfig);
 }
 
@@ -171,9 +155,6 @@ async function verifyWallet(userId, walletAddress) {
 
         console.log('Cache miss for wallet:', walletAddress);
         
-        // Create initial connection
-        let connection = createConnection();
-        
         // Get NFT accounts with retries
         let nftAccounts;
         let retryCount = 0;
@@ -181,6 +162,7 @@ async function verifyWallet(userId, walletAddress) {
         while (retryCount < MAX_RETRIES) {
             try {
                 await sleep(RATE_LIMIT_DELAY);
+                const connection = createConnection(); // Create new connection each try
                 nftAccounts = await connection.getParsedTokenAccountsByOwner(
                     new PublicKey(walletAddress),
                     { programId: TOKEN_PROGRAM_ID }
@@ -188,11 +170,13 @@ async function verifyWallet(userId, walletAddress) {
                 break;
             } catch (error) {
                 retryCount++;
+                console.log(`RPC error (attempt ${retryCount}/${MAX_RETRIES}):`, error.message);
+                
                 if (retryCount === MAX_RETRIES) throw error;
                 
-                console.log(`RPC error (attempt ${retryCount}/${MAX_RETRIES}):`, error.message);
-                connection = createConnection(); // Try next endpoint
-                await sleep(Math.min(1000 * Math.pow(2, retryCount), 8000));
+                // Exponential backoff
+                const delay = Math.min(1000 * Math.pow(2, retryCount), 8000);
+                await sleep(delay);
             }
         }
 
