@@ -138,6 +138,8 @@ async function verifyWallet(userId, walletAddress) {
             );
         });
 
+        console.log('Token accounts response:', tokenAccounts);
+
         const nftCounts = {
             fcked_catz: 0,
             celebcatz: 0,
@@ -154,14 +156,33 @@ async function verifyWallet(userId, walletAddress) {
 
         // Process token accounts
         for (const account of tokenAccounts.value) {
-            if (account.account.data.parsed.info.tokenAmount.amount === "1") {
-                const mintAddress = account.account.data.parsed.info.mint;
+            const tokenAmount = account.account.data.parsed.info.tokenAmount;
+            const mintAddress = account.account.data.parsed.info.mint;
+
+            // Only count tokens with amount = 1 and decimals = 0 (NFTs)
+            if (tokenAmount.amount === "1" && tokenAmount.decimals === 0) {
+                console.log('Found NFT:', mintAddress);
                 
-                if (hashlists.fckedCatz.has(mintAddress)) nftCounts.fcked_catz++;
-                if (hashlists.celebCatz.has(mintAddress)) nftCounts.celebcatz++;
-                if (hashlists.moneyMonsters.has(mintAddress)) nftCounts.money_monsters++;
-                if (hashlists.moneyMonsters3d.has(mintAddress)) nftCounts.money_monsters3d++;
-                if (hashlists.aiBitbots.has(mintAddress)) nftCounts.ai_bitbots++;
+                if (hashlists.fckedCatz.has(mintAddress)) {
+                    console.log('Found Fcked Cat');
+                    nftCounts.fcked_catz++;
+                }
+                if (hashlists.celebCatz.has(mintAddress)) {
+                    console.log('Found Celeb Cat');
+                    nftCounts.celebcatz++;
+                }
+                if (hashlists.moneyMonsters.has(mintAddress)) {
+                    console.log('Found Money Monster');
+                    nftCounts.money_monsters++;
+                }
+                if (hashlists.moneyMonsters3d.has(mintAddress)) {
+                    console.log('Found 3D Monster');
+                    nftCounts.money_monsters3d++;
+                }
+                if (hashlists.aiBitbots.has(mintAddress)) {
+                    console.log('Found BitBot');
+                    nftCounts.ai_bitbots++;
+                }
                 if (hashlists.warriors.has(mintAddress)) nftCounts.warriors++;
                 if (hashlists.squirrels.has(mintAddress)) nftCounts.squirrels++;
                 if (hashlists.rjctdBots.has(mintAddress)) nftCounts.rjctd_bots++;
@@ -170,6 +191,8 @@ async function verifyWallet(userId, walletAddress) {
                 if (hashlists.candyBots.has(mintAddress)) nftCounts.candy_bots++;
             }
         }
+
+        console.log('Final NFT counts:', nftCounts);
 
         // Get BUX balance with retry
         const buxBalance = await retryWithBackoff(async () => {
