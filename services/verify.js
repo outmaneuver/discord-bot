@@ -72,6 +72,20 @@ const RPC_ENDPOINTS = [
 let currentRpcIndex = 0;
 const RPC_TIMEOUT = 10000; // 10 second timeout
 
+// Add RPC endpoint selection function
+function getNextEndpoint() {
+    // Sort endpoints by weight and success rate
+    const sortedEndpoints = [...RPC_ENDPOINTS].sort((a, b) => 
+        (b.weight * (b.successRate || 1)) - (a.weight * (a.successRate || 1))
+    );
+    
+    currentRpcIndex = (currentRpcIndex + 1) % sortedEndpoints.length;
+    const endpoint = sortedEndpoints[currentRpcIndex];
+    
+    console.log(`Using RPC endpoint: ${endpoint.url} (weight: ${endpoint.weight})`);
+    return endpoint;
+}
+
 // Update connection creation with headers
 function createConnection(endpoint) {
     const connectionConfig = {
@@ -160,7 +174,8 @@ async function verifyWallet(userId, walletAddress) {
         }
 
         console.log('Cache miss for wallet:', walletAddress);
-        const connection = new Connection(getNextRpcEndpoint());
+        const endpoint = getNextEndpoint();
+        const connection = createConnection(endpoint);
         
         // Add delay between RPC calls
         await sleep(RATE_LIMIT_DELAY);
