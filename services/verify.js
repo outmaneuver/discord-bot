@@ -275,8 +275,11 @@ async function updateDiscordRoles(userId, client) {
             .filter(role => ALL_NFT_ROLES.includes(role.name))
             .map(role => role.name);
 
+        // Convert shouldHaveRoles array to Set for faster lookups
+        const shouldHaveRolesSet = new Set(shouldHaveRoles);
+
         // Add missing NFT roles
-        for (const roleName of shouldHaveRoles) {
+        for (const roleName of shouldHaveRolesSet) {
             if (!currentNftRoleNames.includes(roleName)) {
                 const role = guild.roles.cache.find(r => r.name === roleName);
                 if (role) {
@@ -288,7 +291,7 @@ async function updateDiscordRoles(userId, client) {
 
         // Remove extra NFT roles
         for (const roleName of currentNftRoleNames) {
-            if (!shouldHaveRoles.includes(roleName)) {
+            if (!shouldHaveRolesSet.has(roleName)) {
                 const role = guild.roles.cache.find(r => r.name === roleName);
                 if (role) {
                     rolesToRemove.push(role);
@@ -302,8 +305,11 @@ async function updateDiscordRoles(userId, client) {
             .filter(role => Object.keys(BUX_ROLES).includes(role.id))
             .map(role => role.id);
 
+        // Convert buxRoleIds array to Set for faster lookups
+        const buxRoleIdsSet = new Set(buxRoleIds);
+
         // Add missing BUX roles
-        for (const roleId of buxRoleIds) {
+        for (const roleId of buxRoleIdsSet) {
             if (!currentBuxRoleIds.includes(roleId)) {
                 const role = guild.roles.cache.get(roleId);
                 if (role) {
@@ -315,7 +321,7 @@ async function updateDiscordRoles(userId, client) {
 
         // Remove extra BUX roles
         for (const roleId of currentBuxRoleIds) {
-            if (!buxRoleIds.has(roleId)) {
+            if (!buxRoleIdsSet.has(roleId)) {
                 const role = guild.roles.cache.get(roleId);
                 if (role) {
                     rolesToRemove.push(role);
