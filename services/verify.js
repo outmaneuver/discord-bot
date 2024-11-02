@@ -74,7 +74,6 @@ const RPC_TIMEOUT = 10000; // 10 second timeout
 
 // Add connection pool and caching
 const CONNECTION_POOL = [];
-const CACHE_TTL = 300; // 5 minutes
 const MAX_POOL_SIZE = 3;
 
 // Initialize connection pool
@@ -87,29 +86,51 @@ function getConnection() {
     return CONNECTION_POOL[Math.floor(Math.random() * CONNECTION_POOL.length)];
 }
 
-// Update verifyWallet function with better caching and connection handling
+// Add cache management constants
+const CACHE_KEYS = {
+    WALLET: 'wallet:',
+    BUX_BALANCE: 'bux:',
+    NFT_ACCOUNTS: 'nft:',
+    DAILY_REWARD: 'daily_reward:'
+};
+
+// Single CACHE_TTL object with all TTL values
+const CACHE_TTL = {
+    WALLET: 60,        // 1 minute for full wallet data
+    BUX_BALANCE: 30,   // 30 seconds for BUX balance
+    NFT_ACCOUNTS: 45,  // 45 seconds for NFT data
+    DAILY_REWARD: 300  // 5 minutes for daily reward calculation
+};
+
+// Update verifyWallet to always check BUX balance
 async function verifyWallet(userId, walletAddress) {
     try {
         console.log(`Checking wallet ${walletAddress} for user ${userId}`);
         
-        // Check cache first
-        const cacheKey = `wallet:${walletAddress}`;
-        const cached = await redis.get(cacheKey);
-        if (cached) {
-            console.log('Using cached wallet data');
-            return JSON.parse(cached);
-        }
-
-        // Get BUX balance and NFTs in parallel with single connection
-        const connection = getConnection();
-        const [buxBalance, nftAccounts] = await Promise.all([
-            getBUXBalance(walletAddress),
-            getNFTAccounts(walletAddress, connection)
-        ]);
-
+        // Always get fresh BUX balance
+        const buxBalance = await getBUXBalance(walletAddress);
         console.log(`BUX balance for ${walletAddress}:`, buxBalance);
 
-        // Count NFTs
+        // Check NFT cache with shorter TTL
+        const nftCacheKey = `${CACHE_KEYS.NFT_ACCOUNTS}${walletAddress}`;
+        let nftAccounts = null;
+        const cachedNFTs = await redis.get(nftCacheKey);
+
+        if (cachedNFTs) {
+            console.log('Using cached NFT data');
+            nftAccounts = JSON.parse(cachedNFTs);
+        } else {
+            // Get fresh NFT data if not cached
+            const connection = getConnection();
+            nftAccounts = await getNFTAccounts(walletAddress, connection);
+            
+            // Cache NFT data with shorter TTL
+            if (nftAccounts?.value) {
+                await redis.setex(nftCacheKey, CACHE_TTL.NFT_ACCOUNTS, JSON.stringify(nftAccounts));
+            }
+        }
+
+        // Process NFT counts
         const nftCounts = {
             fcked_catz: 0,
             celebcatz: 0,
@@ -141,17 +162,23 @@ async function verifyWallet(userId, walletAddress) {
             }
         }
 
+        // Get daily reward from cache or calculate
+        const rewardCacheKey = `${CACHE_KEYS.DAILY_REWARD}${walletAddress}`;
+        let dailyReward = await redis.get(rewardCacheKey);
+
+        if (!dailyReward) {
+            dailyReward = await calculateDailyReward(nftCounts);
+            await redis.setex(rewardCacheKey, CACHE_TTL.DAILY_REWARD, dailyReward.toString());
+        }
+
         const result = {
             success: true,
             data: {
                 nftCounts,
                 buxBalance,
-                dailyReward: await calculateDailyReward(nftCounts)
+                dailyReward: parseInt(dailyReward)
             }
         };
-
-        // Cache the result
-        await redis.setex(cacheKey, CACHE_TTL, JSON.stringify(result));
 
         return result;
 
@@ -159,6 +186,34 @@ async function verifyWallet(userId, walletAddress) {
         console.error('Error in verifyWallet:', error);
         throw error;
     }
+}
+
+// Add helper functions for cached data retrieval
+async function getCachedBuxBalance(walletAddress) {
+    const cacheKey = `${CACHE_KEYS.BUX_BALANCE}${walletAddress}`;
+    const cached = await redis.get(cacheKey);
+    
+    if (cached) {
+        return parseFloat(cached);
+    }
+
+    const balance = await getBUXBalance(walletAddress);
+    await redis.setex(cacheKey, CACHE_TTL.BUX_BALANCE, balance.toString());
+    return balance;
+}
+
+async function getCachedNFTAccounts(walletAddress) {
+    const cacheKey = `${CACHE_KEYS.NFT_ACCOUNTS}${walletAddress}`;
+    const cached = await redis.get(cacheKey);
+    
+    if (cached) {
+        return JSON.parse(cached);
+    }
+
+    const connection = getConnection();
+    const accounts = await getNFTAccounts(walletAddress, connection);
+    await redis.setex(cacheKey, CACHE_TTL.NFT_ACCOUNTS, JSON.stringify(accounts));
+    return accounts;
 }
 
 // Add separate function for NFT account fetching with retries
