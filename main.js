@@ -13,7 +13,7 @@ import { promises as fs } from 'fs';
 import cookieParser from 'cookie-parser';
 
 import { 
-  verifyHolder, 
+  verifyWallet,
   updateDiscordRoles,
   updateHashlists,
   getBUXBalance,
