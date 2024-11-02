@@ -57,7 +57,11 @@ let hashlistsData = {
   mm3dTop10: new Set()
 };
 
-// Function to load hashlist from JSON file
+// Add caching for hashlist loading
+const HASHLIST_CACHE_KEY = 'hashlists:loaded';
+const HASHLIST_CACHE_TTL = 3600; // 1 hour
+
+// Function to load hashlist from JSON file with caching
 async function loadHashlist(filename) {
   try {
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -70,6 +74,14 @@ async function loadHashlist(filename) {
       filePath = path.join(__dirname, 'config', 'hashlists', filename);
     }
     
+    // Check cache first
+    const cacheKey = `hashlist:${filename}`;
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      console.log(`Using cached hashlist for ${filename}`);
+      return new Set(JSON.parse(cached));
+    }
+    
     console.log('Loading hashlist:', filePath);
     const data = await fs.readFile(filePath, 'utf8');
     const jsonData = JSON.parse(data);
@@ -80,6 +92,10 @@ async function loadHashlist(filename) {
                      Object.keys(jsonData);
                      
     console.log(`Loaded ${addresses.length} addresses from ${filename}`);
+
+    // Cache the addresses
+    await redis.setex(cacheKey, HASHLIST_CACHE_TTL, JSON.stringify(addresses));
+    
     return new Set(addresses);
   } catch (error) {
     console.error(`Error loading hashlist ${filename}:`, error);
@@ -130,15 +146,17 @@ async function startApp() {
       }
     }));
 
-    // Add session debug middleware
-    app.use((req, res, next) => {
-      console.log('Session Debug:', {
-        id: req.sessionID,
-        user: req.session?.user,
-        cookies: req.cookies
+    // Add session debug middleware in development
+    if (process.env.NODE_ENV !== 'production') {
+      app.use((req, res, next) => {
+        console.log('Session Debug:', {
+          id: req.sessionID,
+          user: req.session?.user,
+          cookies: req.cookies
+        });
+        next();
       });
-      next();
-    });
+    }
 
     // Add trust proxy setting
     app.set('trust proxy', 1);
@@ -188,35 +206,59 @@ async function startApp() {
     });
 
     // Start server
-    app.listen(port, () => {
+    const server = app.listen(port, () => {
       console.log(`Server running on port ${port}`);
       console.log('Server started successfully');
+    });
+
+    // Add graceful shutdown
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM received. Shutting down gracefully...');
+      server.close(() => {
+        console.log('Server closed');
+        redis.quit();
+        process.exit(0);
+      });
     });
 
     // Load hashlists
     console.log('Loading hashlists...');
     
-    // Load each hashlist
-    const hashlistFiles = {
-      fckedCatz: 'fcked_catz.json',
-      celebCatz: 'celebcatz.json',
-      moneyMonsters: 'money_monsters.json',
-      moneyMonsters3d: 'money_monsters3d.json',
-      aiBitbots: 'ai_bitbots.json',
-      mmTop10: 'MM_top10.json',
-      mm3dTop10: 'MM3D_top10.json',
-      warriors: 'ai_collabs/warriors.json',
-      squirrels: 'ai_collabs/squirrels.json',
-      rjctdBots: 'ai_collabs/rjctd_bots.json',
-      energyApes: 'ai_collabs/energy_apes.json',
-      doodleBots: 'ai_collabs/doodle_bot.json',
-      candyBots: 'ai_collabs/candy_bots.json'
-    };
+    // Check if hashlists are already cached
+    const hashlistsCached = await redis.get(HASHLIST_CACHE_KEY);
+    if (hashlistsCached) {
+      console.log('Using cached hashlists');
+      hashlistsData = JSON.parse(hashlistsCached);
+    } else {
+      // Load each hashlist
+      const hashlistFiles = {
+        fckedCatz: 'fcked_catz.json',
+        celebCatz: 'celebcatz.json',
+        moneyMonsters: 'money_monsters.json',
+        moneyMonsters3d: 'money_monsters3d.json',
+        aiBitbots: 'ai_bitbots.json',
+        mmTop10: 'MM_top10.json',
+        mm3dTop10: 'MM3D_top10.json',
+        warriors: 'ai_collabs/warriors.json',
+        squirrels: 'ai_collabs/squirrels.json',
+        rjctdBots: 'ai_collabs/rjctd_bots.json',
+        energyApes: 'ai_collabs/energy_apes.json',
+        doodleBots: 'ai_collabs/doodle_bot.json',
+        candyBots: 'ai_collabs/candy_bots.json'
+      };
 
-    for (const [key, filename] of Object.entries(hashlistFiles)) {
-      console.log('Loading hashlist:', filename);
-      hashlistsData[key] = await loadHashlist(filename);
-      console.log(`Loaded ${hashlistsData[key].size} addresses from ${filename}`);
+      for (const [key, filename] of Object.entries(hashlistFiles)) {
+        console.log('Loading hashlist:', filename);
+        hashlistsData[key] = await loadHashlist(filename);
+        console.log(`Loaded ${hashlistsData[key].size} addresses from ${filename}`);
+      }
+
+      // Cache the loaded hashlists
+      await redis.setex(
+        HASHLIST_CACHE_KEY,
+        HASHLIST_CACHE_TTL,
+        JSON.stringify(hashlistsData)
+      );
     }
 
     // Log loaded hashlist sizes
@@ -251,89 +293,17 @@ async function startApp() {
       ]
     });
 
-    // Add message event handler
-    client.on('messageCreate', async (message) => {
-      try {
-        if (message.author.bot) return;
+    // Add Discord client error handling
+    client.on('error', error => {
+      console.error('Discord client error:', error);
+    });
 
-        if (message.content.startsWith('=')) {
-          const command = message.content.slice(1).toLowerCase();
-
-          // Check if command is a my.* command
-          if (command.startsWith('my.')) {
-            // Check if user has verified wallets
-            const walletData = await getWalletData(message.author.id);
-            if (!walletData.walletAddresses.length) {
-              const verifyUrl = process.env.SIGN_IN_URL || 'https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify';
-              return await message.channel.send(
-                `Please verify your wallet first at ${verifyUrl} before using profile commands.`
-              );
-            }
-          }
-
-          switch (command) {
-            case 'my.profile':
-              await updateUserProfile(message.channel, message.author.id, client);
-              break;
-
-            case 'my.wallet':
-              await displayWallets(message.channel, message.author.id);
-              break;
-
-            case 'my.nfts':
-              await displayNFTs(message.channel, message.author.id, client);
-              break;
-
-            case 'my.roles':
-              await displayRoles(message.channel, message.author.id, client);
-              break;
-
-            case 'my.bux':
-              await displayBuxBalance(message.channel, message.author.id, client);
-              break;
-
-            case 'help':
-              await displayHelp(message.channel);
-              break;
-
-            case 'info.catz':
-              await displayCatzInfo(message.channel);
-              break;
-
-            case 'info.mm':
-              await displayMMInfo(message.channel);
-              break;
-
-            case 'info.mm3d':
-              await displayMM3DInfo(message.channel);
-              break;
-
-            case 'info.celeb':
-              await displayCelebInfo(message.channel);
-              break;
-
-            case 'info.bots':
-              await displayBitbotsInfo(message.channel);
-              break;
-
-            case 'rewards':
-              await displayRewards(message.channel);
-              break;
-
-            case 'info.bux':
-              await displayBuxInfo(message.channel);
-              break;
-          }
-        }
-      } catch (error) {
-        console.error('Error handling message:', error);
-        await message.channel.send('An error occurred while processing your command. Please try again later.');
-      }
+    client.on('ready', () => {
+      console.log('Discord bot logged in');
     });
 
     // Login to Discord
     await client.login(config.discord.token);
-    console.log('Discord bot logged in');
 
     // After creating Discord client
     global.discordClient = client;
@@ -345,7 +315,10 @@ async function startApp() {
 }
 
 // Start the application
-startApp();
+startApp().catch(error => {
+  console.error('Fatal error starting application:', error);
+  process.exit(1);
+});
 
 // Handle process errors
 process.on('uncaughtException', (error) => {
