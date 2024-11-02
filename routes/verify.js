@@ -8,12 +8,52 @@ const router = express.Router();
 router.post('/verify', async (req, res) => {
   try {
     if (!req.session.user) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Not authenticated',
+        data: {
+          nftCounts: {
+            fcked_catz: 0,
+            celebcatz: 0,
+            money_monsters: 0,
+            money_monsters3d: 0,
+            ai_bitbots: 0,
+            warriors: 0,
+            squirrels: 0,
+            rjctd_bots: 0,
+            energy_apes: 0,
+            doodle_bots: 0,
+            candy_bots: 0
+          },
+          buxBalance: 0,
+          dailyReward: 0
+        }
+      });
     }
 
     const { walletAddress } = req.body;
     if (!walletAddress) {
-      return res.status(400).json({ error: 'Wallet address required' });
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Wallet address required',
+        data: {
+          nftCounts: {
+            fcked_catz: 0,
+            celebcatz: 0,
+            money_monsters: 0,
+            money_monsters3d: 0,
+            ai_bitbots: 0,
+            warriors: 0,
+            squirrels: 0,
+            rjctd_bots: 0,
+            energy_apes: 0,
+            doodle_bots: 0,
+            candy_bots: 0
+          },
+          buxBalance: 0,
+          dailyReward: 0
+        }
+      });
     }
 
     console.log('Verifying wallet:', {
@@ -23,21 +63,17 @@ router.post('/verify', async (req, res) => {
 
     // Verify the wallet first
     const result = await verifyWallet(req.session.user.id, walletAddress);
-    
-    // Format response before role update
-    const response = {
+
+    // Send success response immediately
+    res.json({
       success: true,
       message: 'Wallet verified successfully',
       data: {
-        nftCounts: result.data.nftCounts,
-        buxBalance: result.data.buxBalance,
-        dailyReward: result.data.dailyReward
-      },
-      formattedResponse: result.formattedResponse
-    };
-
-    // Send success response immediately
-    res.json(response);
+        nftCounts: result.nftCounts,
+        buxBalance: result.buxBalance,
+        dailyReward: result.dailyReward
+      }
+    });
 
     // Update Discord roles in background
     updateDiscordRoles(req.session.user.id, global.discordClient)
