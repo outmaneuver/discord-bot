@@ -129,9 +129,29 @@ async function updateDiscordRoles(userId, client) {
         const member = await guild.members.fetch(userId);
         if (!member) throw new Error('Member not found');
 
+        // Define all possible NFT roles
+        const ALL_NFT_ROLES = [
+            'Fcked Catz Holder',
+            'Celeb Catz Holder',
+            'Money Monsters Holder',
+            '3D Monsters Holder',
+            'AI Bitbots Holder',
+            'Warriors Holder',
+            'Squirrels Holder',
+            'RJCTD Bots Holder',
+            'Energy Apes Holder',
+            'Doodle Bots Holder',
+            'Candy Bots Holder'
+        ];
+
+        // Get current NFT counts
         const wallets = await redis.smembers(`wallets:${userId}`);
         if (!wallets || wallets.length === 0) {
-            throw new Error('No wallets found for user');
+            // Remove all NFT roles if no wallets connected
+            const rolesToRemove = member.roles.cache
+                .filter(role => ALL_NFT_ROLES.includes(role.name));
+            await member.roles.remove(rolesToRemove);
+            return { success: true, nftCounts: {}, roles: [] };
         }
 
         const nftCounts = {
@@ -158,25 +178,61 @@ async function updateDiscordRoles(userId, client) {
             }
         }
 
-        // Update roles based on NFT counts
-        const roles = new Set();
-        if (nftCounts.fcked_catz > 0) roles.add('Fcked Catz Holder');
-        if (nftCounts.celebcatz > 0) roles.add('Celeb Catz Holder');
-        if (nftCounts.money_monsters > 0) roles.add('Money Monsters Holder');
-        if (nftCounts.money_monsters3d > 0) roles.add('3D Monsters Holder');
-        if (nftCounts.ai_bitbots > 0) roles.add('AI Bitbots Holder');
+        // Determine which roles the user should have
+        const shouldHaveRoles = new Set();
+        if (nftCounts.fcked_catz > 0) shouldHaveRoles.add('Fcked Catz Holder');
+        if (nftCounts.celebcatz > 0) shouldHaveRoles.add('Celeb Catz Holder');
+        if (nftCounts.money_monsters > 0) shouldHaveRoles.add('Money Monsters Holder');
+        if (nftCounts.money_monsters3d > 0) shouldHaveRoles.add('3D Monsters Holder');
+        if (nftCounts.ai_bitbots > 0) shouldHaveRoles.add('AI Bitbots Holder');
+        if (nftCounts.warriors > 0) shouldHaveRoles.add('Warriors Holder');
+        if (nftCounts.squirrels > 0) shouldHaveRoles.add('Squirrels Holder');
+        if (nftCounts.rjctd_bots > 0) shouldHaveRoles.add('RJCTD Bots Holder');
+        if (nftCounts.energy_apes > 0) shouldHaveRoles.add('Energy Apes Holder');
+        if (nftCounts.doodle_bots > 0) shouldHaveRoles.add('Doodle Bots Holder');
+        if (nftCounts.candy_bots > 0) shouldHaveRoles.add('Candy Bots Holder');
 
-        // Update member roles
-        const guildRoles = Array.from(roles).map(roleName => 
-            guild.roles.cache.find(role => role.name === roleName)
-        ).filter(role => role);
+        // Get current roles
+        const currentRoles = new Set(
+            member.roles.cache
+                .filter(role => ALL_NFT_ROLES.includes(role.name))
+                .map(role => role.name)
+        );
 
-        await member.roles.set(guildRoles);
+        // Determine roles to add and remove
+        const rolesToAdd = [...shouldHaveRoles].filter(role => !currentRoles.has(role));
+        const rolesToRemove = [...currentRoles].filter(role => !shouldHaveRoles.has(role));
+
+        // Log role changes
+        console.log('Role updates for', member.user.username, {
+            adding: rolesToAdd,
+            removing: rolesToRemove
+        });
+
+        // Perform role updates
+        const rolePromises = [];
+        
+        if (rolesToAdd.length > 0) {
+            const addRoles = rolesToAdd
+                .map(roleName => guild.roles.cache.find(r => r.name === roleName))
+                .filter(role => role); // Remove any undefined roles
+            rolePromises.push(member.roles.add(addRoles));
+        }
+        
+        if (rolesToRemove.length > 0) {
+            const removeRoles = rolesToRemove
+                .map(roleName => guild.roles.cache.find(r => r.name === roleName))
+                .filter(role => role); // Remove any undefined roles
+            rolePromises.push(member.roles.remove(removeRoles));
+        }
+
+        // Wait for all role updates to complete
+        await Promise.all(rolePromises);
 
         return {
             success: true,
             nftCounts,
-            roles: Array.from(roles)
+            roles: Array.from(shouldHaveRoles)
         };
 
     } catch (error) {
