@@ -52,22 +52,18 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Update RPC endpoints with API keys and better error handling
 const RPC_ENDPOINTS = [
-    { 
-        url: process.env.SOLANA_RPC_URL, 
+    {
+        url: process.env.SOLANA_RPC_URL,
         weight: 10,
-        headers: {
+        headers: process.env.SOLANA_RPC_API_KEY ? {
             'x-api-key': process.env.SOLANA_RPC_API_KEY
-        }
+        } : undefined
     },
-    { 
-        url: 'https://api.mainnet-beta.solana.com', 
+    {
+        url: 'https://api.mainnet-beta.solana.com',
         weight: 5
-    },
-    { 
-        url: 'https://solana-api.projectserum.com', 
-        weight: 3
     }
-].filter(endpoint => endpoint.url); // Remove any undefined endpoints
+].filter(endpoint => endpoint.url);
 
 let currentRpcIndex = 0;
 const RPC_TIMEOUT = 10000; // 10 second timeout
@@ -174,22 +170,33 @@ async function verifyWallet(userId, walletAddress) {
         }
 
         console.log('Cache miss for wallet:', walletAddress);
-        const endpoint = getNextEndpoint();
-        const connection = createConnection(endpoint);
         
-        // Add delay between RPC calls
-        await sleep(RATE_LIMIT_DELAY);
+        // Create initial connection
+        let connection = createConnection();
+        
+        // Get NFT accounts with retries
+        let nftAccounts;
+        let retryCount = 0;
+        
+        while (retryCount < MAX_RETRIES) {
+            try {
+                await sleep(RATE_LIMIT_DELAY);
+                nftAccounts = await connection.getParsedTokenAccountsByOwner(
+                    new PublicKey(walletAddress),
+                    { programId: TOKEN_PROGRAM_ID }
+                );
+                break;
+            } catch (error) {
+                retryCount++;
+                if (retryCount === MAX_RETRIES) throw error;
+                
+                console.log(`RPC error (attempt ${retryCount}/${MAX_RETRIES}):`, error.message);
+                connection = createConnection(); // Try next endpoint
+                await sleep(Math.min(1000 * Math.pow(2, retryCount), 8000));
+            }
+        }
 
-        // Get NFTs with retry and longer backoff
-        const nftAccounts = await retryWithBackoff(
-            () => connection.getParsedTokenAccountsByOwner(
-                new PublicKey(walletAddress),
-                { programId: TOKEN_PROGRAM_ID }
-            ),
-            5, // More retries
-            8000 // Longer max delay
-        );
-
+        // Process NFT accounts
         const nftCounts = {
             fcked_catz: 0,
             celebcatz: 0,
@@ -204,48 +211,30 @@ async function verifyWallet(userId, walletAddress) {
             candy_bots: 0
         };
 
-        // Check each NFT
+        // Count NFTs
         for (const account of nftAccounts.value) {
-            const tokenAmount = account.account.data.parsed.info.tokenAmount;
-            const mintAddress = account.account.data.parsed.info.mint;
-
-            if (tokenAmount.amount === "1" && tokenAmount.decimals === 0) {
-                if (hashlists.fckedCatz.has(mintAddress)) nftCounts.fcked_catz++;
-                if (hashlists.celebCatz.has(mintAddress)) nftCounts.celebcatz++;
-                if (hashlists.moneyMonsters.has(mintAddress)) nftCounts.money_monsters++;
-                if (hashlists.moneyMonsters3d.has(mintAddress)) nftCounts.money_monsters3d++;
-                if (hashlists.aiBitbots.has(mintAddress)) nftCounts.ai_bitbots++;
-                if (hashlists.warriors.has(mintAddress)) nftCounts.warriors++;
-                if (hashlists.squirrels.has(mintAddress)) nftCounts.squirrels++;
-                if (hashlists.rjctdBots.has(mintAddress)) nftCounts.rjctd_bots++;
-                if (hashlists.energyApes.has(mintAddress)) nftCounts.energy_apes++;
-                if (hashlists.doodleBots.has(mintAddress)) nftCounts.doodle_bots++;
-                if (hashlists.candyBots.has(mintAddress)) nftCounts.candy_bots++;
-            }
+            const mint = account.account.data.parsed.info.mint;
+            if (hashlists.fckedCatz.has(mint)) nftCounts.fcked_catz++;
+            if (hashlists.celebCatz.has(mint)) nftCounts.celebcatz++;
+            if (hashlists.moneyMonsters.has(mint)) nftCounts.money_monsters++;
+            if (hashlists.moneyMonsters3d.has(mint)) nftCounts.money_monsters3d++;
+            if (hashlists.aiBitbots.has(mint)) nftCounts.ai_bitbots++;
+            if (hashlists.warriors.has(mint)) nftCounts.warriors++;
+            if (hashlists.squirrels.has(mint)) nftCounts.squirrels++;
+            if (hashlists.rjctdBots.has(mint)) nftCounts.rjctd_bots++;
+            if (hashlists.energyApes.has(mint)) nftCounts.energy_apes++;
+            if (hashlists.doodleBots.has(mint)) nftCounts.doodle_bots++;
+            if (hashlists.candyBots.has(mint)) nftCounts.candy_bots++;
         }
 
-        // Get BUX balance
-        const buxAccounts = await connection.getParsedTokenAccountsByOwner(
-            new PublicKey(walletAddress),
-            { mint: new PublicKey(BUX_TOKEN_MINT) }
-        );
+        // Calculate daily reward
+        const dailyReward = await calculateDailyReward(nftCounts);
 
-        let buxBalance = 0;
-        for (const account of buxAccounts.value) {
-            const tokenAmount = account.account.data.parsed.info.tokenAmount;
-            if (tokenAmount.decimals === 9) {
-                buxBalance += Number(tokenAmount.uiAmount);
-            }
-        }
-
-        const dailyReward = await calculateDailyReward(nftCounts, buxBalance);
-
-        // Cache the result
+        // Cache results
         const result = {
             success: true,
             data: {
                 nftCounts,
-                buxBalance,
                 dailyReward
             }
         };
