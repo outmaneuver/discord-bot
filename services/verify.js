@@ -225,23 +225,32 @@ async function verifyWallet(userId, walletAddress) {
         // Format the response
         const response = {
             success: true,
+            message: 'Wallet verified successfully',
             data: {
-                nftCounts: result.nftCounts || {
-                    fcked_catz: 0,
-                    celebcatz: 0,
-                    money_monsters: 0,
-                    money_monsters3d: 0,
-                    ai_bitbots: 0,
-                    warriors: 0,
-                    squirrels: 0,
-                    rjctd_bots: 0,
-                    energy_apes: 0,
-                    doodle_bots: 0,
-                    candy_bots: 0
-                },
-                buxBalance: result.buxBalance || 0,
-                dailyReward: dailyReward || 0
-            }
+                nftCounts: result.nftCounts,
+                buxBalance: result.buxBalance,
+                dailyReward
+            },
+            formattedResponse: `
+                **Wallet Verification Successful!**
+                
+                VERIFIED NFTs
+               
+                Fcked Catz - ${result.nftCounts.fcked_catz}
+                Celeb Catz - ${result.nftCounts.celebcatz}
+                Monsters - ${result.nftCounts.money_monsters}
+                3D Monsters - ${result.nftCounts.money_monsters3d}
+                BitBots - ${result.nftCounts.ai_bitbots}
+                
+                A.I. collabs - ${(result.nftCounts.warriors || 0) + 
+                                (result.nftCounts.squirrels || 0) + 
+                                (result.nftCounts.rjctd_bots || 0) + 
+                                (result.nftCounts.energy_apes || 0) + 
+                                (result.nftCounts.doodle_bots || 0) + 
+                                (result.nftCounts.candy_bots || 0)}
+
+                **Daily reward - ${dailyReward} BUX**
+            `
         };
 
         return response;
