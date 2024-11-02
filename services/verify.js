@@ -3,6 +3,28 @@ import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { redis } from '../config/redis.js';
 import { calculateDailyReward } from './rewards.js';
 
+// Add constants at the top of the file
+const ALL_NFT_ROLES = [
+    'Fcked Catz Holder',
+    'Celeb Catz Holder',
+    'Money Monsters Holder',
+    '3D Monsters Holder',
+    'AI Bitbots Holder',
+    'Warriors Holder',
+    'Squirrels Holder',
+    'RJCTD Bots Holder',
+    'Energy Apes Holder',
+    'Doodle Bots Holder',
+    'Candy Bots Holder'
+];
+
+const BUX_ROLES = {
+    [process.env.ROLE_ID_2500_BUX]: 2500,
+    [process.env.ROLE_ID_10000_BUX]: 10000,
+    [process.env.ROLE_ID_25000_BUX]: 25000,
+    [process.env.ROLE_ID_50000_BUX]: 50000
+};
+
 let hashlists = {
     fckedCatz: new Set(),
     celebCatz: new Set(),
