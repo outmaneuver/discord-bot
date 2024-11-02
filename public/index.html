@@ -507,7 +507,72 @@
                             credentials: 'include'
                         });
 
-                        // Handle the response
+                        // Handle different response statuses
+                        if (verifyResponse.status === 503) {
+                            // Keep checking for completion every 5 seconds
+                            const checkStatus = async () => {
+                                try {
+                                    const statusResponse = await fetch('/holder-verify/verify', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({ 
+                                            walletAddress,
+                                            walletType: walletName
+                                        }),
+                                        credentials: 'include'
+                                    });
+
+                                    if (statusResponse.ok) {
+                                        const data = await statusResponse.json();
+                                        if (data.success) {
+                                            // Clear loading status
+                                            status.textContent = '';
+                                            
+                                            // Show verification result
+                                            const formattedResponse = `<div class="verification-container">
+✓ Wallet Verification Successful!
+
+VERIFIED NFTs
+
+Fcked Catz - ${data.data.nftCounts.fcked_catz}
+Celeb Catz - ${data.data.nftCounts.celebcatz}
+Monsters - ${data.data.nftCounts.money_monsters}
+3D Monsters - ${data.data.nftCounts.money_monsters3d}
+BitBots - ${data.data.nftCounts.ai_bitbots}
+A.I. collabs - ${data.data.nftCounts.warriors + data.data.nftCounts.squirrels + data.data.nftCounts.rjctd_bots + data.data.nftCounts.energy_apes + data.data.nftCounts.doodle_bots + data.data.nftCounts.candy_bots}
+
+Daily reward - ${data.data.dailyReward} BUX</div>`;
+
+                                            document.getElementById('verificationResult').innerHTML = formattedResponse;
+                                            document.getElementById('closeMessage').style.display = 'block';
+                                            
+                                            // Update button state
+                                            connectButton.classList.remove('loading');
+                                            connectButton.textContent = 'Connected';
+                                            connectButton.disabled = true;
+                                            
+                                            // Hide wallet info
+                                            walletInfo.style.display = 'none';
+                                            return;
+                                        }
+                                    } else if (statusResponse.status === 503) {
+                                        // Keep checking
+                                        setTimeout(checkStatus, 5000);
+                                    }
+                                } catch (error) {
+                                    console.error('Status check error:', error);
+                                    setTimeout(checkStatus, 5000);
+                                }
+                            };
+
+                            // Start checking status
+                            setTimeout(checkStatus, 5000);
+                            return;
+                        }
+
+                        // Handle successful response
                         if (verifyResponse.ok) {
                             const data = await verifyResponse.json();
                             if (data.success) {
@@ -540,9 +605,6 @@ Daily reward - ${data.data.dailyReward} BUX</div>`;
                                 // Hide wallet info
                                 walletInfo.style.display = 'none';
                             }
-                        } else if (verifyResponse.status === 503) {
-                            // Keep showing "in progress" for timeouts
-                            status.textContent = 'NFT check in progress... This may take a few minutes';
                         } else {
                             throw new Error('Verification failed');
                         }
