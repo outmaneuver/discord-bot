@@ -216,120 +216,70 @@ function getDisplayName(collection) {
 
 async function verifyWallet(userId, walletAddress) {
     try {
-        // First check Redis cache
-        const cacheKey = `verify:${userId}:${walletAddress}`;
-        let cachedResult;
-        try {
-            const cachedData = await redis.get(cacheKey);
-            if (cachedData) {
-                console.log('Using cached verification result');
-                cachedResult = JSON.parse(cachedData);
-            }
-        } catch (cacheError) {
-            console.error('Cache read error:', cacheError);
-            // Delete the problematic key
-            await redis.del(cacheKey);
-        }
-
-        if (cachedResult) return cachedResult;
-
-        // Get NFT counts and BUX balance in parallel with retries
-        const [nftCounts, buxBalance] = await Promise.all([
-            retryWithBackoff(async () => {
-                // Check cache first
-                const nftCacheKey = `nfts:${walletAddress}`;
-                try {
-                    const cachedNfts = await redis.get(nftCacheKey);
-                    if (cachedNfts) {
-                        console.log('Using cached NFT counts');
-                        return JSON.parse(cachedNfts);
-                    }
-                } catch (error) {
-                    console.error('NFT cache error:', error);
-                    await redis.del(nftCacheKey);
-                }
-
-                const counts = await verifyHolder(walletAddress);
-                // Cache NFT counts for 1 hour
-                await redis.setex(nftCacheKey, 3600, JSON.stringify(counts));
-                return counts;
-            }, 3),
-            retryWithBackoff(async () => {
-                // Check cache first
-                const buxCacheKey = `bux:${walletAddress}`;
-                try {
-                    const cachedBux = await redis.get(buxCacheKey);
-                    if (cachedBux) {
-                        console.log('Using cached BUX balance');
-                        return parseInt(cachedBux);
-                    }
-                } catch (error) {
-                    console.error('BUX cache error:', error);
-                    await redis.del(buxCacheKey);
-                }
-
-                const balance = await getBUXBalance(walletAddress);
-                // Cache BUX balance for 5 minutes
-                await redis.setex(buxCacheKey, 300, balance.toString());
-                return balance;
-            }, 3)
-        ]);
-
-        const result = {
-            success: true,
-            nftCounts,
-            buxBalance
+        // Verify the wallet
+        const result = await verifyHolder(walletAddress);
+        
+        // Format the response
+        const nftCounts = {
+            fcked_catz: 0,
+            celebcatz: 0,
+            money_monsters: 0,
+            money_monsters3d: 0,
+            ai_bitbots: 0,
+            warriors: 0,
+            squirrels: 0,
+            rjctd_bots: 0,
+            energy_apes: 0,
+            doodle_bots: 0,
+            candy_bots: 0,
+            ...result.nftCounts // Spread any found NFTs
         };
 
-        // Update daily reward timer after successful verification
-        try {
-            const { startOrUpdateDailyTimer, calculateDailyReward } = await import('./rewards.js');
-            const dailyReward = await calculateDailyReward(nftCounts);
-            console.log('Daily reward calculation:', {
-                nftCounts,
-                dailyReward
-            });
-            await startOrUpdateDailyTimer(userId, nftCounts);
+        // Calculate daily reward
+        const dailyReward = await calculateDailyReward(nftCounts, result.buxBalance || 0);
 
-            // Format the response message with the calculated daily reward
-            result.formattedResponse = `
-      **Wallet Verification Successful!**
-      
-      VERIFIED NFTs
-     
-      Fcked Catz - ${nftCounts.fcked_catz}
-      Celeb Catz - ${nftCounts.celebcatz}
-      Monsters - ${nftCounts.money_monsters}
-      3D Monsters - ${nftCounts.money_monsters3d}
-      BitBots - ${nftCounts.ai_bitbots}
-      
-      A.I. collabs - ${nftCounts.warriors + nftCounts.squirrels + nftCounts.rjctd_bots + 
-                      nftCounts.energy_apes + nftCounts.doodle_bots + nftCounts.candy_bots}
+        return {
+            success: true,
+            nftCounts,
+            buxBalance: result.buxBalance || 0,
+            dailyReward,
+            formattedResponse: `
+                **Wallet Verification Complete**
+                
+                VERIFIED NFTs
+                
+                Fcked Catz - ${nftCounts.fcked_catz}
+                Celeb Catz - ${nftCounts.celebcatz}
+                Monsters - ${nftCounts.money_monsters}
+                3D Monsters - ${nftCounts.money_monsters3d}
+                BitBots - ${nftCounts.ai_bitbots}
+                
+                A.I. collabs - ${nftCounts.warriors + nftCounts.squirrels + 
+                               nftCounts.rjctd_bots + nftCounts.energy_apes + 
+                               nftCounts.doodle_bots + nftCounts.candy_bots}
 
-      **Daily reward - ${dailyReward || 0} BUX**
-    `;
+                **Daily reward - ${dailyReward} BUX**
+            `
+        };
 
-            result.dailyReward = dailyReward; // Make sure to add it to the result object
-        } catch (error) {
-            console.error('Error updating daily reward:', error);
-            // Set default values if calculation fails
-            result.dailyReward = 0;
-            result.formattedResponse = result.formattedResponse.replace('Daily reward - 0 BUX', 'Error calculating rewards');
-        }
-
-        // Cache final result for 5 minutes
-        try {
-            await redis.setex(cacheKey, 300, JSON.stringify(result));
-        } catch (error) {
-            console.error('Error caching result:', error);
-        }
-
-        return result;
     } catch (error) {
-        console.error('Error verifying wallet:', error);
+        console.error('Verification error:', error);
         return {
             success: false,
-            error: error.message
+            error: error.message,
+            nftCounts: {
+                fcked_catz: 0,
+                celebcatz: 0,
+                money_monsters: 0,
+                money_monsters3d: 0,
+                ai_bitbots: 0,
+                warriors: 0,
+                squirrels: 0,
+                rjctd_bots: 0,
+                energy_apes: 0,
+                doodle_bots: 0,
+                candy_bots: 0
+            }
         };
     }
 }
