@@ -4,7 +4,6 @@ import { redis } from '../config/redis.js';
 
 const router = express.Router();
 
-// Add verify endpoint
 router.post('/verify', async (req, res) => {
   try {
     if (!req.session.user) {
@@ -56,15 +55,8 @@ router.post('/verify', async (req, res) => {
       });
     }
 
-    console.log('Verifying wallet:', {
-      userId: req.session.user.id,
-      walletAddress,
-    });
-
-    // Verify the wallet first
     const result = await verifyWallet(req.session.user.id, walletAddress);
 
-    // Send success response immediately
     res.json({
       success: true,
       message: 'Wallet verified successfully',
@@ -78,11 +70,11 @@ router.post('/verify', async (req, res) => {
     // Update Discord roles in background
     updateDiscordRoles(req.session.user.id, global.discordClient)
       .catch(error => {
-        console.error('Background role update failed:', error);
+        console.error('Background role update failed:', error.message);
       });
 
   } catch (error) {
-    console.error('Error in verify endpoint:', error);
+    console.error('Verify error:', error.message);
     res.status(500).json({ 
       success: false,
       error: 'Failed to verify wallet',
@@ -108,7 +100,6 @@ router.post('/verify', async (req, res) => {
   }
 });
 
-// Update store-wallet endpoint path to match frontend
 router.post('/store-wallet', async (req, res) => {
   try {
     if (!req.session.user) {
@@ -120,15 +111,8 @@ router.post('/store-wallet', async (req, res) => {
       return res.status(400).json({ error: 'Wallet address required' });
     }
 
-    console.log('Storing wallet:', {
-      userId: req.session.user.id,
-      walletAddress,
-    });
-
-    // Store wallet in Redis
     await redis.sadd(`wallets:${req.session.user.id}`, walletAddress);
     
-    // Return success response
     res.json({ 
       success: true,
       message: 'Wallet stored successfully',
@@ -139,7 +123,7 @@ router.post('/store-wallet', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error storing wallet:', error);
+    console.error('Store wallet error:', error.message);
     res.status(500).json({ 
       error: 'Failed to store wallet',
       details: error.message
