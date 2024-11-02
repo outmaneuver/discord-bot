@@ -114,32 +114,23 @@ async function verifyHolder(walletAddress) {
             candy_bots: 0
         };
 
-        // Add debug logging for each hashlist check
-        const hashlistMappings = {
-            fckedCatz: 'fcked_catz',
-            celebCatz: 'celebcatz',
-            moneyMonsters: 'money_monsters',
-            moneyMonsters3d: 'money_monsters3d',
-            aiBitbots: 'ai_bitbots',
-            warriors: 'warriors',
-            squirrels: 'squirrels',
-            rjctdBots: 'rjctd_bots',
-            energyApes: 'energy_apes',
-            doodleBots: 'doodle_bots',
-            candyBots: 'candy_bots'
-        };
-
-        // Check each hashlist and log results
-        for (const [hashlistKey, countKey] of Object.entries(hashlistMappings)) {
-            const hashlist = hashlists[hashlistKey];
-            const hasNFT = hashlist.has(walletAddress);
-            console.log(`Checking ${hashlistKey}:`, {
-                walletAddress,
-                hasNFT,
-                hashlistSize: hashlist.size
+        // Log the wallet address and first few addresses from each hashlist
+        for (const [key, hashlist] of Object.entries(hashlists)) {
+            console.log(`Checking ${key} hashlist:`, {
+                walletToCheck: walletAddress,
+                hashlistSize: hashlist.size,
+                sampleAddresses: Array.from(hashlist).slice(0, 3)
             });
+
+            // Convert both addresses to lowercase for case-insensitive comparison
+            const hasNFT = Array.from(hashlist).some(addr => 
+                addr.toLowerCase() === walletAddress.toLowerCase()
+            );
+
             if (hasNFT) {
-                nftCounts[countKey]++;
+                const countKey = key.replace(/([A-Z])/g, '_$1').toLowerCase().slice(1);
+                nftCounts[countKey] = (nftCounts[countKey] || 0) + 1;
+                console.log(`Found match in ${key}!`);
             }
         }
 
