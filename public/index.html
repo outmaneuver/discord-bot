@@ -402,7 +402,7 @@
                         const walletAddress = resp.publicKey.toString();
                         
                         // Update status to show NFT check is in progress
-                        status.textContent = 'NFT check in progress... Please wait';
+                        status.textContent = 'NFT check in progress... This may take up to 30 seconds';
                         
                         // Store wallet with type
                         const storeResponse = await fetch('/store-wallet', {
@@ -421,8 +421,8 @@
                             throw new Error('Failed to store wallet');
                         }
 
-                        // Verify wallet
-                        const verifyResponse = await fetch('/holder-verify/verify', {
+                        // Add timeout for verify request
+                        const verifyPromise = fetch('/holder-verify/verify', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -433,7 +433,19 @@
                             }),
                             credentials: 'include'
                         });
+
+                        // Set 30 second timeout
+                        const timeoutPromise = new Promise((_, reject) => {
+                            setTimeout(() => reject(new Error('Verification timed out')), 30000);
+                        });
+
+                        // Race between verify and timeout
+                        const verifyResponse = await Promise.race([verifyPromise, timeoutPromise]);
                         
+                        if (!verifyResponse.ok) {
+                            throw new Error('Verification failed');
+                        }
+
                         const data = await verifyResponse.json();
                         
                         if (data.success) {
@@ -475,7 +487,11 @@
                             throw new Error(data.error || 'Verification failed');
                         }
                     } catch (err) {
-                        status.textContent = `Error: ${err.message}`;
+                        let errorMessage = err.message;
+                        if (err.message === 'Verification timed out') {
+                            errorMessage = 'NFT check is taking longer than usual. Please try again in a few minutes.';
+                        }
+                        status.textContent = errorMessage;
                         connectButton.classList.remove('loading');
                         connectButton.disabled = false;
                         connectButton.textContent = 'Connect Wallet';
