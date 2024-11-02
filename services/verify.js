@@ -271,36 +271,56 @@ async function updateDiscordRoles(userId, client) {
         const rolesToRemove = [];
 
         // Check NFT roles
-        for (const roleName of ALL_NFT_ROLES) {
-            const role = guild.roles.cache.find(r => r.name === roleName);
-            if (!role) continue;
+        const currentNftRoleNames = currentRoles
+            .filter(role => ALL_NFT_ROLES.includes(role.name))
+            .map(role => role.name);
 
-            const hasRole = currentRoles.has(role.id);
-            const shouldHaveRole = shouldHaveRoles.has(roleName);
+        // Add missing NFT roles
+        for (const roleName of shouldHaveRoles) {
+            if (!currentNftRoleNames.includes(roleName)) {
+                const role = guild.roles.cache.find(r => r.name === roleName);
+                if (role) {
+                    rolesToAdd.push(role);
+                    console.log(`Adding NFT role ${roleName} to ${member.user.username}`);
+                }
+            }
+        }
 
-            if (shouldHaveRole && !hasRole) {
-                rolesToAdd.push(role);
-                console.log(`Adding NFT role ${roleName} to ${member.user.username}`);
-            } else if (!shouldHaveRole && hasRole) {
-                rolesToRemove.push(role);
-                console.log(`Removing NFT role ${roleName} from ${member.user.username}`);
+        // Remove extra NFT roles
+        for (const roleName of currentNftRoleNames) {
+            if (!shouldHaveRoles.includes(roleName)) {
+                const role = guild.roles.cache.find(r => r.name === roleName);
+                if (role) {
+                    rolesToRemove.push(role);
+                    console.log(`Removing NFT role ${roleName} from ${member.user.username}`);
+                }
             }
         }
 
         // Check BUX roles
-        for (const roleId of Object.keys(BUX_ROLES)) {
-            const role = guild.roles.cache.get(roleId);
-            if (!role) continue;
+        const currentBuxRoleIds = currentRoles
+            .filter(role => Object.keys(BUX_ROLES).includes(role.id))
+            .map(role => role.id);
 
-            const hasRole = currentRoles.has(roleId);
-            const shouldHaveRole = buxRoleIds.has(roleId);
+        // Add missing BUX roles
+        for (const roleId of buxRoleIds) {
+            if (!currentBuxRoleIds.includes(roleId)) {
+                const role = guild.roles.cache.get(roleId);
+                if (role) {
+                    rolesToAdd.push(role);
+                    console.log(`Adding BUX role ${role.name} to ${member.user.username}`);
+                }
+            }
+        }
 
-            if (shouldHaveRole && !hasRole) {
-                rolesToAdd.push(role);
-                console.log(`Adding BUX role ${role.name} to ${member.user.username}`);
-            } else if (!shouldHaveRole && hasRole) {
-                rolesToRemove.push(role);
-                console.log(`Removing BUX role ${role.name} from ${member.user.username}`);
+        // Remove extra BUX roles
+        for (const roleId of currentBuxRoleIds) {
+            if (!buxRoleIds.has(roleId)) {
+                const role = guild.roles.cache.get(roleId);
+                if (role) {
+                    rolesToRemove.push(role);
+                    console.log(`Removing BUX role ${role.name} from ${member.user.username}`);
+                }
             }
         }
 
