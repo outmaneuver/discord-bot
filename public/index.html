@@ -475,7 +475,7 @@
                         const walletAddress = resp.publicKey.toString();
                         
                         // Update status to show NFT check is in progress
-                        status.textContent = 'NFT check in progress... This may take up to 30 seconds';
+                        status.textContent = 'NFT check in progress... This may take a few minutes';
                         
                         // Store wallet with type
                         const storeResponse = await fetch('/store-wallet', {
@@ -494,8 +494,8 @@
                             throw new Error('Failed to store wallet');
                         }
 
-                        // Add timeout for verify request
-                        const verifyPromise = fetch('/holder-verify/verify', {
+                        // Remove the timeout and just wait for the verify request
+                        const verifyResponse = await fetch('/holder-verify/verify', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -507,14 +507,6 @@
                             credentials: 'include'
                         });
 
-                        // Set 30 second timeout
-                        const timeoutPromise = new Promise((_, reject) => {
-                            setTimeout(() => reject(new Error('Verification timed out')), 30000);
-                        });
-
-                        // Race between verify and timeout
-                        const verifyResponse = await Promise.race([verifyPromise, timeoutPromise]);
-                        
                         if (!verifyResponse.ok) {
                             throw new Error('Verification failed');
                         }
