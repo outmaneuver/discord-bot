@@ -494,7 +494,7 @@
                             throw new Error('Failed to store wallet');
                         }
 
-                        // Remove the timeout and just wait for the verify request
+                        // Make verify request
                         const verifyResponse = await fetch('/holder-verify/verify', {
                             method: 'POST',
                             headers: {
@@ -506,6 +506,13 @@
                             }),
                             credentials: 'include'
                         });
+
+                        // Handle different response statuses
+                        if (verifyResponse.status === 503) {
+                            // Don't show error for timeout, keep showing "in progress" message
+                            status.textContent = 'NFT check in progress... This may take a few minutes';
+                            return;
+                        }
 
                         if (!verifyResponse.ok) {
                             throw new Error('Verification failed');
@@ -542,16 +549,15 @@ Daily reward - ${data.data.dailyReward} BUX</div>`;
                         } else {
                             throw new Error(data.error || 'Verification failed');
                         }
-                    } catch (err) {
-                        let errorMessage = err.message;
-                        if (err.message === 'Verification timed out') {
-                            errorMessage = 'NFT check is taking longer than usual. Please try again in a few minutes.';
+                    } catch (error) {
+                        // Only show error if it's not a timeout
+                        if (!error.message.includes('timeout') && !error.message.includes('NetworkError')) {
+                            status.textContent = error.message;
                         }
-                        status.textContent = errorMessage;
+                        // Keep the "in progress" message for timeouts
                         connectButton.classList.remove('loading');
                         connectButton.disabled = false;
                         connectButton.textContent = 'Connect Wallet';
-                        walletInfo.style.display = 'flex'; // Show info again on error
                     }
 
                 } catch (error) {
