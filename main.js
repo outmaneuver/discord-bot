@@ -187,41 +187,37 @@ async function startApp() {
       }
     });
 
-    // Start server first
-    const server = await new Promise((resolve, reject) => {
-      const server = app.listen(port, '0.0.0.0', () => {
-        console.log(`Server running on port ${port}`);
-        resolve(server);
-      }).on('error', reject);
+    // Start server
+    app.listen(port, () => {
+      console.log(`Server running on port ${port}`);
+      console.log('Server started successfully');
     });
 
-    console.log('Server started successfully');
-
-    // Wait for Redis to be ready
-    await redis.connect();
-    console.log('Redis connected successfully');
-
-    // Load all hashlists with proper paths
+    // Load hashlists
     console.log('Loading hashlists...');
     
-    // Main collections
-    hashlistsData.fckedCatz = await loadHashlist('fcked_catz.json');
-    hashlistsData.celebCatz = await loadHashlist('celebcatz.json');
-    hashlistsData.moneyMonsters = await loadHashlist('money_monsters.json');
-    hashlistsData.moneyMonsters3d = await loadHashlist('money_monsters3d.json');
-    hashlistsData.aiBitbots = await loadHashlist('ai_bitbots.json');
-    
-    // Top holders
-    hashlistsData.mmTop10 = await loadHashlist('MM_top10.json');
-    hashlistsData.mm3dTop10 = await loadHashlist('MM3D_top10.json');
-    
-    // AI Collabs with proper paths
-    hashlistsData.warriors = await loadHashlist('ai_collabs/warriors.json');
-    hashlistsData.squirrels = await loadHashlist('ai_collabs/squirrels.json');
-    hashlistsData.rjctdBots = await loadHashlist('ai_collabs/rjctd_bots.json');
-    hashlistsData.energyApes = await loadHashlist('ai_collabs/energy_apes.json');
-    hashlistsData.doodleBots = await loadHashlist('ai_collabs/doodle_bot.json');
-    hashlistsData.candyBots = await loadHashlist('ai_collabs/candy_bots.json');
+    // Load each hashlist
+    const hashlistFiles = {
+      fckedCatz: 'fcked_catz.json',
+      celebCatz: 'celebcatz.json',
+      moneyMonsters: 'money_monsters.json',
+      moneyMonsters3d: 'money_monsters3d.json',
+      aiBitbots: 'ai_bitbots.json',
+      mmTop10: 'MM_top10.json',
+      mm3dTop10: 'MM3D_top10.json',
+      warriors: 'ai_collabs/warriors.json',
+      squirrels: 'ai_collabs/squirrels.json',
+      rjctdBots: 'ai_collabs/rjctd_bots.json',
+      energyApes: 'ai_collabs/energy_apes.json',
+      doodleBots: 'ai_collabs/doodle_bot.json',
+      candyBots: 'ai_collabs/candy_bots.json'
+    };
+
+    for (const [key, filename] of Object.entries(hashlistFiles)) {
+      console.log('Loading hashlist:', filename);
+      hashlistsData[key] = await loadHashlist(filename);
+      console.log(`Loaded ${hashlistsData[key].size} addresses from ${filename}`);
+    }
 
     // Log loaded hashlist sizes
     console.log('Loaded hashlist sizes:', {
@@ -241,6 +237,7 @@ async function startApp() {
     });
 
     // Update hashlists in verify service
+    console.log('Updating hashlists with:', hashlistsData);
     updateHashlists(hashlistsData);
 
     // Initialize Discord client
