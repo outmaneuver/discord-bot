@@ -118,13 +118,25 @@ async function getBUXBalance(walletAddress) {
 
 async function verifyWallet(userId, walletAddress) {
     try {
-        const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
-        
-        // Get all token accounts owned by the wallet
-        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-            new PublicKey(walletAddress),
-            { programId: TOKEN_PROGRAM_ID }
-        );
+        // First check Redis cache
+        const cacheKey = `nfts:${walletAddress}`;
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+            return JSON.parse(cached);
+        }
+
+        const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com', {
+            commitment: 'confirmed',
+            confirmTransactionInitialTimeout: 60000
+        });
+
+        // Get all token accounts with retry logic
+        const tokenAccounts = await retryWithBackoff(async () => {
+            return await connection.getParsedTokenAccountsByOwner(
+                new PublicKey(walletAddress),
+                { programId: TOKEN_PROGRAM_ID }
+            );
+        });
 
         const nftCounts = {
             fcked_catz: 0,
@@ -140,13 +152,11 @@ async function verifyWallet(userId, walletAddress) {
             candy_bots: 0
         };
 
-        // Check each token account
+        // Process token accounts
         for (const account of tokenAccounts.value) {
-            // Only count tokens with amount = 1 (NFTs)
             if (account.account.data.parsed.info.tokenAmount.amount === "1") {
                 const mintAddress = account.account.data.parsed.info.mint;
                 
-                // Check which collection this NFT belongs to
                 if (hashlists.fckedCatz.has(mintAddress)) nftCounts.fcked_catz++;
                 if (hashlists.celebCatz.has(mintAddress)) nftCounts.celebcatz++;
                 if (hashlists.moneyMonsters.has(mintAddress)) nftCounts.money_monsters++;
@@ -161,10 +171,14 @@ async function verifyWallet(userId, walletAddress) {
             }
         }
 
-        const buxBalance = await getBUXBalance(walletAddress);
+        // Get BUX balance with retry
+        const buxBalance = await retryWithBackoff(async () => {
+            return await getBUXBalance(walletAddress);
+        });
+
         const dailyReward = await calculateDailyReward(nftCounts, buxBalance);
 
-        return {
+        const result = {
             success: true,
             data: {
                 nftCounts,
@@ -173,9 +187,32 @@ async function verifyWallet(userId, walletAddress) {
             }
         };
 
+        // Cache the result
+        await redis.setex(cacheKey, 300, JSON.stringify(result));
+
+        return result;
+
     } catch (error) {
         console.error('Error in verifyWallet:', error);
         throw error;
+    }
+}
+
+// Add retry logic
+async function retryWithBackoff(fn, maxRetries = 5) {
+    let retries = 0;
+    while (true) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (!error.message.includes('429 Too Many Requests') || retries >= maxRetries) {
+                throw error;
+            }
+            retries++;
+            const delay = Math.min(1000 * Math.pow(2, retries), 10000);
+            console.log(`Rate limited, retrying in ${delay}ms...`);
+            await sleep(delay);
+        }
     }
 }
 
