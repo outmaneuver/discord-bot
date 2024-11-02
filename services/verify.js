@@ -89,39 +89,31 @@ async function storeWalletAddress(userId, walletAddress, walletType) {
 }
 
 async function getBUXBalance(walletAddress) {
-    const cacheKey = `bux:${walletAddress}`;
     try {
-        // Check cache first
-        const cached = await redis.get(cacheKey);
-        if (cached) return parseInt(cached);
-
         const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
         
-        // Get BUX token accounts with retry
-        const tokenAccounts = await retryWithBackoff(async () => {
-            return await connection.getParsedTokenAccountsByOwner(
-                new PublicKey(walletAddress),
-                { mint: new PublicKey(BUX_TOKEN_MINT) }
-            );
-        });
+        // Get BUX token accounts
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+            new PublicKey(walletAddress),
+            { mint: new PublicKey(BUX_TOKEN_MINT) }
+        );
 
-        console.log('BUX token accounts:', tokenAccounts);
-
+        console.log('BUX token accounts for wallet:', walletAddress);
+        
         let totalBalance = 0;
         for (const account of tokenAccounts.value) {
-            const parsedInfo = account.account.data.parsed.info;
-            if (parsedInfo.mint === BUX_TOKEN_MINT) {
-                totalBalance += parseInt(parsedInfo.tokenAmount.amount);
+            const tokenAmount = account.account.data.parsed.info.tokenAmount;
+            console.log('Token amount data:', tokenAmount);
+            
+            if (tokenAmount.decimals === 9) { // BUX has 9 decimals
+                totalBalance += Number(tokenAmount.amount);
             }
         }
 
         // Convert from raw amount to decimal amount
-        const buxBalance = totalBalance / 1e9;
-        console.log('Found BUX balance:', buxBalance);
+        const buxBalance = totalBalance / Math.pow(10, 9);
+        console.log('Final BUX balance:', buxBalance);
 
-        // Cache the result for 5 minutes
-        await redis.setex(cacheKey, 300, totalBalance.toString());
-        
         return buxBalance;
 
     } catch (error) {
@@ -132,31 +124,13 @@ async function getBUXBalance(walletAddress) {
 
 async function verifyWallet(userId, walletAddress) {
     try {
-        // Check cache first
-        const cacheKey = `verify:${walletAddress}`;
-        const cached = await redis.get(cacheKey);
-        if (cached) {
-            return JSON.parse(cached);
-        }
-
-        const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com', {
-            commitment: 'confirmed',
-            confirmTransactionInitialTimeout: 60000
-        });
-
-        // Get token accounts with retry and proper error handling
-        const tokenAccounts = await retryWithBackoff(async () => {
-            try {
-                const accounts = await connection.getParsedTokenAccountsByOwner(
-                    new PublicKey(walletAddress),
-                    { programId: TOKEN_PROGRAM_ID }
-                );
-                return accounts;
-            } catch (error) {
-                console.error('Token account fetch error:', error);
-                throw error;
-            }
-        }, 5);
+        const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
+        
+        // Get NFT token accounts
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+            new PublicKey(walletAddress),
+            { programId: TOKEN_PROGRAM_ID }
+        );
 
         const nftCounts = {
             fcked_catz: 0,
@@ -172,62 +146,55 @@ async function verifyWallet(userId, walletAddress) {
             candy_bots: 0
         };
 
-        // Process token accounts with proper error handling
+        // Process NFT accounts
         for (const { account } of tokenAccounts.value) {
-            try {
-                const parsedData = account.data.parsed;
-                const tokenAmount = parsedData.info.tokenAmount;
-                const mintAddress = parsedData.info.mint;
+            const tokenAmount = account.data.parsed.info.tokenAmount;
+            const mintAddress = account.data.parsed.info.mint;
 
-                // Only count tokens with amount = 1 and decimals = 0 (NFTs)
-                if (tokenAmount.amount === "1" && tokenAmount.decimals === 0) {
-                    console.log('Found NFT:', mintAddress);
-                    
-                    // Check each collection
-                    if (hashlists.moneyMonsters3d.has(mintAddress)) {
-                        console.log('Found 3D Monster');
-                        nftCounts.money_monsters3d++;
-                    }
-                    if (hashlists.fckedCatz.has(mintAddress)) {
-                        console.log('Found Fcked Cat');
-                        nftCounts.fcked_catz++;
-                    }
-                    if (hashlists.celebCatz.has(mintAddress)) {
-                        console.log('Found Celeb Cat');
-                        nftCounts.celebcatz++;
-                    }
-                    if (hashlists.moneyMonsters.has(mintAddress)) {
-                        console.log('Found Money Monster');
-                        nftCounts.money_monsters++;
-                    }
-                    if (hashlists.aiBitbots.has(mintAddress)) {
-                        console.log('Found BitBot');
-                        nftCounts.ai_bitbots++;
-                    }
-                    if (hashlists.warriors.has(mintAddress)) nftCounts.warriors++;
-                    if (hashlists.squirrels.has(mintAddress)) nftCounts.squirrels++;
-                    if (hashlists.rjctdBots.has(mintAddress)) nftCounts.rjctd_bots++;
-                    if (hashlists.energyApes.has(mintAddress)) nftCounts.energy_apes++;
-                    if (hashlists.doodleBots.has(mintAddress)) nftCounts.doodle_bots++;
-                    if (hashlists.candyBots.has(mintAddress)) nftCounts.candy_bots++;
+            // Only count tokens with amount = 1 and decimals = 0 (NFTs)
+            if (tokenAmount.amount === "1" && tokenAmount.decimals === 0) {
+                console.log('Found NFT:', mintAddress);
+                
+                if (hashlists.moneyMonsters3d.has(mintAddress)) {
+                    console.log('Found 3D Monster');
+                    nftCounts.money_monsters3d++;
                 }
-            } catch (error) {
-                console.error('Error processing token account:', error);
-                continue; // Skip problematic accounts
+                if (hashlists.fckedCatz.has(mintAddress)) {
+                    console.log('Found Fcked Cat');
+                    nftCounts.fcked_catz++;
+                }
+                if (hashlists.celebCatz.has(mintAddress)) {
+                    console.log('Found Celeb Cat');
+                    nftCounts.celebcatz++;
+                }
+                if (hashlists.moneyMonsters.has(mintAddress)) {
+                    console.log('Found Money Monster');
+                    nftCounts.money_monsters++;
+                }
+                if (hashlists.aiBitbots.has(mintAddress)) {
+                    console.log('Found BitBot');
+                    nftCounts.ai_bitbots++;
+                }
+                if (hashlists.warriors.has(mintAddress)) nftCounts.warriors++;
+                if (hashlists.squirrels.has(mintAddress)) nftCounts.squirrels++;
+                if (hashlists.rjctdBots.has(mintAddress)) nftCounts.rjctd_bots++;
+                if (hashlists.energyApes.has(mintAddress)) nftCounts.energy_apes++;
+                if (hashlists.doodleBots.has(mintAddress)) nftCounts.doodle_bots++;
+                if (hashlists.candyBots.has(mintAddress)) nftCounts.candy_bots++;
             }
         }
 
         console.log('Final NFT counts:', nftCounts);
 
-        // Get BUX balance with detailed logging
-        console.log('Getting BUX balance for wallet:', walletAddress);
+        // Get BUX balance
         const buxBalance = await getBUXBalance(walletAddress);
         console.log('BUX balance:', buxBalance);
 
+        // Calculate daily reward
         const dailyReward = await calculateDailyReward(nftCounts, buxBalance);
         console.log('Daily reward:', dailyReward);
 
-        const result = {
+        return {
             success: true,
             data: {
                 nftCounts,
@@ -235,9 +202,6 @@ async function verifyWallet(userId, walletAddress) {
                 dailyReward
             }
         };
-
-        console.log('Final result:', result);
-        return result;
 
     } catch (error) {
         console.error('Error in verifyWallet:', error);
