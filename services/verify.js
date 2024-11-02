@@ -124,10 +124,22 @@ async function verifyWallet(userId, walletAddress) {
 async function updateDiscordRoles(userId, client) {
     try {
         const guild = client.guilds.cache.get(process.env.GUILD_ID);
-        if (!guild) throw new Error('Guild not found');
+        if (!guild) {
+            console.error('Guild not found:', process.env.GUILD_ID);
+            throw new Error('Guild not found');
+        }
 
         const member = await guild.members.fetch(userId);
-        if (!member) throw new Error('Member not found');
+        if (!member) {
+            console.error('Member not found:', userId);
+            throw new Error('Member not found');
+        }
+
+        console.log('Updating roles for user:', {
+            userId,
+            username: member.user.username,
+            currentRoles: member.roles.cache.map(r => r.name)
+        });
 
         // Define all possible NFT and BUX roles
         const ALL_NFT_ROLES = [
@@ -153,12 +165,15 @@ async function updateDiscordRoles(userId, client) {
 
         // Get wallets and verify
         const wallets = await redis.smembers(`wallets:${userId}`);
+        console.log('Found wallets:', wallets);
+
         if (!wallets || wallets.length === 0) {
-            // Remove all NFT and BUX roles if no wallets connected
+            console.log('No wallets found, removing all roles');
             const rolesToRemove = member.roles.cache.filter(role => 
                 ALL_NFT_ROLES.includes(role.name) || 
                 Object.keys(BUX_ROLES).includes(role.id)
             );
+            console.log('Removing roles:', rolesToRemove.map(r => r.name));
             await member.roles.remove(rolesToRemove);
             return { success: true, nftCounts: {}, roles: [] };
         }
@@ -231,20 +246,26 @@ async function updateDiscordRoles(userId, client) {
         const buxRolesToAdd = [...buxRoleIds].filter(id => !currentBuxRoles.has(id));
         const buxRolesToRemove = [...currentBuxRoles].filter(id => !buxRoleIds.has(id));
 
-        // Log role changes
-        console.log('Role updates for', member.user.username, {
-            nftRoles: { adding: nftRolesToAdd, removing: nftRolesToRemove },
-            buxRoles: { adding: buxRolesToAdd, removing: buxRolesToRemove },
-            totalBuxBalance
+        // Log role changes in detail
+        console.log('Role update details:', {
+            username: member.user.username,
+            nftCounts,
+            totalBuxBalance,
+            currentRoles: member.roles.cache.map(r => r.name),
+            nftRolesToAdd,
+            nftRolesToRemove,
+            buxRolesToAdd,
+            buxRolesToRemove
         });
 
-        // Perform role updates
+        // Perform role updates with logging
         const rolePromises = [];
         
         if (nftRolesToAdd.length > 0) {
             const addNftRoles = nftRolesToAdd
                 .map(roleName => guild.roles.cache.find(r => r.name === roleName))
                 .filter(role => role);
+            console.log('Adding NFT roles:', addNftRoles.map(r => r.name));
             rolePromises.push(member.roles.add(addNftRoles));
         }
         
@@ -252,19 +273,29 @@ async function updateDiscordRoles(userId, client) {
             const removeNftRoles = nftRolesToRemove
                 .map(roleName => guild.roles.cache.find(r => r.name === roleName))
                 .filter(role => role);
+            console.log('Removing NFT roles:', removeNftRoles.map(r => r.name));
             rolePromises.push(member.roles.remove(removeNftRoles));
         }
 
         if (buxRolesToAdd.length > 0) {
+            console.log('Adding BUX roles:', buxRolesToAdd);
             rolePromises.push(member.roles.add(buxRolesToAdd));
         }
 
         if (buxRolesToRemove.length > 0) {
+            console.log('Removing BUX roles:', buxRolesToRemove);
             rolePromises.push(member.roles.remove(buxRolesToRemove));
         }
 
         // Wait for all role updates to complete
         await Promise.all(rolePromises);
+
+        // Log final roles after update
+        const updatedMember = await guild.members.fetch(userId);
+        console.log('Final roles after update:', {
+            username: updatedMember.user.username,
+            roles: updatedMember.roles.cache.map(r => r.name)
+        });
 
         return {
             success: true,
