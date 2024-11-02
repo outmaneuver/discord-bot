@@ -265,56 +265,52 @@ async function updateDiscordRoles(userId, client) {
 
         // Get current roles
         const currentRoles = member.roles.cache;
-        console.log('Current roles:', {
-            userId,
-            username: member.user.username,
-            roles: currentRoles.map(r => ({
-                id: r.id,
-                name: r.name
-            }))
-        });
-
-        // Update roles
+        
+        // Track roles to add and remove
         const rolesToAdd = [];
         const rolesToRemove = [];
 
-        // Handle NFT roles
-        for (const roleName of shouldHaveRoles) {
+        // Check NFT roles
+        for (const roleName of ALL_NFT_ROLES) {
             const role = guild.roles.cache.find(r => r.name === roleName);
-            if (role && !currentRoles.has(role.id)) {
-                rolesToAdd.push(role);
-            }
-        }
+            if (!role) continue;
 
-        // Handle BUX roles
-        for (const roleId of buxRoleIds) {
-            const role = guild.roles.cache.get(roleId);
-            if (role && !currentRoles.has(roleId)) {
-                rolesToAdd.push(role);
-            }
-        }
+            const hasRole = currentRoles.has(role.id);
+            const shouldHaveRole = shouldHaveRoles.has(roleName);
 
-        // Remove roles that shouldn't be there
-        for (const role of currentRoles.values()) {
-            const isNftRole = shouldHaveRoles.has(role.name);
-            const isBuxRole = buxRoleIds.has(role.id);
-            if ((isNftRole || isBuxRole) && !shouldHaveRoles.has(role.name) && !buxRoleIds.has(role.id)) {
+            if (shouldHaveRole && !hasRole) {
+                rolesToAdd.push(role);
+                console.log(`Adding NFT role ${roleName} to ${member.user.username}`);
+            } else if (!shouldHaveRole && hasRole) {
                 rolesToRemove.push(role);
+                console.log(`Removing NFT role ${roleName} from ${member.user.username}`);
             }
         }
 
-        console.log('Role updates:', {
-            userId,
-            username: member.user.username,
-            adding: rolesToAdd.map(r => ({ id: r.id, name: r.name })),
-            removing: rolesToRemove.map(r => ({ id: r.id, name: r.name }))
-        });
+        // Check BUX roles
+        for (const [roleId, threshold] of Object.entries(BUX_ROLES)) {
+            const role = guild.roles.cache.get(roleId);
+            if (!role) continue;
+
+            const hasRole = currentRoles.has(roleId);
+            const shouldHaveRole = totalBuxBalance >= threshold;
+
+            if (shouldHaveRole && !hasRole) {
+                rolesToAdd.push(role);
+                console.log(`Adding BUX role ${role.name} to ${member.user.username}`);
+            } else if (!shouldHaveRole && hasRole) {
+                rolesToRemove.push(role);
+                console.log(`Removing BUX role ${role.name} from ${member.user.username}`);
+            }
+        }
 
         // Apply role changes
         if (rolesToAdd.length > 0) {
+            console.log('Adding roles:', rolesToAdd.map(r => r.name));
             await member.roles.add(rolesToAdd);
         }
         if (rolesToRemove.length > 0) {
+            console.log('Removing roles:', rolesToRemove.map(r => r.name));
             await member.roles.remove(rolesToRemove);
         }
 
@@ -372,11 +368,7 @@ async function updateDiscordRoles(userId, client) {
         };
 
     } catch (error) {
-        console.error('Error updating Discord roles:', {
-            userId,
-            error: error.message,
-            stack: error.stack
-        });
+        console.error('Error updating Discord roles:', error);
         throw error;
     }
 }
