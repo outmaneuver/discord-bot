@@ -99,6 +99,15 @@ async function verifyHolder(walletAddress) {
             candyBots: hashlists.candyBots.size
         });
 
+        // Get NFT holdings using Metaplex
+        const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
+        const nftAccounts = await retryWithBackoff(() => 
+            connection.getParsedTokenAccountsByOwner(
+                new PublicKey(walletAddress),
+                { programId: TOKEN_PROGRAM_ID }
+            )
+        );
+
         // Get NFT holdings
         const nftCounts = {
             fcked_catz: 0,
@@ -114,23 +123,17 @@ async function verifyHolder(walletAddress) {
             candy_bots: 0
         };
 
-        // Log the wallet address and first few addresses from each hashlist
-        for (const [key, hashlist] of Object.entries(hashlists)) {
-            console.log(`Checking ${key} hashlist:`, {
-                walletToCheck: walletAddress,
-                hashlistSize: hashlist.size,
-                sampleAddresses: Array.from(hashlist).slice(0, 3)
-            });
-
-            // Convert both addresses to lowercase for case-insensitive comparison
-            const hasNFT = Array.from(hashlist).some(addr => 
-                addr.toLowerCase() === walletAddress.toLowerCase()
-            );
-
-            if (hasNFT) {
-                const countKey = key.replace(/([A-Z])/g, '_$1').toLowerCase().slice(1);
-                nftCounts[countKey] = (nftCounts[countKey] || 0) + 1;
-                console.log(`Found match in ${key}!`);
+        // Check each token account
+        for (const account of nftAccounts.value) {
+            const mintAddress = account.account.data.parsed.info.mint;
+            
+            // Check each hashlist for the mint address
+            for (const [key, hashlist] of Object.entries(hashlists)) {
+                if (hashlist.has(mintAddress)) {
+                    const countKey = key.replace(/([A-Z])/g, '_$1').toLowerCase().slice(1);
+                    nftCounts[countKey]++;
+                    console.log(`Found NFT in ${key}:`, mintAddress);
+                }
             }
         }
 
@@ -138,13 +141,10 @@ async function verifyHolder(walletAddress) {
         const buxBalance = await getBUXBalance(walletAddress);
         console.log('BUX Balance:', buxBalance);
 
-        // Check if wallet has any NFTs or BUX
-        const hasAnyAssets = Object.values(nftCounts).some(count => count > 0) || buxBalance > 0;
-
         // Log final counts
         console.log('Final NFT counts:', nftCounts);
 
-        if (!hasAnyAssets) {
+        if (!Object.values(nftCounts).some(count => count > 0) && buxBalance === 0) {
             return {
                 success: true,
                 formattedResponse: 
