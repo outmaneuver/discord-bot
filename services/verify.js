@@ -205,9 +205,7 @@ async function verifyWallet(userId, walletAddress) {
 
 // Add updateHashlists function
 function updateHashlists(newHashlists) {
-    console.log('Updating hashlists with:', newHashlists);
-    
-    // Update each collection's hashlist
+    // Update each collection's hashlist silently
     if (newHashlists.fckedCatz) hashlists.fckedCatz = new Set(newHashlists.fckedCatz);
     if (newHashlists.celebCatz) hashlists.celebCatz = new Set(newHashlists.celebCatz);
     if (newHashlists.moneyMonsters) hashlists.moneyMonsters = new Set(newHashlists.moneyMonsters);
