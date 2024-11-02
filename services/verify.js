@@ -5,17 +5,17 @@ import { calculateDailyReward } from './rewards.js';
 
 // Add constants at the top of the file
 const ALL_NFT_ROLES = [
-    'Fcked Catz Holder',
-    'Celeb Catz Holder',
-    'Money Monsters Holder',
-    '3D Monsters Holder',
-    'AI Bitbots Holder',
-    'Warriors Holder',
-    'Squirrels Holder',
-    'RJCTD Bots Holder',
-    'Energy Apes Holder',
-    'Doodle Bots Holder',
-    'Candy Bots Holder'
+    'FCKED CATZ',
+    'CELEB CATZ',
+    'MONEY MONSTERS',
+    '3D MONSTERS',
+    'AI BITBOTS',
+    'WARRIORS',
+    'SQUIRRELS',
+    'RJCTD BOTS',
+    'ENERGY APES',
+    'DOODLE BOTS',
+    'CANDY BOTS'
 ];
 
 const BUX_ROLES = {
@@ -237,17 +237,17 @@ async function updateDiscordRoles(userId, client) {
         const buxRoleIds = new Set();
 
         // Add NFT roles
-        if (nftCounts.fcked_catz > 0) shouldHaveRoles.add('Fcked Catz Holder');
-        if (nftCounts.celebcatz > 0) shouldHaveRoles.add('Celeb Catz Holder');
-        if (nftCounts.money_monsters > 0) shouldHaveRoles.add('Money Monsters Holder');
-        if (nftCounts.money_monsters3d > 0) shouldHaveRoles.add('3D Monsters Holder');
-        if (nftCounts.ai_bitbots > 0) shouldHaveRoles.add('AI Bitbots Holder');
-        if (nftCounts.warriors > 0) shouldHaveRoles.add('Warriors Holder');
-        if (nftCounts.squirrels > 0) shouldHaveRoles.add('Squirrels Holder');
-        if (nftCounts.rjctd_bots > 0) shouldHaveRoles.add('RJCTD Bots Holder');
-        if (nftCounts.energy_apes > 0) shouldHaveRoles.add('Energy Apes Holder');
-        if (nftCounts.doodle_bots > 0) shouldHaveRoles.add('Doodle Bots Holder');
-        if (nftCounts.candy_bots > 0) shouldHaveRoles.add('Candy Bots Holder');
+        if (nftCounts.fcked_catz > 0) shouldHaveRoles.add('FCKED CATZ');
+        if (nftCounts.celebcatz > 0) shouldHaveRoles.add('CELEB CATZ');
+        if (nftCounts.money_monsters > 0) shouldHaveRoles.add('MONEY MONSTERS');
+        if (nftCounts.money_monsters3d > 0) shouldHaveRoles.add('3D MONSTERS');
+        if (nftCounts.ai_bitbots > 0) shouldHaveRoles.add('AI BITBOTS');
+        if (nftCounts.warriors > 0) shouldHaveRoles.add('WARRIORS');
+        if (nftCounts.squirrels > 0) shouldHaveRoles.add('SQUIRRELS');
+        if (nftCounts.rjctd_bots > 0) shouldHaveRoles.add('RJCTD BOTS');
+        if (nftCounts.energy_apes > 0) shouldHaveRoles.add('ENERGY APES');
+        if (nftCounts.doodle_bots > 0) shouldHaveRoles.add('DOODLE BOTS');
+        if (nftCounts.candy_bots > 0) shouldHaveRoles.add('CANDY BOTS');
 
         // Add BUX roles based on balance
         if (totalBuxBalance >= 50000) buxRoleIds.add(process.env.ROLE_ID_50000_BUX);
