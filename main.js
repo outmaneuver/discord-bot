@@ -39,53 +39,31 @@ let hashlistsData = {
   mm3dTop10: new Set()
 };
 
-// Add caching for hashlist loading
 const HASHLIST_CACHE_KEY = 'hashlists:loaded';
-const HASHLIST_CACHE_TTL = 3600; // 1 hour
+const HASHLIST_CACHE_TTL = 3600;
 
-// Function to load hashlist from JSON file with caching
 async function loadHashlist(filename) {
   try {
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
-    let filePath;
-    
-    // Handle AI collabs subdirectory
-    if (filename.startsWith('ai_collabs/')) {
-      filePath = path.join(__dirname, 'config', 'hashlists', filename);
-    } else {
-      filePath = path.join(__dirname, 'config', 'hashlists', filename);
-    }
-    
-    // Check cache first
+    const filePath = path.join(__dirname, 'config', 'hashlists', filename);
     const cacheKey = `hashlist:${filename}`;
+    
     const cached = await redis.get(cacheKey);
     if (cached) {
-      console.log(`Using cached hashlist for ${filename}`);
       return new Set(JSON.parse(cached));
     }
     
-    console.log('Loading hashlist:', filePath);
     const data = await fs.readFile(filePath, 'utf8');
-    const jsonData = JSON.parse(data);
+    const addresses = JSON.parse(data);
     
-    // Handle different JSON structures
-    const addresses = Array.isArray(jsonData) ? jsonData : 
-                     jsonData.mints || jsonData.addresses || 
-                     Object.keys(jsonData);
-                     
-    console.log(`Loaded ${addresses.length} addresses from ${filename}`);
-
-    // Cache the addresses
     await redis.setex(cacheKey, HASHLIST_CACHE_TTL, JSON.stringify(addresses));
-    
     return new Set(addresses);
   } catch (error) {
-    console.error(`Error loading hashlist ${filename}:`, error);
+    console.error(`Error loading ${filename}:`, error.message);
     return new Set();
   }
 }
 
-// Main application startup function
 async function startApp() {
   try {
     const port = process.env.PORT || 3000;
@@ -125,8 +103,7 @@ async function startApp() {
       app.use((req, res, next) => {
         console.log('Session Debug:', {
           id: req.sessionID,
-          user: req.session?.user,
-          cookies: req.cookies
+          user: req.session?.user
         });
         next();
       });
@@ -145,27 +122,20 @@ async function startApp() {
         const { walletAddress, walletType } = req.body;
         const userId = req.session?.user?.id;
 
-        if (!userId) {
-          return res.status(401).json({
-            success: false,
-            error: 'User not authenticated'
-          });
-        }
-
-        if (!walletAddress) {
+        if (!userId || !walletAddress) {
           return res.status(400).json({
             success: false,
-            error: 'Wallet address is required'
+            error: !userId ? 'Not authenticated' : 'Wallet address required'
           });
         }
 
         const result = await storeWalletAddress(userId, walletAddress, walletType);
         res.json(result);
       } catch (error) {
-        console.error('Error in store-wallet endpoint:', error);
+        console.error('Store wallet error:', error.message);
         res.status(500).json({
           success: false,
-          error: error.message
+          error: 'Failed to store wallet'
         });
       }
     });
@@ -175,15 +145,13 @@ async function startApp() {
     });
 
     process.on('SIGTERM', () => {
-      console.log('SIGTERM received. Shutting down gracefully...');
+      console.log('SIGTERM received, shutting down...');
       server.close(() => {
-        console.log('Server closed');
         redis.quit();
         process.exit(0);
       });
     });
 
-    // Load hashlists
     const hashlistFiles = {
       fckedCatz: 'fcked_catz.json',
       celebCatz: 'celebcatz.json',
@@ -204,13 +172,8 @@ async function startApp() {
       hashlistsData[key] = await loadHashlist(filename);
     }
 
-    // Log only the sizes
     console.log('Loaded hashlist sizes:', Object.entries(hashlistsData)
-      .reduce((acc, [key, set]) => ({
-        ...acc,
-        [key]: set.size
-      }), {})
-    );
+      .reduce((acc, [key, set]) => ({...acc, [key]: set.size}), {}));
 
     updateHashlists(hashlistsData);
 
@@ -225,7 +188,7 @@ async function startApp() {
     });
 
     client.on('error', error => {
-      console.error('Discord client error:', error);
+      console.error('Discord error:', error.message);
     });
 
     client.on('ready', () => {
@@ -236,13 +199,13 @@ async function startApp() {
     global.discordClient = client;
 
   } catch (error) {
-    console.error('Error starting application:', error);
+    console.error('Startup error:', error.message);
     process.exit(1);
   }
 }
 
 startApp().catch(error => {
-  console.error('Fatal error starting application:', error);
+  console.error('Fatal startup error:', error.message);
   process.exit(1);
 });
 
