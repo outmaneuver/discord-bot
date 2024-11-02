@@ -1,6 +1,7 @@
 import express from 'express';
 import { verifyWallet } from '../services/verify.js';
 import { redis } from '../config/redis.js';
+import { updateDiscordRoles } from '../services/discord.js';
 
 const router = express.Router();
 
@@ -56,6 +57,18 @@ router.post('/verify', async (req, res) => {
     }
 
     const result = await verifyWallet(req.session.user.id, walletAddress);
+
+    if (result.success) {
+      console.log('Verification successful, updating Discord roles...');
+      try {
+        await updateDiscordRoles(req.session.user.id, global.discordClient);
+        console.log('Discord roles updated successfully');
+      } catch (error) {
+        console.error('Error updating Discord roles:', error);
+        // Don't fail the request if role update fails
+      }
+    }
+
     res.json(result);
 
   } catch (error) {
