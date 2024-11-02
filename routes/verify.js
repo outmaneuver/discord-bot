@@ -1,5 +1,5 @@
 import express from 'express';
-import { verifyWallet, updateDiscordRoles } from '../services/verify.js';
+import { verifyWallet } from '../services/verify.js';
 import { redis } from '../config/redis.js';
 
 const router = express.Router();
@@ -56,22 +56,7 @@ router.post('/verify', async (req, res) => {
     }
 
     const result = await verifyWallet(req.session.user.id, walletAddress);
-
-    res.json({
-      success: true,
-      message: 'Wallet verified successfully',
-      data: {
-        nftCounts: result.nftCounts,
-        buxBalance: result.buxBalance,
-        dailyReward: result.dailyReward
-      }
-    });
-
-    // Update Discord roles in background
-    updateDiscordRoles(req.session.user.id, global.discordClient)
-      .catch(error => {
-        console.error('Background role update failed:', error.message);
-      });
+    res.json(result);
 
   } catch (error) {
     console.error('Verify error:', error.message);

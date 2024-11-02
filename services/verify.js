@@ -19,14 +19,41 @@ let hashlists = {
 
 const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
 
+// Add rate limiting with exponential backoff
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function retryWithBackoff(fn, maxRetries = 3) {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (!error.message.includes('429 Too Many Requests') || i === maxRetries - 1) {
+                throw error;
+            }
+            const delay = Math.min(1000 * Math.pow(2, i), 8000);
+            console.log(`Rate limited, waiting ${delay}ms before retry ${i + 1}/${maxRetries}`);
+            await sleep(delay);
+        }
+    }
+}
+
 async function verifyWallet(userId, walletAddress) {
     try {
+        // Check cache first
+        const cacheKey = `verify:${walletAddress}`;
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+            return JSON.parse(cached);
+        }
+
         const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
         
-        // Get all NFTs owned by the wallet
-        const nftAccounts = await connection.getParsedTokenAccountsByOwner(
-            new PublicKey(walletAddress),
-            { programId: TOKEN_PROGRAM_ID }
+        // Get NFTs with retry
+        const nftAccounts = await retryWithBackoff(() => 
+            connection.getParsedTokenAccountsByOwner(
+                new PublicKey(walletAddress),
+                { programId: TOKEN_PROGRAM_ID }
+            )
         );
 
         const nftCounts = {
@@ -94,6 +121,70 @@ async function verifyWallet(userId, walletAddress) {
     }
 }
 
+async function updateDiscordRoles(userId, client) {
+    try {
+        const guild = client.guilds.cache.get(process.env.GUILD_ID);
+        if (!guild) throw new Error('Guild not found');
+
+        const member = await guild.members.fetch(userId);
+        if (!member) throw new Error('Member not found');
+
+        const wallets = await redis.smembers(`wallets:${userId}`);
+        if (!wallets || wallets.length === 0) {
+            throw new Error('No wallets found for user');
+        }
+
+        const nftCounts = {
+            fcked_catz: 0,
+            celebcatz: 0,
+            money_monsters: 0,
+            money_monsters3d: 0,
+            ai_bitbots: 0,
+            warriors: 0,
+            squirrels: 0,
+            rjctd_bots: 0,
+            energy_apes: 0,
+            doodle_bots: 0,
+            candy_bots: 0
+        };
+
+        // Check NFTs for all connected wallets
+        for (const walletAddress of wallets) {
+            const result = await verifyWallet(userId, walletAddress);
+            if (result.success) {
+                Object.keys(nftCounts).forEach(key => {
+                    nftCounts[key] += result.data.nftCounts[key];
+                });
+            }
+        }
+
+        // Update roles based on NFT counts
+        const roles = new Set();
+        if (nftCounts.fcked_catz > 0) roles.add('Fcked Catz Holder');
+        if (nftCounts.celebcatz > 0) roles.add('Celeb Catz Holder');
+        if (nftCounts.money_monsters > 0) roles.add('Money Monsters Holder');
+        if (nftCounts.money_monsters3d > 0) roles.add('3D Monsters Holder');
+        if (nftCounts.ai_bitbots > 0) roles.add('AI Bitbots Holder');
+
+        // Update member roles
+        const guildRoles = Array.from(roles).map(roleName => 
+            guild.roles.cache.find(role => role.name === roleName)
+        ).filter(role => role);
+
+        await member.roles.set(guildRoles);
+
+        return {
+            success: true,
+            nftCounts,
+            roles: Array.from(roles)
+        };
+
+    } catch (error) {
+        console.error('Error updating Discord roles:', error);
+        throw error;
+    }
+}
+
 function updateHashlists(newHashlists) {
     if (newHashlists.fckedCatz) hashlists.fckedCatz = new Set(newHashlists.fckedCatz);
     if (newHashlists.celebCatz) hashlists.celebCatz = new Set(newHashlists.celebCatz);
@@ -110,6 +201,7 @@ function updateHashlists(newHashlists) {
 
 export {
     verifyWallet,
+    updateDiscordRoles,
     hashlists,
     updateHashlists
 };
