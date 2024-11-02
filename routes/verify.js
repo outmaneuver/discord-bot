@@ -29,42 +29,11 @@ router.post('/verify', async (req, res) => {
       success: true,
       message: 'Wallet verified successfully',
       data: {
-        nftCounts: result.nftCounts || {
-          fcked_catz: 0,
-          celebcatz: 0,
-          money_monsters: 0,
-          money_monsters3d: 0,
-          ai_bitbots: 0,
-          warriors: 0,
-          squirrels: 0,
-          rjctd_bots: 0,
-          energy_apes: 0,
-          doodle_bots: 0,
-          candy_bots: 0
-        },
-        buxBalance: result.buxBalance || 0,
-        dailyReward: result.dailyReward || 0
+        nftCounts: result.data.nftCounts,
+        buxBalance: result.data.buxBalance,
+        dailyReward: result.data.dailyReward
       },
-      formattedResponse: `
-        **Wallet Verification Successful!**
-        
-        VERIFIED NFTs
-       
-        Fcked Catz - ${result.nftCounts?.fcked_catz || 0}
-        Celeb Catz - ${result.nftCounts?.celebcatz || 0}
-        Monsters - ${result.nftCounts?.money_monsters || 0}
-        3D Monsters - ${result.nftCounts?.money_monsters3d || 0}
-        BitBots - ${result.nftCounts?.ai_bitbots || 0}
-        
-        A.I. collabs - ${(result.nftCounts?.warriors || 0) + 
-                        (result.nftCounts?.squirrels || 0) + 
-                        (result.nftCounts?.rjctd_bots || 0) + 
-                        (result.nftCounts?.energy_apes || 0) + 
-                        (result.nftCounts?.doodle_bots || 0) + 
-                        (result.nftCounts?.candy_bots || 0)}
-
-        **Daily reward - ${result.dailyReward || 0} BUX**
-      `
+      formattedResponse: result.formattedResponse
     };
 
     // Send success response immediately
