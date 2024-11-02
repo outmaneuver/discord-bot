@@ -69,18 +69,34 @@
             font-weight: bold;
         }
         button {
-            border: none;
-            color: white;
-            padding: 15px 32px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 2px solid white;
+            margin: 10px 0;
+            min-width: 200px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        .loading {
+            color: transparent !important;
+        }
+        .loading::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            border-right-color: transparent;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
         #discordButton {
             background-color: #7289DA;
@@ -288,6 +304,10 @@
             // Add connect wallet functionality
             async function connectWallet() {
                 try {
+                    const connectButton = document.getElementById('connectButton');
+                    connectButton.classList.add('loading');
+                    connectButton.disabled = true;
+
                     // Check for any available Solana wallet
                     if (!window.solana && !window.solflare) {
                         status.textContent = 'Please install Phantom or Solflare wallet!';
@@ -360,8 +380,16 @@
                         status.textContent = `Error connecting to ${walletName}: ${err.message}`;
                         connectButton.disabled = false;
                     }
+
+                    // On success
+                    connectButton.classList.remove('loading');
+                    connectButton.textContent = 'Connected';
+
                 } catch (error) {
                     console.error('Wallet connection error:', error);
+                    const connectButton = document.getElementById('connectButton');
+                    connectButton.classList.remove('loading');
+                    connectButton.disabled = false;
                     status.textContent = error.message;
                 }
             }
