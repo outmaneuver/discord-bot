@@ -8,7 +8,6 @@ const redis = new Redis(process.env.REDIS_URL, {
 
 export async function calculateDailyReward(nftCounts, buxBalance) {
   try {
-    // Base rewards per NFT
     const rewardRates = {
       fcked_catz: 5,
       celebcatz: 15,
@@ -23,7 +22,6 @@ export async function calculateDailyReward(nftCounts, buxBalance) {
       candy_bots: 1
     };
 
-    // Calculate total reward
     let totalReward = 0;
     for (const [collection, count] of Object.entries(nftCounts)) {
       if (rewardRates[collection]) {
@@ -31,14 +29,9 @@ export async function calculateDailyReward(nftCounts, buxBalance) {
       }
     }
 
-    console.log('Daily reward calculation:', {
-      nftCounts,
-      totalReward
-    });
-
     return totalReward;
   } catch (error) {
-    console.error('Error calculating daily reward:', error);
+    console.error('Error calculating daily reward:', error.message);
     return 0;
   }
 }
@@ -50,13 +43,11 @@ export async function startOrUpdateDailyTimer(userId, nftCounts, buxBalance) {
     
     if (timerData) {
       const data = JSON.parse(timerData);
-      // Update reward amount but keep timer
       data.claimAmount = await calculateDailyReward(nftCounts, buxBalance);
       await redis.set(key, JSON.stringify(data));
       return data;
     }
 
-    // Start new timer
     const newData = {
       lastClaim: Date.now(),
       claimAmount: await calculateDailyReward(nftCounts, buxBalance)
@@ -65,7 +56,7 @@ export async function startOrUpdateDailyTimer(userId, nftCounts, buxBalance) {
     await redis.set(key, JSON.stringify(newData));
     return newData;
   } catch (error) {
-    console.error('Error updating daily timer:', error);
+    console.error('Error updating daily timer:', error.message);
     return null;
   }
 }
@@ -88,7 +79,7 @@ export async function getTimeUntilNextClaim(userId) {
     
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   } catch (error) {
-    console.error('Error in getTimeUntilNextClaim:', error);
+    console.error('Error in getTimeUntilNextClaim:', error.message);
     return '00:00:00';
   }
 }
