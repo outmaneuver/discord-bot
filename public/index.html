@@ -507,21 +507,15 @@
                             credentials: 'include'
                         });
 
-                        // Handle different response statuses
-                        if (verifyResponse.status === 503) {
-                            // Don't show error for timeout, keep showing "in progress" message
-                            status.textContent = 'NFT check in progress... This may take a few minutes';
-                            return;
-                        }
-
-                        if (!verifyResponse.ok) {
-                            throw new Error('Verification failed');
-                        }
-
-                        const data = await verifyResponse.json();
-                        
-                        if (data.success) {
-                            const formattedResponse = `<div class="verification-container">
+                        // Handle the response
+                        if (verifyResponse.ok) {
+                            const data = await verifyResponse.json();
+                            if (data.success) {
+                                // Clear loading status
+                                status.textContent = '';
+                                
+                                // Show verification result
+                                const formattedResponse = `<div class="verification-container">
 ✓ Wallet Verification Successful!
 
 VERIFIED NFTs
@@ -535,29 +529,34 @@ A.I. collabs - ${data.data.nftCounts.warriors + data.data.nftCounts.squirrels + 
 
 Daily reward - ${data.data.dailyReward} BUX</div>`;
 
-                            document.getElementById('verificationResult').innerHTML = formattedResponse;
-                            status.textContent = '';
-                            document.getElementById('closeMessage').style.display = 'block';
-                            
-                            // Update button state
-                            connectButton.classList.remove('loading');
-                            connectButton.textContent = 'Connected';
-                            connectButton.disabled = true;
-                            
-                            // Hide wallet info
-                            walletInfo.style.display = 'none';
+                                document.getElementById('verificationResult').innerHTML = formattedResponse;
+                                document.getElementById('closeMessage').style.display = 'block';
+                                
+                                // Update button state
+                                connectButton.classList.remove('loading');
+                                connectButton.textContent = 'Connected';
+                                connectButton.disabled = true;
+                                
+                                // Hide wallet info
+                                walletInfo.style.display = 'none';
+                            }
+                        } else if (verifyResponse.status === 503) {
+                            // Keep showing "in progress" for timeouts
+                            status.textContent = 'NFT check in progress... This may take a few minutes';
                         } else {
-                            throw new Error(data.error || 'Verification failed');
+                            throw new Error('Verification failed');
                         }
+
                     } catch (error) {
+                        console.error('Wallet connection error:', error);
                         // Only show error if it's not a timeout
                         if (!error.message.includes('timeout') && !error.message.includes('NetworkError')) {
                             status.textContent = error.message;
                         }
-                        // Keep the "in progress" message for timeouts
                         connectButton.classList.remove('loading');
                         connectButton.disabled = false;
                         connectButton.textContent = 'Connect Wallet';
+                        walletInfo.style.display = 'flex';
                     }
 
                 } catch (error) {
