@@ -223,45 +223,51 @@ async function verifyWallet(userId, walletAddress) {
         const dailyReward = await calculateDailyReward(result.nftCounts, result.buxBalance);
 
         // Format the response
-        return {
+        const response = {
             success: true,
-            nftCounts: {
-                fcked_catz: result.nftCounts.fcked_catz || 0,
-                celebcatz: result.nftCounts.celebcatz || 0,
-                money_monsters: result.nftCounts.money_monsters || 0,
-                money_monsters3d: result.nftCounts.money_monsters3d || 0,
-                ai_bitbots: result.nftCounts.ai_bitbots || 0,
-                warriors: result.nftCounts.warriors || 0,
-                squirrels: result.nftCounts.squirrels || 0,
-                rjctd_bots: result.nftCounts.rjctd_bots || 0,
-                energy_apes: result.nftCounts.energy_apes || 0,
-                doodle_bots: result.nftCounts.doodle_bots || 0,
-                candy_bots: result.nftCounts.candy_bots || 0
-            },
-            buxBalance: result.buxBalance || 0,
-            dailyReward
+            data: {
+                nftCounts: result.nftCounts || {
+                    fcked_catz: 0,
+                    celebcatz: 0,
+                    money_monsters: 0,
+                    money_monsters3d: 0,
+                    ai_bitbots: 0,
+                    warriors: 0,
+                    squirrels: 0,
+                    rjctd_bots: 0,
+                    energy_apes: 0,
+                    doodle_bots: 0,
+                    candy_bots: 0
+                },
+                buxBalance: result.buxBalance || 0,
+                dailyReward: dailyReward || 0
+            }
         };
+
+        return response;
 
     } catch (error) {
         console.error('Error in verifyWallet:', error);
         return {
             success: false,
             error: error.message,
-            nftCounts: {
-                fcked_catz: 0,
-                celebcatz: 0,
-                money_monsters: 0,
-                money_monsters3d: 0,
-                ai_bitbots: 0,
-                warriors: 0,
-                squirrels: 0,
-                rjctd_bots: 0,
-                energy_apes: 0,
-                doodle_bots: 0,
-                candy_bots: 0
-            },
-            buxBalance: 0,
-            dailyReward: 0
+            data: {
+                nftCounts: {
+                    fcked_catz: 0,
+                    celebcatz: 0,
+                    money_monsters: 0,
+                    money_monsters3d: 0,
+                    ai_bitbots: 0,
+                    warriors: 0,
+                    squirrels: 0,
+                    rjctd_bots: 0,
+                    energy_apes: 0,
+                    doodle_bots: 0,
+                    candy_bots: 0
+                },
+                buxBalance: 0,
+                dailyReward: 0
+            }
         };
     }
 }
