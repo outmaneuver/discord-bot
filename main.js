@@ -50,13 +50,16 @@ async function loadHashlist(filename) {
     
     const cached = await redis.get(cacheKey);
     if (cached) {
-      return new Set(JSON.parse(cached));
+      const addresses = JSON.parse(cached);
+      console.log(`Loaded ${addresses.length} addresses from cache for ${filename}`);
+      return new Set(addresses);
     }
     
     const data = await fs.readFile(filePath, 'utf8');
     const addresses = JSON.parse(data);
     
     await redis.setex(cacheKey, HASHLIST_CACHE_TTL, JSON.stringify(addresses));
+    console.log(`Loaded ${addresses.length} addresses from file for ${filename}`);
     return new Set(addresses);
   } catch (error) {
     console.error(`Error loading ${filename}:`, error.message);
@@ -152,6 +155,7 @@ async function startApp() {
       });
     });
 
+    // Load hashlists
     const hashlistFiles = {
       fckedCatz: 'fcked_catz.json',
       celebCatz: 'celebcatz.json',
@@ -168,12 +172,17 @@ async function startApp() {
       candyBots: 'ai_collabs/candy_bots.json'
     };
 
+    console.log('Loading hashlists...');
     for (const [key, filename] of Object.entries(hashlistFiles)) {
       hashlistsData[key] = await loadHashlist(filename);
     }
 
-    console.log('Loaded hashlist sizes:', Object.entries(hashlistsData)
-      .reduce((acc, [key, set]) => ({...acc, [key]: set.size}), {}));
+    // Only log sizes
+    const sizes = {};
+    for (const [key, set] of Object.entries(hashlistsData)) {
+      sizes[key] = set.size;
+    }
+    console.log('Hashlist sizes:', sizes);
 
     updateHashlists(hashlistsData);
 
