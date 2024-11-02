@@ -217,6 +217,17 @@
         .wallet-info {
             display: none;  /* Hidden by default */
         }
+        .wallet-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            vertical-align: middle;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M21 7.28V5c0-1.1-.9-2-2-2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-2.28c.59-.35 1-.98 1-1.72V9c0-.74-.41-1.37-1-1.72zM20 9v6h-7V9h7zM5 19V5h14v2h-6c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h6v2H5z'/%3E%3Ccircle fill='%23ffffff' cx='16' cy='12' r='1.5'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+        }
     </style>
 </head>
 <body>
@@ -235,7 +246,10 @@
             <span class="info-icon">ⓘ</span>
             By signing into Discord, you are giving BUXBOT permissions to update your roles in BUXDAO server
         </div>
-        <button id="connectButton" class="connect-button">Connect Wallet</button>
+        <button id="connectButton" class="connect-button">
+            <span class="wallet-icon"></span>
+            Connect Wallet
+        </button>
         <div class="info-message wallet-info">
             <span class="info-icon">ⓘ</span>
             When connecting your wallet you are simply assigning your wallet address to BUXBOT for tracking and role assignment. The bot has NO access to the contents of your wallet and merely performs onchain checks to see which BUXDAO NFTs and tokens you hold. Connection is a sign of ownership rather than a transaction and encurs no transaction fee
@@ -255,6 +269,92 @@
             const pageTitle = document.getElementById('pageTitle');
             const discordInfo = document.querySelector('.discord-info');
             const walletInfo = document.querySelector('.wallet-info');
+            const status = document.getElementById('status');
+
+            // Add connect wallet functionality
+            async function connectWallet() {
+                try {
+                    // Check for any available Solana wallet
+                    if (!window.solana && !window.solflare) {
+                        status.textContent = 'Please install Phantom or Solflare wallet!';
+                        return;
+                    }
+
+                    let wallet;
+                    let walletName;
+                    
+                    if (window.solflare) {
+                        console.log('Found Solflare wallet');
+                        wallet = window.solflare;
+                        walletName = 'Solflare';
+                    } else if (window.solana) {
+                        console.log('Found Phantom wallet');
+                        wallet = window.solana;
+                        walletName = 'Phantom';
+                    }
+
+                    try {
+                        status.textContent = `Connecting to ${walletName}...`;
+                        const resp = await wallet.connect();
+                        const walletAddress = resp.publicKey.toString();
+                        
+                        status.textContent = `Connected to ${walletName}! Verifying...`;
+                        connectButton.disabled = true;
+                        
+                        // Store wallet with type
+                        const storeResponse = await fetch('/store-wallet', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ 
+                                walletAddress,
+                                walletType: walletName 
+                            }),
+                            credentials: 'include'
+                        });
+
+                        if (!storeResponse.ok) {
+                            throw new Error('Failed to store wallet');
+                        }
+
+                        // Then verify
+                        const verifyResponse = await fetch('/holder-verify/verify', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ 
+                                walletAddress,
+                                walletType: walletName
+                            }),
+                            credentials: 'include'
+                        });
+                        
+                        const data = await verifyResponse.json();
+                        
+                        if (data.success) {
+                            document.getElementById('verificationResult').innerHTML = data.formattedResponse;
+                            status.textContent = '';
+                            document.getElementById('closeMessage').style.display = 'block';
+                        } else {
+                            document.getElementById('verificationResult').textContent = `Verification failed: ${data.error}`;
+                            status.textContent = 'Verification failed.';
+                            connectButton.disabled = false;
+                        }
+                    } catch (err) {
+                        status.textContent = `Error connecting to ${walletName}: ${err.message}`;
+                        connectButton.disabled = false;
+                    }
+                } catch (error) {
+                    console.error('Wallet connection error:', error);
+                    status.textContent = error.message;
+                }
+            }
+
+            if (connectButton) {
+                connectButton.addEventListener('click', connectWallet);
+            }
 
             if (discordButton) {
                 discordButton.addEventListener('click', () => {
