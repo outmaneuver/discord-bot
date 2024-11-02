@@ -108,7 +108,7 @@ async function verifyHolder(walletAddress) {
             )
         );
 
-        // Get NFT holdings
+        // Initialize NFT counts
         const nftCounts = {
             fcked_catz: 0,
             celebcatz: 0,
@@ -125,14 +125,53 @@ async function verifyHolder(walletAddress) {
 
         // Check each token account
         for (const account of nftAccounts.value) {
-            const mintAddress = account.account.data.parsed.info.mint;
-            
-            // Check each hashlist for the mint address
-            for (const [key, hashlist] of Object.entries(hashlists)) {
-                if (hashlist.has(mintAddress)) {
-                    const countKey = key.replace(/([A-Z])/g, '_$1').toLowerCase().slice(1);
-                    nftCounts[countKey]++;
-                    console.log(`Found NFT in ${key}:`, mintAddress);
+            if (account.account.data.parsed.info.tokenAmount.amount === "1") {
+                const mintAddress = account.account.data.parsed.info.mint;
+                
+                // Check each hashlist
+                if (hashlists.fckedCatz.has(mintAddress)) {
+                    nftCounts.fcked_catz++;
+                    console.log('Found NFT in fckedCatz:', mintAddress);
+                }
+                if (hashlists.celebCatz.has(mintAddress)) {
+                    nftCounts.celebcatz++;
+                    console.log('Found NFT in celebCatz:', mintAddress);
+                }
+                if (hashlists.moneyMonsters.has(mintAddress)) {
+                    nftCounts.money_monsters++;
+                    console.log('Found NFT in moneyMonsters:', mintAddress);
+                }
+                if (hashlists.moneyMonsters3d.has(mintAddress)) {
+                    nftCounts.money_monsters3d++;
+                    console.log('Found NFT in moneyMonsters3d:', mintAddress);
+                }
+                if (hashlists.aiBitbots.has(mintAddress)) {
+                    nftCounts.ai_bitbots++;
+                    console.log('Found NFT in aiBitbots:', mintAddress);
+                }
+                if (hashlists.warriors.has(mintAddress)) {
+                    nftCounts.warriors++;
+                    console.log('Found NFT in warriors:', mintAddress);
+                }
+                if (hashlists.squirrels.has(mintAddress)) {
+                    nftCounts.squirrels++;
+                    console.log('Found NFT in squirrels:', mintAddress);
+                }
+                if (hashlists.rjctdBots.has(mintAddress)) {
+                    nftCounts.rjctd_bots++;
+                    console.log('Found NFT in rjctdBots:', mintAddress);
+                }
+                if (hashlists.energyApes.has(mintAddress)) {
+                    nftCounts.energy_apes++;
+                    console.log('Found NFT in energyApes:', mintAddress);
+                }
+                if (hashlists.doodleBots.has(mintAddress)) {
+                    nftCounts.doodle_bots++;
+                    console.log('Found NFT in doodleBots:', mintAddress);
+                }
+                if (hashlists.candyBots.has(mintAddress)) {
+                    nftCounts.candy_bots++;
+                    console.log('Found NFT in candyBots:', mintAddress);
                 }
             }
         }
@@ -144,55 +183,15 @@ async function verifyHolder(walletAddress) {
         // Log final counts
         console.log('Final NFT counts:', nftCounts);
 
-        if (!Object.values(nftCounts).some(count => count > 0) && buxBalance === 0) {
-            return {
-                success: true,
-                formattedResponse: 
-                    "**Wallet Verification Complete**\n\n" +
-                    "This wallet currently has:\n" +
-                    "• No BUX$DAO NFTs\n" +
-                    "• No BUX tokens\n\n" +
-                    "To participate in BUX$DAO:\n" +
-                    "1. Get BUX$DAO NFTs from Magic Eden or Tensor\n" +
-                    "2. Hold BUX tokens\n" +
-                    "3. Join our Discord community\n\n" +
-                    "Visit https://buxdao.io for more information.",
-                nftCounts,
-                buxBalance
-            };
-        }
-
-        // Format response for wallets with assets
-        let response = "**Wallet Verification Complete**\n\n";
-        response += "Your wallet contains:\n";
-        
-        // Add NFT counts
-        for (const [collection, count] of Object.entries(nftCounts)) {
-            if (count > 0) {
-                const displayName = getDisplayName(collection);
-                response += `• ${count} ${displayName}\n`;
-            }
-        }
-
-        // Add BUX balance if any
-        if (buxBalance > 0) {
-            response += `• ${buxBalance.toLocaleString()} BUX tokens\n`;
-        }
-
         return {
             success: true,
-            formattedResponse: response,
             nftCounts,
             buxBalance
         };
 
     } catch (error) {
         console.error('Error in verifyHolder:', error);
-        return {
-            success: false,
-            error: error.message,
-            formattedResponse: "Error verifying wallet. Please try again later."
-        };
+        throw error;
     }
 }
 
