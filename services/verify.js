@@ -83,6 +83,7 @@ async function verifyHolder(walletAddress) {
 
         console.log('Verifying wallet:', walletAddress);
         
+        // Debug log the actual wallet address being checked
         console.log('Checking wallet against hashlists:', walletAddress);
         console.log('Current hashlist sizes:', {
             fckedCatz: hashlists.fckedCatz.size,
@@ -113,13 +114,32 @@ async function verifyHolder(walletAddress) {
             candy_bots: 0
         };
 
-        // Count NFTs from each collection
-        for (const [collection, hashlist] of Object.entries(hashlists)) {
-            if (hashlist.has(walletAddress)) {
-                const collectionKey = collection.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-                if (nftCounts.hasOwnProperty(collectionKey)) {
-                    nftCounts[collectionKey]++;
-                }
+        // Add debug logging for each hashlist check
+        const hashlistMappings = {
+            fckedCatz: 'fcked_catz',
+            celebCatz: 'celebcatz',
+            moneyMonsters: 'money_monsters',
+            moneyMonsters3d: 'money_monsters3d',
+            aiBitbots: 'ai_bitbots',
+            warriors: 'warriors',
+            squirrels: 'squirrels',
+            rjctdBots: 'rjctd_bots',
+            energyApes: 'energy_apes',
+            doodleBots: 'doodle_bots',
+            candyBots: 'candy_bots'
+        };
+
+        // Check each hashlist and log results
+        for (const [hashlistKey, countKey] of Object.entries(hashlistMappings)) {
+            const hashlist = hashlists[hashlistKey];
+            const hasNFT = hashlist.has(walletAddress);
+            console.log(`Checking ${hashlistKey}:`, {
+                walletAddress,
+                hasNFT,
+                hashlistSize: hashlist.size
+            });
+            if (hasNFT) {
+                nftCounts[countKey]++;
             }
         }
 
@@ -129,6 +149,9 @@ async function verifyHolder(walletAddress) {
 
         // Check if wallet has any NFTs or BUX
         const hasAnyAssets = Object.values(nftCounts).some(count => count > 0) || buxBalance > 0;
+
+        // Log final counts
+        console.log('Final NFT counts:', nftCounts);
 
         if (!hasAnyAssets) {
             return {
