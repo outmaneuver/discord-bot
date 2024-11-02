@@ -515,19 +515,15 @@
                         const data = await verifyResponse.json();
                         
                         if (data.success) {
-                            const formattedResponse = `<div class="verification-container">
-                                <div class="verification-header">✓ Wallet Verification Successful!</div>
-                                <div class="nft-section">
-                                    <h3>VERIFIED NFTs</h3>
-                                    <div class="nft-counts">Fcked Catz - ${data.data.nftCounts.fcked_catz}
-Celeb Catz - ${data.data.nftCounts.celebcatz}
-Monsters - ${data.data.nftCounts.money_monsters}
-3D Monsters - ${data.data.nftCounts.money_monsters3d}
-BitBots - ${data.data.nftCounts.ai_bitbots}
-A.I. collabs - ${data.data.nftCounts.warriors + data.data.nftCounts.squirrels + data.data.nftCounts.rjctd_bots + data.data.nftCounts.energy_apes + data.data.nftCounts.doodle_bots + data.data.nftCounts.candy_bots}</div>
-                                </div>
-                                <div class="daily-reward">Daily reward - ${data.data.dailyReward} BUX</div>
-                            </div>`;
+                            const formattedResponse = `<div class="verification-container">✓ Wallet Verification Successful!
+VERIFIED NFTs
+Fcked Catz - ${data.nftCounts.fcked_catz}
+Celeb Catz - ${data.nftCounts.celebcatz}
+Monsters - ${data.nftCounts.money_monsters}
+3D Monsters - ${data.nftCounts.money_monsters3d}
+BitBots - ${data.nftCounts.ai_bitbots}
+A.I. collabs - ${data.nftCounts.warriors + data.nftCounts.squirrels + data.nftCounts.rjctd_bots + data.nftCounts.energy_apes + data.nftCounts.doodle_bots + data.nftCounts.candy_bots}
+Daily reward - ${data.dailyReward} BUX</div>`;
 
                             document.getElementById('verificationResult').innerHTML = formattedResponse;
                             status.textContent = '';
