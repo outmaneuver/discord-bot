@@ -91,27 +91,41 @@ async function storeWalletAddress(userId, walletAddress, walletType) {
 async function getBUXBalance(walletAddress) {
     const cacheKey = `bux:${walletAddress}`;
     try {
+        // Check cache first
         const cached = await redis.get(cacheKey);
         if (cached) return parseInt(cached);
 
         const connection = new Connection(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
-        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-            new PublicKey(walletAddress),
-            { mint: new PublicKey(BUX_TOKEN_MINT) }
-        );
+        
+        // Get BUX token accounts with retry
+        const tokenAccounts = await retryWithBackoff(async () => {
+            return await connection.getParsedTokenAccountsByOwner(
+                new PublicKey(walletAddress),
+                { mint: new PublicKey(BUX_TOKEN_MINT) }
+            );
+        });
+
+        console.log('BUX token accounts:', tokenAccounts);
 
         let totalBalance = 0;
         for (const account of tokenAccounts.value) {
-            if (account.account.data.parsed.info.mint === BUX_TOKEN_MINT) {
-                totalBalance += parseInt(account.account.data.parsed.info.tokenAmount.amount);
+            const parsedInfo = account.account.data.parsed.info;
+            if (parsedInfo.mint === BUX_TOKEN_MINT) {
+                totalBalance += parseInt(parsedInfo.tokenAmount.amount);
             }
         }
 
+        // Convert from raw amount to decimal amount
+        const buxBalance = totalBalance / 1e9;
+        console.log('Found BUX balance:', buxBalance);
+
+        // Cache the result for 5 minutes
         await redis.setex(cacheKey, 300, totalBalance.toString());
-        return totalBalance;
+        
+        return buxBalance;
 
     } catch (error) {
-        console.error('Error getting BUX balance:', error.message);
+        console.error('Error getting BUX balance:', error);
         return 0;
     }
 }
@@ -205,12 +219,13 @@ async function verifyWallet(userId, walletAddress) {
 
         console.log('Final NFT counts:', nftCounts);
 
-        // Get BUX balance with retry
-        const buxBalance = await retryWithBackoff(async () => {
-            return await getBUXBalance(walletAddress);
-        });
+        // Get BUX balance with detailed logging
+        console.log('Getting BUX balance for wallet:', walletAddress);
+        const buxBalance = await getBUXBalance(walletAddress);
+        console.log('BUX balance:', buxBalance);
 
         const dailyReward = await calculateDailyReward(nftCounts, buxBalance);
+        console.log('Daily reward:', dailyReward);
 
         const result = {
             success: true,
@@ -221,9 +236,7 @@ async function verifyWallet(userId, walletAddress) {
             }
         };
 
-        // Cache the result for 5 minutes
-        await redis.setex(cacheKey, 300, JSON.stringify(result));
-
+        console.log('Final result:', result);
         return result;
 
     } catch (error) {
