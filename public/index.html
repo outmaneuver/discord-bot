@@ -318,6 +318,72 @@
         .wallet-info.hidden {
             display: none;
         }
+
+        .verification-container {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .verification-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            color: #FFD700;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .verification-header .checkmark {
+            margin-right: 10px;
+            background-color: #4CAF50;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .nft-container {
+            margin: 15px 0;
+        }
+
+        .nft-section h3 {
+            color: #FFD700;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .nft-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            color: white;
+        }
+
+        .nft-item {
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+
+        .reward-container {
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 5px;
+        }
+
+        .daily-reward {
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
     </style>
 </head>
 <body>
@@ -450,38 +516,48 @@
                         
                         if (data.success) {
                             const formattedResponse = `
-                                <div class="verification-title">
-                                    <span class="checkmark">✓</span>
-                                    Wallet Verification Successful!
-                                </div>
-                                
-                                <div class="nft-section-title">VERIFIED NFTs</div>
-                                <div class="nft-list">
-                                    Fcked Catz - ${data.data.nftCounts.fcked_catz}
-                                    Celeb Catz - ${data.data.nftCounts.celebcatz}
-                                    Monsters - ${data.data.nftCounts.money_monsters}
-                                    3D Monsters - ${data.data.nftCounts.money_monsters3d}
-                                    BitBots - ${data.data.nftCounts.ai_bitbots}
+                                <div class="verification-container">
+                                    <div class="verification-header">
+                                        <span class="checkmark">✓</span>
+                                        <span>Wallet Verification Successful!</span>
+                                    </div>
                                     
-                                    A.I. collabs - ${data.data.nftCounts.warriors + data.data.nftCounts.squirrels + 
-                                                    data.data.nftCounts.rjctd_bots + data.data.nftCounts.energy_apes + 
-                                                    data.data.nftCounts.doodle_bots + data.data.nftCounts.candy_bots}
-                                </div>
+                                    <div class="nft-container">
+                                        <div class="nft-section">
+                                            <h3>VERIFIED NFTs</h3>
+                                            <div class="nft-list">
+                                                <div class="nft-item">Fcked Catz: ${data.data.nftCounts.fcked_catz}</div>
+                                                <div class="nft-item">Celeb Catz: ${data.data.nftCounts.celebcatz}</div>
+                                                <div class="nft-item">Monsters: ${data.data.nftCounts.money_monsters}</div>
+                                                <div class="nft-item">3D Monsters: ${data.data.nftCounts.money_monsters3d}</div>
+                                                <div class="nft-item">BitBots: ${data.data.nftCounts.ai_bitbots}</div>
+                                                <div class="nft-item">A.I. Collabs: ${
+                                                    data.data.nftCounts.warriors + 
+                                                    data.data.nftCounts.squirrels + 
+                                                    data.data.nftCounts.rjctd_bots + 
+                                                    data.data.nftCounts.energy_apes + 
+                                                    data.data.nftCounts.doodle_bots + 
+                                                    data.data.nftCounts.candy_bots
+                                                }</div>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                <div class="daily-reward">
-                                    Daily reward - ${data.data.dailyReward || 0} BUX
+                                    <div class="reward-container">
+                                        <div class="daily-reward">Daily Reward: ${data.data.dailyReward || 0} BUX</div>
+                                    </div>
                                 </div>`;
 
                             document.getElementById('verificationResult').innerHTML = formattedResponse;
                             status.textContent = '';
                             document.getElementById('closeMessage').style.display = 'block';
                             
-                            // Keep button disabled and update text
+                            // Update button state
                             connectButton.classList.remove('loading');
                             connectButton.textContent = 'Connected';
                             connectButton.disabled = true;
                             
-                            // Ensure wallet info stays hidden
+                            // Hide wallet info
                             walletInfo.style.display = 'none';
                         } else {
                             throw new Error(data.error || 'Verification failed');
