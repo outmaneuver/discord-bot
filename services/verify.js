@@ -2,6 +2,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { redis } from '../config/redis.js';
 import { config } from '../config/config.js';
+import { calculateDailyReward } from './rewards.js';
 
 // Initialize hashlists object
 let hashlists = {
@@ -218,51 +219,31 @@ async function verifyWallet(userId, walletAddress) {
         // Verify the wallet
         const result = await verifyHolder(walletAddress);
         
-        // Format the response
-        const nftCounts = {
-            fcked_catz: 0,
-            celebcatz: 0,
-            money_monsters: 0,
-            money_monsters3d: 0,
-            ai_bitbots: 0,
-            warriors: 0,
-            squirrels: 0,
-            rjctd_bots: 0,
-            energy_apes: 0,
-            doodle_bots: 0,
-            candy_bots: 0,
-            ...result.nftCounts // Spread any found NFTs
-        };
-
         // Calculate daily reward
-        const dailyReward = await calculateDailyReward(nftCounts, result.buxBalance || 0);
+        const dailyReward = await calculateDailyReward(result.nftCounts, result.buxBalance);
 
+        // Format the response
         return {
             success: true,
-            nftCounts,
+            nftCounts: {
+                fcked_catz: result.nftCounts.fcked_catz || 0,
+                celebcatz: result.nftCounts.celebcatz || 0,
+                money_monsters: result.nftCounts.money_monsters || 0,
+                money_monsters3d: result.nftCounts.money_monsters3d || 0,
+                ai_bitbots: result.nftCounts.ai_bitbots || 0,
+                warriors: result.nftCounts.warriors || 0,
+                squirrels: result.nftCounts.squirrels || 0,
+                rjctd_bots: result.nftCounts.rjctd_bots || 0,
+                energy_apes: result.nftCounts.energy_apes || 0,
+                doodle_bots: result.nftCounts.doodle_bots || 0,
+                candy_bots: result.nftCounts.candy_bots || 0
+            },
             buxBalance: result.buxBalance || 0,
-            dailyReward,
-            formattedResponse: `
-                **Wallet Verification Complete**
-                
-                VERIFIED NFTs
-                
-                Fcked Catz - ${nftCounts.fcked_catz}
-                Celeb Catz - ${nftCounts.celebcatz}
-                Monsters - ${nftCounts.money_monsters}
-                3D Monsters - ${nftCounts.money_monsters3d}
-                BitBots - ${nftCounts.ai_bitbots}
-                
-                A.I. collabs - ${nftCounts.warriors + nftCounts.squirrels + 
-                               nftCounts.rjctd_bots + nftCounts.energy_apes + 
-                               nftCounts.doodle_bots + nftCounts.candy_bots}
-
-                **Daily reward - ${dailyReward} BUX**
-            `
+            dailyReward
         };
 
     } catch (error) {
-        console.error('Verification error:', error);
+        console.error('Error in verifyWallet:', error);
         return {
             success: false,
             error: error.message,
@@ -278,7 +259,9 @@ async function verifyWallet(userId, walletAddress) {
                 energy_apes: 0,
                 doodle_bots: 0,
                 candy_bots: 0
-            }
+            },
+            buxBalance: 0,
+            dailyReward: 0
         };
     }
 }
