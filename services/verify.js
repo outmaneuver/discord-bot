@@ -29,7 +29,14 @@ async function verifyWallet(userId, walletAddress) {
         const buxBalance = await getBUXBalance(walletAddress);
         console.log(`BUX balance for ${walletAddress}:`, buxBalance);
 
-        // Check NFTs against hashlists
+        // Get NFT token accounts with single RPC call
+        const connection = new Connection(process.env.SOLANA_RPC_URL);
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+            new PublicKey(walletAddress),
+            { programId: TOKEN_PROGRAM_ID }
+        );
+
+        // Initialize NFT counts
         const nftCounts = {
             fcked_catz: 0,
             celebcatz: 0,
@@ -44,18 +51,24 @@ async function verifyWallet(userId, walletAddress) {
             candy_bots: 0
         };
 
-        // Check each NFT against hashlists
-        if (hashlists.fckedCatz.has(walletAddress)) nftCounts.fcked_catz++;
-        if (hashlists.celebCatz.has(walletAddress)) nftCounts.celebcatz++;
-        if (hashlists.moneyMonsters.has(walletAddress)) nftCounts.money_monsters++;
-        if (hashlists.moneyMonsters3d.has(walletAddress)) nftCounts.money_monsters3d++;
-        if (hashlists.aiBitbots.has(walletAddress)) nftCounts.ai_bitbots++;
-        if (hashlists.warriors.has(walletAddress)) nftCounts.warriors++;
-        if (hashlists.squirrels.has(walletAddress)) nftCounts.squirrels++;
-        if (hashlists.rjctdBots.has(walletAddress)) nftCounts.rjctd_bots++;
-        if (hashlists.energyApes.has(walletAddress)) nftCounts.energy_apes++;
-        if (hashlists.doodleBots.has(walletAddress)) nftCounts.doodle_bots++;
-        if (hashlists.candyBots.has(walletAddress)) nftCounts.candy_bots++;
+        // Check each token's mint address against hashlists
+        for (const account of tokenAccounts.value) {
+            const mint = account.account.data.parsed.info.mint;
+            // Only count tokens with amount = 1 (NFTs)
+            if (account.account.data.parsed.info.tokenAmount.amount === "1") {
+                if (hashlists.fckedCatz.has(mint)) nftCounts.fcked_catz++;
+                if (hashlists.celebCatz.has(mint)) nftCounts.celebcatz++;
+                if (hashlists.moneyMonsters.has(mint)) nftCounts.money_monsters++;
+                if (hashlists.moneyMonsters3d.has(mint)) nftCounts.money_monsters3d++;
+                if (hashlists.aiBitbots.has(mint)) nftCounts.ai_bitbots++;
+                if (hashlists.warriors.has(mint)) nftCounts.warriors++;
+                if (hashlists.squirrels.has(mint)) nftCounts.squirrels++;
+                if (hashlists.rjctdBots.has(mint)) nftCounts.rjctd_bots++;
+                if (hashlists.energyApes.has(mint)) nftCounts.energy_apes++;
+                if (hashlists.doodleBots.has(mint)) nftCounts.doodle_bots++;
+                if (hashlists.candyBots.has(mint)) nftCounts.candy_bots++;
+            }
+        }
 
         return {
             success: true,
