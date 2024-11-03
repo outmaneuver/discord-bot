@@ -242,7 +242,6 @@ async function showProfile(message) {
 
 async function showWallets(message) {
     try {
-        // Verify roles first
         await verifyAndUpdateRoles(message);
         
         const userId = message.author.id;
@@ -250,8 +249,13 @@ async function showWallets(message) {
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
-            .setTitle('Your Connected Wallets')
-            .setDescription(wallets.length > 0 ? wallets.join('\n') : 'No wallets connected');
+            .setTitle(`${message.author.username}'s Connected Wallets`)
+            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setDescription(wallets.length > 0 ? wallets.join('\n') : 'No wallets connected')
+            .setFooter({ 
+                text: 'BUXDAO - Putting community first',
+                iconURL: 'https://buxdao.io/logo.png'
+            });
 
         await message.channel.send({ embeds: [embed] });
     } catch (error) {
@@ -262,7 +266,6 @@ async function showWallets(message) {
 
 async function showNFTs(message) {
     try {
-        // Verify roles first
         await verifyAndUpdateRoles(message);
         
         const userId = message.author.id;
@@ -315,8 +318,9 @@ async function showNFTs(message) {
         }
 
         const embed = new EmbedBuilder()
-            .setColor('#FFD700')
-            .setTitle(`${message.author.username}'s NFT Holdings`)
+            .setColor('#0099ff')
+            .setTitle(`${message.author.username}'s NFT Collection`)
+            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
             .addFields(
                 { 
                     name: '🎨 Main Collections', 
@@ -337,7 +341,8 @@ async function showNFTs(message) {
                         `A.I. Energy Apes: ${nftCounts.energy_apes}\n` +
                         `RJCTD bots: ${nftCounts.rjctd_bots}\n` +
                         `Candy bots: ${nftCounts.candy_bots}\n` +
-                        `Doodle bots: ${nftCounts.doodle_bots}`,
+                        `Doodle bots: ${nftCounts.doodle_bots}\n` +
+                        '---------------------------------------------------------------',
                     inline: false
                 }
             )
@@ -356,7 +361,6 @@ async function showNFTs(message) {
 
 async function showRoles(message) {
     try {
-        // Verify roles first
         await verifyAndUpdateRoles(message);
         
         const roles = message.member.roles.cache
@@ -366,8 +370,13 @@ async function showRoles(message) {
 
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
-            .setTitle('Your Server Roles')
-            .setDescription(roles.length > 0 ? roles.join('\n') : 'No roles');
+            .setTitle(`${message.author.username}'s Server Roles`)
+            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setDescription(roles.length > 0 ? roles.join('\n') : 'No roles')
+            .setFooter({ 
+                text: 'BUXDAO - Putting community first',
+                iconURL: 'https://buxdao.io/logo.png'
+            });
 
         await message.channel.send({ embeds: [embed] });
     } catch (error) {
@@ -378,7 +387,6 @@ async function showRoles(message) {
 
 async function showBUX(message) {
     try {
-        // Verify roles first
         await verifyAndUpdateRoles(message);
         
         const userId = message.author.id;
@@ -388,12 +396,12 @@ async function showBUX(message) {
             const embed = new EmbedBuilder()
                 .setColor('#FFD700')
                 .setTitle(`${message.author.username}'s BUX Info`)
+                .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
                 .setDescription('No wallets connected. Please connect your wallet at https://verify.buxdao.io')
                 .setFooter({ 
                     text: 'BUXDAO - Putting community first',
                     iconURL: 'https://buxdao.io/logo.png'
-                })
-                .setTimestamp();
+                });
 
             await message.channel.send({ embeds: [embed] });
             return;
@@ -437,6 +445,7 @@ async function showBUX(message) {
         const embed = new EmbedBuilder()
             .setColor('#FFD700')
             .setTitle(`${message.author.username}'s BUX Info`)
+            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
             .addFields(
                 { 
                     name: '💰 BUX Balance', 
