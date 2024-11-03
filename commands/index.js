@@ -339,6 +339,22 @@ async function showBUX(message) {
     try {
         const userId = message.author.id;
         const wallets = await redis.smembers(`wallets:${userId}`);
+        
+        if (wallets.length === 0) {
+            const embed = new EmbedBuilder()
+                .setColor('#FFD700')
+                .setTitle(`${message.author.username}'s BUX Info`)
+                .setDescription('No wallets connected. Please connect your wallet at https://verify.buxdao.io')
+                .setFooter({ 
+                    text: 'BUXDAO - Putting community first',
+                    iconURL: 'https://buxdao.io/logo.png'
+                })
+                .setTimestamp();
+
+            await message.channel.send({ embeds: [embed] });
+            return;
+        }
+
         let totalBalance = 0;
         let nftCounts = {
             fcked_catz: 0,
@@ -354,13 +370,21 @@ async function showBUX(message) {
             candy_bots: 0
         };
 
+        // Process one wallet at a time with delay
         for (const wallet of wallets) {
-            const result = await verifyWallet(userId, wallet);
-            if (result?.success) {
-                totalBalance += result.data.buxBalance || 0;
-                Object.keys(nftCounts).forEach(key => {
-                    nftCounts[key] += result.data.nftCounts[key] || 0;
-                });
+            try {
+                const result = await verifyWallet(userId, wallet);
+                if (result?.success) {
+                    totalBalance += result.data.buxBalance || 0;
+                    Object.keys(nftCounts).forEach(key => {
+                        nftCounts[key] += result.data.nftCounts[key] || 0;
+                    });
+                }
+                // Add delay between wallets
+                await sleep(2000);
+            } catch (error) {
+                console.error(`Error checking wallet ${wallet}:`, error);
+                // Continue with next wallet
             }
         }
 
