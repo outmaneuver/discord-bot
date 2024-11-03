@@ -42,13 +42,6 @@ async function verifyWallet(userId, walletAddress) {
         const buxBalance = await getBUXBalance(walletAddress);
         console.log(`BUX balance for ${walletAddress}:`, buxBalance);
 
-        // Get NFT token accounts with single RPC call
-        const connection = new Connection(process.env.SOLANA_RPC_URL);
-        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-            new PublicKey(walletAddress),
-            { programId: TOKEN_PROGRAM_ID }
-        );
-
         // Initialize NFT counts
         const nftCounts = {
             fcked_catz: 0,
@@ -64,22 +57,35 @@ async function verifyWallet(userId, walletAddress) {
             candy_bots: 0
         };
 
-        // Check each token's mint address against hashlists
-        for (const account of tokenAccounts.value) {
-            const mint = account.account.data.parsed.info.mint;
-            if (account.account.data.parsed.info.tokenAmount.amount === "1") {
-                if (hashlists.fckedCatz.has(mint)) nftCounts.fcked_catz++;
-                if (hashlists.celebCatz.has(mint)) nftCounts.celebcatz++;
-                if (hashlists.moneyMonsters.has(mint)) nftCounts.money_monsters++;
-                if (hashlists.moneyMonsters3d.has(mint)) nftCounts.money_monsters3d++;
-                if (hashlists.aiBitbots.has(mint)) nftCounts.ai_bitbots++;
-                if (hashlists.warriors.has(mint)) nftCounts.warriors++;
-                if (hashlists.squirrels.has(mint)) nftCounts.squirrels++;
-                if (hashlists.rjctdBots.has(mint)) nftCounts.rjctd_bots++;
-                if (hashlists.energyApes.has(mint)) nftCounts.energy_apes++;
-                if (hashlists.doodleBots.has(mint)) nftCounts.doodle_bots++;
-                if (hashlists.candyBots.has(mint)) nftCounts.candy_bots++;
+        // Only make RPC call if we don't have the NFT data cached
+        if (!cached?.data?.nftCounts) {
+            // Get NFT token accounts with single RPC call
+            const connection = new Connection(process.env.SOLANA_RPC_URL);
+            const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+                new PublicKey(walletAddress),
+                { programId: TOKEN_PROGRAM_ID }
+            );
+
+            // Check each token's mint address against hashlists
+            for (const account of tokenAccounts.value) {
+                const mint = account.account.data.parsed.info.mint;
+                if (account.account.data.parsed.info.tokenAmount.amount === "1") {
+                    if (hashlists.fckedCatz.has(mint)) nftCounts.fcked_catz++;
+                    if (hashlists.celebCatz.has(mint)) nftCounts.celebcatz++;
+                    if (hashlists.moneyMonsters.has(mint)) nftCounts.money_monsters++;
+                    if (hashlists.moneyMonsters3d.has(mint)) nftCounts.money_monsters3d++;
+                    if (hashlists.aiBitbots.has(mint)) nftCounts.ai_bitbots++;
+                    if (hashlists.warriors.has(mint)) nftCounts.warriors++;
+                    if (hashlists.squirrels.has(mint)) nftCounts.squirrels++;
+                    if (hashlists.rjctdBots.has(mint)) nftCounts.rjctd_bots++;
+                    if (hashlists.energyApes.has(mint)) nftCounts.energy_apes++;
+                    if (hashlists.doodleBots.has(mint)) nftCounts.doodle_bots++;
+                    if (hashlists.candyBots.has(mint)) nftCounts.candy_bots++;
+                }
             }
+        } else {
+            // Use cached NFT counts
+            Object.assign(nftCounts, cached.data.nftCounts);
         }
 
         const result = {
