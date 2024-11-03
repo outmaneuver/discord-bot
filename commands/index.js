@@ -117,7 +117,7 @@ async function showProfile(message) {
                 .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
                 .setDescription('❌ No wallets connected. Please connect your wallet at https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify')
                 .setFooter({ 
-                    text: 'BUXDAO - Building the future of Web3 gaming',
+                    text: 'BUXDAO - Putting community first',
                     iconURL: 'https://buxdao.io/logo.png'
                 })
                 .setTimestamp();
