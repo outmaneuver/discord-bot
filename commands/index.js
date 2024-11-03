@@ -107,11 +107,8 @@ async function verifyAndUpdateRoles(message) {
 // Update each =my. command to include role verification
 async function showProfile(message) {
     try {
-        // Verify roles first
-        await verifyAndUpdateRoles(message);
-        
         const userId = message.author.id;
-        const wallets = await redis.smembers(`wallets:${userId}`) || [];
+        const wallets = await redis.smembers(`wallets:${userId}`);
         
         if (wallets.length === 0) {
             const embed = new EmbedBuilder()
@@ -145,22 +142,26 @@ async function showProfile(message) {
 
         let totalBuxBalance = 0;
 
+        // Fetch data ONCE
         for (const wallet of wallets) {
             try {
                 const result = await verifyWallet(userId, wallet);
                 if (result?.success) {
-                    totalBuxBalance += result.data.buxBalance || 0;
-                    if (result.data.nftCounts) {
-                        Object.keys(nftCounts).forEach(key => {
-                            nftCounts[key] += result.data.nftCounts[key] || 0;
-                        });
-                    }
+                    totalBuxBalance += result.data.buxBalance;
+                    Object.keys(nftCounts).forEach(key => {
+                        nftCounts[key] += result.data.nftCounts[key];
+                    });
                 }
             } catch (err) {
                 console.error(`Error verifying wallet ${wallet}:`, err);
-                // Continue with next wallet
             }
         }
+
+        // Use the data we just fetched instead of fetching again
+        await updateDiscordRoles(message.author.id, message.client, {
+            totalBuxBalance,
+            nftCounts
+        });
 
         const dailyReward = await calculateDailyReward(nftCounts);
         const aiCollabsCount = nftCounts.warriors + nftCounts.squirrels + nftCounts.rjctd_bots + 
