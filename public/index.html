@@ -461,35 +461,43 @@
                     let walletAddress;
                     
                     // Try Solflare first
-                    if (window.solflare) {
-                        console.log('Found Solflare wallet');
+                    if (window.solflare && window.solflare.isSolflare) {
+                        console.log('Attempting Solflare connection...');
                         try {
-                            await window.solflare.connect();
-                            if (window.solflare.connected) {
-                                wallet = window.solflare;
-                                walletName = 'Solflare';
-                                walletAddress = window.solflare.publicKey.toString();
+                            if (!window.solflare.isConnected) {
+                                await window.solflare.connect();
                             }
+                            walletAddress = window.solflare.publicKey.toBase58();
+                            wallet = window.solflare;
+                            walletName = 'Solflare';
+                            console.log('Solflare connected:', walletAddress);
                         } catch (err) {
-                            console.error('Solflare connection failed:', err);
+                            console.error('Solflare connection error:', err);
+                            if (err.code === 4001) {
+                                throw new Error('Connection rejected by user');
+                            }
                         }
                     }
 
-                    // Try Phantom if Solflare failed
-                    if (!wallet && window.solana) {
-                        console.log('Found Phantom wallet');
+                    // Try Phantom if Solflare failed or isn't available
+                    if (!walletAddress && window.solana) {
+                        console.log('Attempting Phantom connection...');
                         try {
                             const resp = await window.solana.connect();
                             wallet = window.solana;
                             walletName = 'Phantom';
                             walletAddress = resp.publicKey.toString();
+                            console.log('Phantom connected:', walletAddress);
                         } catch (err) {
-                            console.error('Phantom connection failed:', err);
+                            console.error('Phantom connection error:', err);
+                            if (err.code === 4001) {
+                                throw new Error('Connection rejected by user');
+                            }
                         }
                     }
 
-                    if (!wallet || !walletAddress) {
-                        throw new Error('Failed to connect wallet. Please try again.');
+                    if (!walletAddress) {
+                        throw new Error('Unable to connect wallet. Please try again.');
                     }
 
                     status.textContent = 'NFT check in progress... This may take a few minutes';
