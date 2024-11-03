@@ -177,6 +177,10 @@ async function updateDiscordRoles(userId, client) {
             candy_bots: 0
         };
 
+        // Check for top 10 holders in any wallet
+        let isMMTop10 = false;
+        let isMM3DTop10 = false;
+
         // Process each wallet
         for (const wallet of wallets) {
             const result = await verifyWallet(userId, wallet);
@@ -186,6 +190,14 @@ async function updateDiscordRoles(userId, client) {
                 Object.keys(nftCounts).forEach(key => {
                     nftCounts[key] += result.data.nftCounts[key];
                 });
+                
+                // Check if this wallet is in top 10
+                if (hashlists.mmTop10.has(wallet)) {
+                    isMMTop10 = true;
+                }
+                if (hashlists.mm3dTop10.has(wallet)) {
+                    isMM3DTop10 = true;
+                }
             }
         }
 
@@ -225,13 +237,11 @@ async function updateDiscordRoles(userId, client) {
             rolesToAdd.push(process.env.WHALE_ROLE_ID_AI_BITBOTS);
         }
 
-        // Also check for top 10 holders
-        if (hashlists.mmTop10.has(walletAddress)) {
-            rolesToAdd.push(process.env.ROLE_ID_MM_TOP10);
-        }
-        if (hashlists.mm3dTop10.has(walletAddress)) {
-            rolesToAdd.push(process.env.ROLE_ID_MM3D_TOP10);
-        }
+        // Add top 10 roles
+        if (isMMTop10) rolesToAdd.push(process.env.ROLE_ID_MM_TOP10);
+        if (isMM3DTop10) rolesToAdd.push(process.env.ROLE_ID_MM3D_TOP10);
+
+        console.log('Roles to add:', rolesToAdd);
 
         // Add roles
         if (rolesToAdd.length > 0) {
