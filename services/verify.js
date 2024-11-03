@@ -246,7 +246,7 @@ async function getNFTAccounts(walletAddress, connection) {
     }
 }
 
-// Update updateDiscordRoles to handle errors better
+// Update updateDiscordRoles to avoid double counting
 async function updateDiscordRoles(userId, client) {
     try {
         console.log('Starting role update for user:', userId);
@@ -261,13 +261,44 @@ async function updateDiscordRoles(userId, client) {
         const wallets = await redis.smembers(`wallets:${userId}`);
         console.log('Found wallets:', wallets);
 
+        // Create a Set to track unique NFT mints
+        const uniqueMints = {
+            fcked_catz: new Set(),
+            celebcatz: new Set(),
+            money_monsters: new Set(),
+            money_monsters3d: new Set(),
+            ai_bitbots: new Set(),
+            warriors: new Set(),
+            squirrels: new Set(),
+            rjctd_bots: new Set(),
+            energy_apes: new Set(),
+            doodle_bots: new Set(),
+            candy_bots: new Set()
+        };
+
+        let totalBuxBalance = 0;
+
         // Process wallets with rate limiting
-        const results = [];
         for (const wallet of wallets) {
             try {
                 const result = await verifyWallet(userId, wallet);
-                if (result.success) {
-                    results.push(result);
+                if (result.success && result.data.nftAccounts?.value) {
+                    // Add unique mints to sets
+                    for (const account of result.data.nftAccounts.value) {
+                        const mint = account.account.data.parsed.info.mint;
+                        if (hashlists.fckedCatz.has(mint)) uniqueMints.fcked_catz.add(mint);
+                        if (hashlists.celebCatz.has(mint)) uniqueMints.celebcatz.add(mint);
+                        if (hashlists.moneyMonsters.has(mint)) uniqueMints.money_monsters.add(mint);
+                        if (hashlists.moneyMonsters3d.has(mint)) uniqueMints.money_monsters3d.add(mint);
+                        if (hashlists.aiBitbots.has(mint)) uniqueMints.ai_bitbots.add(mint);
+                        if (hashlists.warriors.has(mint)) uniqueMints.warriors.add(mint);
+                        if (hashlists.squirrels.has(mint)) uniqueMints.squirrels.add(mint);
+                        if (hashlists.rjctdBots.has(mint)) uniqueMints.rjctd_bots.add(mint);
+                        if (hashlists.energyApes.has(mint)) uniqueMints.energy_apes.add(mint);
+                        if (hashlists.doodleBots.has(mint)) uniqueMints.doodle_bots.add(mint);
+                        if (hashlists.candyBots.has(mint)) uniqueMints.candy_bots.add(mint);
+                    }
+                    totalBuxBalance += result.data.buxBalance;
                 }
                 await sleep(1000); // Rate limit between wallets
             } catch (error) {
@@ -275,45 +306,36 @@ async function updateDiscordRoles(userId, client) {
             }
         }
 
-        // Calculate totals
+        // Convert Sets to counts
         const totalNftCounts = {
-            fcked_catz: 0,
-            celebcatz: 0,
-            money_monsters: 0,
-            money_monsters3d: 0,
-            ai_bitbots: 0,
-            warriors: 0,
-            squirrels: 0,
-            rjctd_bots: 0,
-            energy_apes: 0,
-            doodle_bots: 0,
-            candy_bots: 0
+            fcked_catz: uniqueMints.fcked_catz.size,
+            celebcatz: uniqueMints.celebcatz.size,
+            money_monsters: uniqueMints.money_monsters.size,
+            money_monsters3d: uniqueMints.money_monsters3d.size,
+            ai_bitbots: uniqueMints.ai_bitbots.size,
+            warriors: uniqueMints.warriors.size,
+            squirrels: uniqueMints.squirrels.size,
+            rjctd_bots: uniqueMints.rjctd_bots.size,
+            energy_apes: uniqueMints.energy_apes.size,
+            doodle_bots: uniqueMints.doodle_bots.size,
+            candy_bots: uniqueMints.candy_bots.size
         };
-
-        let totalBuxBalance = 0;
-
-        results.forEach(result => {
-            Object.keys(totalNftCounts).forEach(key => {
-                totalNftCounts[key] += result.data.nftCounts[key];
-            });
-            totalBuxBalance += result.data.buxBalance;
-        });
 
         // Update roles using role IDs
         const rolesToAdd = [];
 
-        // Add NFT roles
-        if (totalNftCounts.fcked_catz > 0) rolesToAdd.push(process.env.ROLE_ID_FCKED_CATZ);
-        if (totalNftCounts.celebcatz > 0) rolesToAdd.push(process.env.ROLE_ID_CELEBCATZ);
-        if (totalNftCounts.money_monsters > 0) rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS);
-        if (totalNftCounts.money_monsters3d > 0) rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
-        if (totalNftCounts.ai_bitbots > 0) rolesToAdd.push(process.env.ROLE_ID_AI_BITBOTS);
-        if (totalNftCounts.warriors > 0) rolesToAdd.push(process.env.ROLE_ID_WARRIORS);
-        if (totalNftCounts.squirrels > 0) rolesToAdd.push(process.env.ROLE_ID_SQUIRRELS);
-        if (totalNftCounts.rjctd_bots > 0) rolesToAdd.push(process.env.ROLE_ID_RJCTD_BOTS);
-        if (totalNftCounts.energy_apes > 0) rolesToAdd.push(process.env.ROLE_ID_ENERGY_APES);
-        if (totalNftCounts.doodle_bots > 0) rolesToAdd.push(process.env.ROLE_ID_DOODLE_BOTS);
-        if (totalNftCounts.candy_bots > 0) rolesToAdd.push(process.env.ROLE_ID_CANDY_BOTS);
+        // Add NFT roles based on unique NFTs
+        if (uniqueMints.fcked_catz.size > 0) rolesToAdd.push(process.env.ROLE_ID_FCKED_CATZ);
+        if (uniqueMints.celebcatz.size > 0) rolesToAdd.push(process.env.ROLE_ID_CELEBCATZ);
+        if (uniqueMints.money_monsters.size > 0) rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS);
+        if (uniqueMints.money_monsters3d.size > 0) rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
+        if (uniqueMints.ai_bitbots.size > 0) rolesToAdd.push(process.env.ROLE_ID_AI_BITBOTS);
+        if (uniqueMints.warriors.size > 0) rolesToAdd.push(process.env.ROLE_ID_WARRIORS);
+        if (uniqueMints.squirrels.size > 0) rolesToAdd.push(process.env.ROLE_ID_SQUIRRELS);
+        if (uniqueMints.rjctd_bots.size > 0) rolesToAdd.push(process.env.ROLE_ID_RJCTD_BOTS);
+        if (uniqueMints.energy_apes.size > 0) rolesToAdd.push(process.env.ROLE_ID_ENERGY_APES);
+        if (uniqueMints.doodle_bots.size > 0) rolesToAdd.push(process.env.ROLE_ID_DOODLE_BOTS);
+        if (uniqueMints.candy_bots.size > 0) rolesToAdd.push(process.env.ROLE_ID_CANDY_BOTS);
 
         // Add BUX roles based on total balance
         if (totalBuxBalance >= 50000) rolesToAdd.push(process.env.ROLE_ID_50000_BUX);
