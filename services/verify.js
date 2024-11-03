@@ -102,33 +102,18 @@ const CACHE_TTL = {
     DAILY_REWARD: 300  // 5 minutes for daily reward calculation
 };
 
-// Update verifyWallet to always check BUX balance
+// Update verifyWallet function to remove NFT caching
 async function verifyWallet(userId, walletAddress) {
     try {
         console.log(`Checking wallet ${walletAddress} for user ${userId}`);
         
-        // Always get fresh BUX balance
+        // Get BUX balance with short cache
         const buxBalance = await getBUXBalance(walletAddress);
         console.log(`BUX balance for ${walletAddress}:`, buxBalance);
 
-        // Check NFT cache with shorter TTL
-        const nftCacheKey = `${CACHE_KEYS.NFT_ACCOUNTS}${walletAddress}`;
-        let nftAccounts = null;
-        const cachedNFTs = await redis.get(nftCacheKey);
-
-        if (cachedNFTs) {
-            console.log('Using cached NFT data');
-            nftAccounts = JSON.parse(cachedNFTs);
-        } else {
-            // Get fresh NFT data if not cached
-            const connection = getConnection();
-            nftAccounts = await getNFTAccounts(walletAddress, connection);
-            
-            // Cache NFT data with shorter TTL
-            if (nftAccounts?.value) {
-                await redis.setex(nftCacheKey, CACHE_TTL.NFT_ACCOUNTS, JSON.stringify(nftAccounts));
-            }
-        }
+        // Always get fresh NFT data
+        const connection = getConnection();
+        const nftAccounts = await getNFTAccounts(walletAddress, connection);
 
         // Process NFT counts
         const nftCounts = {
@@ -162,21 +147,12 @@ async function verifyWallet(userId, walletAddress) {
             }
         }
 
-        // Get daily reward from cache or calculate
-        const rewardCacheKey = `${CACHE_KEYS.DAILY_REWARD}${walletAddress}`;
-        let dailyReward = await redis.get(rewardCacheKey);
-
-        if (!dailyReward) {
-            dailyReward = await calculateDailyReward(nftCounts);
-            await redis.setex(rewardCacheKey, CACHE_TTL.DAILY_REWARD, dailyReward.toString());
-        }
-
         const result = {
             success: true,
             data: {
                 nftCounts,
                 buxBalance,
-                dailyReward: parseInt(dailyReward)
+                dailyReward: await calculateDailyReward(nftCounts)
             }
         };
 
@@ -246,7 +222,7 @@ async function getNFTAccounts(walletAddress, connection) {
     }
 }
 
-// Update updateDiscordRoles to avoid double counting
+// Update updateDiscordRoles to avoid caching
 async function updateDiscordRoles(userId, client) {
     try {
         console.log('Starting role update for user:', userId);
@@ -282,23 +258,30 @@ async function updateDiscordRoles(userId, client) {
         for (const wallet of wallets) {
             try {
                 const result = await verifyWallet(userId, wallet);
-                if (result.success && result.data.nftAccounts?.value) {
-                    // Add unique mints to sets
-                    for (const account of result.data.nftAccounts.value) {
-                        const mint = account.account.data.parsed.info.mint;
-                        if (hashlists.fckedCatz.has(mint)) uniqueMints.fcked_catz.add(mint);
-                        if (hashlists.celebCatz.has(mint)) uniqueMints.celebcatz.add(mint);
-                        if (hashlists.moneyMonsters.has(mint)) uniqueMints.money_monsters.add(mint);
-                        if (hashlists.moneyMonsters3d.has(mint)) uniqueMints.money_monsters3d.add(mint);
-                        if (hashlists.aiBitbots.has(mint)) uniqueMints.ai_bitbots.add(mint);
-                        if (hashlists.warriors.has(mint)) uniqueMints.warriors.add(mint);
-                        if (hashlists.squirrels.has(mint)) uniqueMints.squirrels.add(mint);
-                        if (hashlists.rjctdBots.has(mint)) uniqueMints.rjctd_bots.add(mint);
-                        if (hashlists.energyApes.has(mint)) uniqueMints.energy_apes.add(mint);
-                        if (hashlists.doodleBots.has(mint)) uniqueMints.doodle_bots.add(mint);
-                        if (hashlists.candyBots.has(mint)) uniqueMints.candy_bots.add(mint);
-                    }
+                if (result.success) {
+                    // Add BUX balance
                     totalBuxBalance += result.data.buxBalance;
+                    
+                    // Get fresh NFT data for each wallet
+                    const connection = getConnection();
+                    const nftAccounts = await getNFTAccounts(wallet, connection);
+                    
+                    if (nftAccounts?.value) {
+                        for (const account of nftAccounts.value) {
+                            const mint = account.account.data.parsed.info.mint;
+                            if (hashlists.fckedCatz.has(mint)) uniqueMints.fcked_catz.add(mint);
+                            if (hashlists.celebCatz.has(mint)) uniqueMints.celebcatz.add(mint);
+                            if (hashlists.moneyMonsters.has(mint)) uniqueMints.money_monsters.add(mint);
+                            if (hashlists.moneyMonsters3d.has(mint)) uniqueMints.money_monsters3d.add(mint);
+                            if (hashlists.aiBitbots.has(mint)) uniqueMints.ai_bitbots.add(mint);
+                            if (hashlists.warriors.has(mint)) uniqueMints.warriors.add(mint);
+                            if (hashlists.squirrels.has(mint)) uniqueMints.squirrels.add(mint);
+                            if (hashlists.rjctdBots.has(mint)) uniqueMints.rjctd_bots.add(mint);
+                            if (hashlists.energyApes.has(mint)) uniqueMints.energy_apes.add(mint);
+                            if (hashlists.doodleBots.has(mint)) uniqueMints.doodle_bots.add(mint);
+                            if (hashlists.candyBots.has(mint)) uniqueMints.candy_bots.add(mint);
+                        }
+                    }
                 }
                 await sleep(1000); // Rate limit between wallets
             } catch (error) {
