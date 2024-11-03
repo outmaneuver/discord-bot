@@ -458,80 +458,97 @@
 
                     let wallet;
                     let walletName;
+                    let walletAddress;
                     
+                    // Try Solflare first
                     if (window.solflare) {
                         console.log('Found Solflare wallet');
-                        wallet = window.solflare;
-                        walletName = 'Solflare';
-                    } else if (window.solana) {
-                        console.log('Found Phantom wallet');
-                        wallet = window.solana;
-                        walletName = 'Phantom';
+                        try {
+                            await window.solflare.connect();
+                            if (window.solflare.connected) {
+                                wallet = window.solflare;
+                                walletName = 'Solflare';
+                                walletAddress = window.solflare.publicKey.toString();
+                            }
+                        } catch (err) {
+                            console.error('Solflare connection failed:', err);
+                        }
                     }
 
-                    try {
-                        status.textContent = `Connecting to ${walletName}...`;
-                        const resp = await wallet.connect();
-                        const walletAddress = resp.publicKey.toString();
-                        
-                        // Update status to show NFT check is in progress
-                        status.textContent = 'NFT check in progress... This may take a few minutes';
-                        
-                        // Store wallet with type
-                        const storeResponse = await fetch('/store-wallet', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ 
-                                walletAddress,
-                                walletType: walletName 
-                            }),
-                            credentials: 'include'
-                        });
-
-                        if (!storeResponse.ok) {
-                            throw new Error('Failed to store wallet');
+                    // Try Phantom if Solflare failed
+                    if (!wallet && window.solana) {
+                        console.log('Found Phantom wallet');
+                        try {
+                            const resp = await window.solana.connect();
+                            wallet = window.solana;
+                            walletName = 'Phantom';
+                            walletAddress = resp.publicKey.toString();
+                        } catch (err) {
+                            console.error('Phantom connection failed:', err);
                         }
+                    }
 
-                        // Make verify request
-                        const verifyResponse = await fetch('/holder-verify/verify', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ 
-                                walletAddress,
-                                walletType: walletName
-                            }),
-                            credentials: 'include'
-                        });
+                    if (!wallet || !walletAddress) {
+                        throw new Error('Failed to connect wallet. Please try again.');
+                    }
 
-                        // Handle different response statuses
-                        if (verifyResponse.status === 503) {
-                            // Keep checking for completion every 5 seconds
-                            const checkStatus = async () => {
-                                try {
-                                    const statusResponse = await fetch('/holder-verify/verify', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                        },
-                                        body: JSON.stringify({ 
-                                            walletAddress,
-                                            walletType: walletName
-                                        }),
-                                        credentials: 'include'
-                                    });
+                    status.textContent = 'NFT check in progress... This may take a few minutes';
+                    
+                    // Store wallet with type
+                    const storeResponse = await fetch('/store-wallet', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            walletAddress,
+                            walletType: walletName 
+                        }),
+                        credentials: 'include'
+                    });
 
-                                    if (statusResponse.ok) {
-                                        const data = await statusResponse.json();
-                                        if (data.success) {
-                                            // Clear loading status
-                                            status.textContent = '';
-                                            
-                                            // Show verification result
-                                            const formattedResponse = `<div class="verification-container">
+                    if (!storeResponse.ok) {
+                        throw new Error('Failed to store wallet');
+                    }
+
+                    // Make verify request
+                    const verifyResponse = await fetch('/holder-verify/verify', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            walletAddress,
+                            walletType: walletName
+                        }),
+                        credentials: 'include'
+                    });
+
+                    // Handle different response statuses
+                    if (verifyResponse.status === 503) {
+                        // Keep checking for completion every 5 seconds
+                        const checkStatus = async () => {
+                            try {
+                                const statusResponse = await fetch('/holder-verify/verify', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({ 
+                                        walletAddress,
+                                        walletType: walletName
+                                    }),
+                                    credentials: 'include'
+                                });
+
+                                if (statusResponse.ok) {
+                                    const data = await statusResponse.json();
+                                    if (data.success) {
+                                        // Clear loading status
+                                        status.textContent = '';
+                                        
+                                        // Show verification result
+                                        const formattedResponse = `<div class="verification-container">
 ✓ Wallet Verification Successful!
 
 VERIFIED NFTs
@@ -545,42 +562,42 @@ A.I. collabs - ${data.data.nftCounts.warriors + data.data.nftCounts.squirrels + 
 
 Daily reward - ${data.data.dailyReward} BUX</div>`;
 
-                                            document.getElementById('verificationResult').innerHTML = formattedResponse;
-                                            document.getElementById('closeMessage').style.display = 'block';
-                                            
-                                            // Update button state
-                                            connectButton.classList.remove('loading');
-                                            connectButton.textContent = 'Connected';
-                                            connectButton.disabled = true;
-                                            
-                                            // Hide wallet info
-                                            walletInfo.style.display = 'none';
-                                            return;
-                                        }
-                                    } else if (statusResponse.status === 503) {
-                                        // Keep checking
-                                        setTimeout(checkStatus, 5000);
+                                        document.getElementById('verificationResult').innerHTML = formattedResponse;
+                                        document.getElementById('closeMessage').style.display = 'block';
+                                        
+                                        // Update button state
+                                        connectButton.classList.remove('loading');
+                                        connectButton.textContent = 'Connected';
+                                        connectButton.disabled = true;
+                                        
+                                        // Hide wallet info
+                                        walletInfo.style.display = 'none';
+                                        return;
                                     }
-                                } catch (error) {
-                                    console.error('Status check error:', error);
+                                } else if (statusResponse.status === 503) {
+                                    // Keep checking
                                     setTimeout(checkStatus, 5000);
                                 }
-                            };
+                            } catch (error) {
+                                console.error('Status check error:', error);
+                                setTimeout(checkStatus, 5000);
+                            }
+                        };
 
-                            // Start checking status
-                            setTimeout(checkStatus, 5000);
-                            return;
-                        }
+                        // Start checking status
+                        setTimeout(checkStatus, 5000);
+                        return;
+                    }
 
-                        // Handle successful response
-                        if (verifyResponse.ok) {
-                            const data = await verifyResponse.json();
-                            if (data.success) {
-                                // Clear loading status
-                                status.textContent = '';
-                                
-                                // Show verification result
-                                const formattedResponse = `<div class="verification-container">
+                    // Handle successful response
+                    if (verifyResponse.ok) {
+                        const data = await verifyResponse.json();
+                        if (data.success) {
+                            // Clear loading status
+                            status.textContent = '';
+                            
+                            // Show verification result
+                            const formattedResponse = `<div class="verification-container">
 ✓ Wallet Verification Successful!
 
 VERIFIED NFTs
@@ -594,42 +611,31 @@ A.I. collabs - ${data.data.nftCounts.warriors + data.data.nftCounts.squirrels + 
 
 Daily reward - ${data.data.dailyReward} BUX</div>`;
 
-                                document.getElementById('verificationResult').innerHTML = formattedResponse;
-                                document.getElementById('closeMessage').style.display = 'block';
-                                
-                                // Update button state
-                                connectButton.classList.remove('loading');
-                                connectButton.textContent = 'Connected';
-                                connectButton.disabled = true;
-                                
-                                // Hide wallet info
-                                walletInfo.style.display = 'none';
-                            }
-                        } else {
-                            throw new Error('Verification failed');
+                            document.getElementById('verificationResult').innerHTML = formattedResponse;
+                            document.getElementById('closeMessage').style.display = 'block';
+                            
+                            // Update button state
+                            connectButton.classList.remove('loading');
+                            connectButton.textContent = 'Connected';
+                            connectButton.disabled = true;
+                            
+                            // Hide wallet info
+                            walletInfo.style.display = 'none';
                         }
-
-                    } catch (error) {
-                        console.error('Wallet connection error:', error);
-                        // Only show error if it's not a timeout
-                        if (!error.message.includes('timeout') && !error.message.includes('NetworkError')) {
-                            status.textContent = error.message;
-                        }
-                        connectButton.classList.remove('loading');
-                        connectButton.disabled = false;
-                        connectButton.textContent = 'Connect Wallet';
-                        walletInfo.style.display = 'flex';
+                    } else {
+                        throw new Error('Verification failed');
                     }
 
                 } catch (error) {
                     console.error('Wallet connection error:', error);
-                    const connectButton = document.getElementById('connectButton');
-                    const walletInfo = document.querySelector('.wallet-info');
+                    // Only show error if it's not a timeout
+                    if (!error.message.includes('timeout') && !error.message.includes('NetworkError')) {
+                        status.textContent = error.message;
+                    }
                     connectButton.classList.remove('loading');
                     connectButton.disabled = false;
                     connectButton.textContent = 'Connect Wallet';
-                    status.textContent = error.message;
-                    walletInfo.style.display = 'flex'; // Show info again on error
+                    walletInfo.style.display = 'flex';
                 }
             }
 
