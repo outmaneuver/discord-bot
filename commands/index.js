@@ -195,11 +195,16 @@ async function showProfile(message) {
                     name: '🎁 Daily Rewards', 
                     value: `${dailyReward} BUX per day`,
                     inline: false 
+                },
+                {
+                    name: '💵 BUX Claim',
+                    value: `0 BUX available`,
+                    inline: false
                 }
             )
             .setImage('https://buxdao.io/banner.png')
             .setFooter({ 
-                text: 'BUXDAO - Building the future of Web3 gaming',
+                text: 'BUXDAO - Putting community first',
                 iconURL: 'https://buxdao.io/logo.png'
             })
             .setTimestamp();
