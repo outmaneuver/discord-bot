@@ -25,6 +25,13 @@ async function verifyWallet(userId, walletAddress) {
     try {
         console.log(`Checking wallet ${walletAddress} for user ${userId}`);
         
+        // Validate wallet address
+        try {
+            new PublicKey(walletAddress);
+        } catch (error) {
+            throw new Error('Invalid wallet address');
+        }
+
         // Get BUX balance
         const buxBalance = await getBUXBalance(walletAddress);
         console.log(`BUX balance for ${walletAddress}:`, buxBalance);
@@ -38,7 +45,8 @@ async function verifyWallet(userId, walletAddress) {
 
         // Only count tokens with amount = 1 (NFTs)
         const nftMints = tokenAccounts.value
-            .filter(acc => acc.account.data.parsed.info.tokenAmount.amount === "1")
+            .filter(acc => acc.account.data.parsed.info.tokenAmount.amount === "1" 
+                && acc.account.data.parsed.info.tokenAmount.decimals === 0)
             .map(acc => acc.account.data.parsed.info.mint);
 
         console.log(`Found ${nftMints.length} NFTs in wallet ${walletAddress}`);
@@ -93,7 +101,7 @@ async function verifyWallet(userId, walletAddress) {
     }
 }
 
-// Get BUX balance with caching
+// Get BUX balance with caching and retries
 async function getBUXBalance(walletAddress) {
     try {
         const cacheKey = `bux:${walletAddress}`;
@@ -121,9 +129,16 @@ async function getBUXBalance(walletAddress) {
     }
 }
 
-// Store wallet address
+// Store wallet address with validation
 async function storeWalletAddress(userId, walletAddress) {
     try {
+        // Validate wallet address
+        try {
+            new PublicKey(walletAddress);
+        } catch (error) {
+            throw new Error('Invalid wallet address');
+        }
+
         await redis.sadd(`wallets:${userId}`, walletAddress);
         return { success: true };
     } catch (error) {
