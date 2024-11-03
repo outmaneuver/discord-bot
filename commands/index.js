@@ -59,7 +59,7 @@ async function showHelp(message) {
     const embed = new EmbedBuilder()
         .setColor('#0099ff')
         .setTitle('BUXDAO Bot Commands')
-        .setThumbnail('https://buxdao.io/bux.jpg')
+        .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/bux.jpg')
         .setDescription('Welcome to BUXDAO! Here are all available commands:')
         .addFields(
             { 
@@ -87,8 +87,8 @@ async function showHelp(message) {
             }
         )
         .setFooter({ 
-            text: 'BUXDAO - Building the future of Web3 gaming', 
-            iconURL: 'https://buxdao.io/bux.jpg'
+            text: 'BUXDAO - Putting community first', 
+            iconURL: 'https://buxdao-verify-d1faffc83da7.herokuapp.com/bux.jpg'
         });
 
     await message.channel.send({ embeds: [embed] });
