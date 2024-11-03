@@ -4,7 +4,7 @@ import { redis } from '../config/redis.js';
 import { calculateDailyReward } from '../services/rewards.js';
 
 // Command handler
-export async function handleCommand(message) {
+async function handleCommand(message) {
     const command = message.content.toLowerCase();
 
     try {
@@ -354,7 +354,6 @@ async function showRewards(message) {
 }
 
 export {
-    handleCommand,
     showHelp,
     showProfile,
     showWallets,
@@ -367,5 +366,6 @@ export {
     showMM3DInfo,
     showBotsInfo,
     showBUXInfo,
-    showRewards
+    showRewards,
+    handleCommand
 };
