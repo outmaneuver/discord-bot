@@ -150,10 +150,99 @@ function updateHashlists(newHashlists) {
     };
 }
 
+// Add updateDiscordRoles function back
+async function updateDiscordRoles(userId, client) {
+    try {
+        console.log('Starting role update for user:', userId);
+        
+        const guild = client.guilds.cache.get(process.env.GUILD_ID);
+        if (!guild) throw new Error('Guild not found');
+
+        const member = await guild.members.fetch(userId);
+        if (!member) throw new Error('Member not found');
+
+        // Get all wallets
+        const wallets = await redis.smembers(`wallets:${userId}`);
+        console.log('Found wallets:', wallets);
+
+        let totalBuxBalance = 0;
+        const nftCounts = {
+            fcked_catz: 0,
+            celebcatz: 0,
+            money_monsters: 0,
+            money_monsters3d: 0,
+            ai_bitbots: 0,
+            warriors: 0,
+            squirrels: 0,
+            rjctd_bots: 0,
+            energy_apes: 0,
+            doodle_bots: 0,
+            candy_bots: 0
+        };
+
+        // Process each wallet
+        for (const wallet of wallets) {
+            const result = await verifyWallet(userId, wallet);
+            if (result.success) {
+                totalBuxBalance += result.data.buxBalance;
+                // Add NFT counts
+                Object.keys(nftCounts).forEach(key => {
+                    nftCounts[key] += result.data.nftCounts[key];
+                });
+            }
+        }
+
+        // Update roles based on NFTs and BUX balance
+        const rolesToAdd = [];
+
+        // Add NFT roles
+        if (nftCounts.fcked_catz > 0) rolesToAdd.push(process.env.ROLE_ID_FCKED_CATZ);
+        if (nftCounts.celebcatz > 0) rolesToAdd.push(process.env.ROLE_ID_CELEBCATZ);
+        if (nftCounts.money_monsters > 0) rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS);
+        if (nftCounts.money_monsters3d > 0) rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
+        if (nftCounts.ai_bitbots > 0) rolesToAdd.push(process.env.ROLE_ID_AI_BITBOTS);
+        if (nftCounts.warriors > 0) rolesToAdd.push(process.env.ROLE_ID_WARRIORS);
+        if (nftCounts.squirrels > 0) rolesToAdd.push(process.env.ROLE_ID_SQUIRRELS);
+        if (nftCounts.rjctd_bots > 0) rolesToAdd.push(process.env.ROLE_ID_RJCTD_BOTS);
+        if (nftCounts.energy_apes > 0) rolesToAdd.push(process.env.ROLE_ID_ENERGY_APES);
+        if (nftCounts.doodle_bots > 0) rolesToAdd.push(process.env.ROLE_ID_DOODLE_BOTS);
+        if (nftCounts.candy_bots > 0) rolesToAdd.push(process.env.ROLE_ID_CANDY_BOTS);
+
+        // Add BUX roles based on total balance
+        if (totalBuxBalance >= 50000) rolesToAdd.push(process.env.ROLE_ID_50000_BUX);
+        if (totalBuxBalance >= 25000) rolesToAdd.push(process.env.ROLE_ID_25000_BUX);
+        if (totalBuxBalance >= 10000) rolesToAdd.push(process.env.ROLE_ID_10000_BUX);
+        if (totalBuxBalance >= 2500) rolesToAdd.push(process.env.ROLE_ID_2500_BUX);
+
+        // Add roles
+        if (rolesToAdd.length > 0) {
+            const roles = rolesToAdd
+                .map(id => guild.roles.cache.get(id))
+                .filter(r => r);
+            
+            if (roles.length > 0) {
+                await member.roles.add(roles);
+                console.log('Added roles:', roles.map(r => r.name));
+            }
+        }
+
+        return {
+            success: true,
+            nftCounts,
+            buxBalance: totalBuxBalance
+        };
+
+    } catch (error) {
+        console.error('Error updating Discord roles:', error);
+        throw error;
+    }
+}
+
 export {
     verifyWallet,
     hashlists,
     updateHashlists,
     getBUXBalance,
-    storeWalletAddress
+    storeWalletAddress,
+    updateDiscordRoles
 };
