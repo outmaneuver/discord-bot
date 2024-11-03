@@ -266,8 +266,6 @@ async function showWallets(message) {
 
 async function showNFTs(message) {
     try {
-        await verifyAndUpdateRoles(message);
-        
         const userId = message.author.id;
         const wallets = await redis.smembers(`wallets:${userId}`);
         
@@ -275,6 +273,7 @@ async function showNFTs(message) {
             const embed = new EmbedBuilder()
                 .setColor('#FFD700')
                 .setTitle(`${message.author.username}'s NFT Holdings`)
+                .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
                 .setDescription('No wallets connected. Please connect your wallet at https://verify.buxdao.io')
                 .setFooter({ 
                     text: 'BUXDAO - Putting community first',
@@ -300,22 +299,28 @@ async function showNFTs(message) {
             candy_bots: 0
         };
 
-        // Process one wallet at a time with delay
+        let totalBuxBalance = 0;
+
+        // Process each wallet
         for (const wallet of wallets) {
             try {
                 const result = await verifyWallet(userId, wallet);
                 if (result?.success) {
+                    totalBuxBalance += result.data.buxBalance;
                     Object.keys(nftCounts).forEach(key => {
                         nftCounts[key] += result.data.nftCounts[key] || 0;
                     });
                 }
-                // Add delay between wallets
-                await sleep(2000);
             } catch (error) {
                 console.error(`Error verifying wallet ${wallet}:`, error);
-                // Continue with next wallet
             }
         }
+
+        // Update roles with the data we just fetched
+        await updateDiscordRoles(message.author.id, message.client, {
+            totalBuxBalance,
+            nftCounts
+        });
 
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
