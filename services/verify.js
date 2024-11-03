@@ -29,6 +29,20 @@ async function verifyWallet(userId, walletAddress) {
         const buxBalance = await getBUXBalance(walletAddress);
         console.log(`BUX balance for ${walletAddress}:`, buxBalance);
 
+        // Get token accounts for NFT verification
+        const connection = new Connection(process.env.SOLANA_RPC_URL);
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+            new PublicKey(walletAddress),
+            { programId: TOKEN_PROGRAM_ID }
+        );
+
+        // Only count tokens with amount = 1 (NFTs)
+        const nftMints = tokenAccounts.value
+            .filter(acc => acc.account.data.parsed.info.tokenAmount.amount === "1")
+            .map(acc => acc.account.data.parsed.info.mint);
+
+        console.log(`Found ${nftMints.length} NFTs in wallet ${walletAddress}`);
+
         // Check NFTs against hashlists
         const nftCounts = {
             fcked_catz: 0,
@@ -44,26 +58,8 @@ async function verifyWallet(userId, walletAddress) {
             candy_bots: 0
         };
 
-        // Get NFT token accounts from cache
-        const cacheKey = `nfts:${walletAddress}`;
-        let nftAccounts = await redis.get(cacheKey);
-        
-        if (!nftAccounts) {
-            // If not in cache, get from chain
-            const connection = new Connection(process.env.SOLANA_RPC_URL);
-            const accounts = await connection.getParsedTokenAccountsByOwner(
-                new PublicKey(walletAddress),
-                { programId: TOKEN_PROGRAM_ID }
-            );
-            
-            nftAccounts = accounts.value.map(acc => acc.account.data.parsed.info.mint);
-            await redis.setex(cacheKey, 300, JSON.stringify(nftAccounts));
-        } else {
-            nftAccounts = JSON.parse(nftAccounts);
-        }
-
-        // Check NFTs against hashlists
-        for (const mint of nftAccounts) {
+        // Count NFTs from hashlists
+        for (const mint of nftMints) {
             if (hashlists.fckedCatz.has(mint)) nftCounts.fcked_catz++;
             if (hashlists.celebCatz.has(mint)) nftCounts.celebcatz++;
             if (hashlists.moneyMonsters.has(mint)) nftCounts.money_monsters++;
@@ -76,6 +72,9 @@ async function verifyWallet(userId, walletAddress) {
             if (hashlists.doodleBots.has(mint)) nftCounts.doodle_bots++;
             if (hashlists.candyBots.has(mint)) nftCounts.candy_bots++;
         }
+
+        // Log NFT counts for debugging
+        console.log('NFT counts for wallet', walletAddress, ':', nftCounts);
 
         const result = {
             success: true,
