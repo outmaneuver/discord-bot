@@ -3,6 +3,9 @@ import { verifyWallet, getBUXBalance, updateDiscordRoles } from '../services/ver
 import { redis } from '../config/redis.js';
 import { calculateDailyReward } from '../services/rewards.js';
 
+// Add sleep helper function
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 // Command handler
 async function handleCommand(message) {
     const command = message.content.toLowerCase();
