@@ -449,6 +449,7 @@ async function showBUX(message) {
         }
 
         const dailyReward = await calculateDailyReward(nftCounts);
+        const displayBalance = (totalBalance / 1e9).toLocaleString(); // Convert from raw units
 
         const embed = new EmbedBuilder()
             .setColor('#FFD700')
@@ -457,7 +458,7 @@ async function showBUX(message) {
             .addFields(
                 { 
                     name: '💰 BUX Balance', 
-                    value: `${totalBalance.toLocaleString()} BUX\n---------------------------------------------------------------`,
+                    value: `${displayBalance} BUX\n---------------------------------------------------------------`,
                     inline: false 
                 },
                 { 
