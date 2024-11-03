@@ -152,7 +152,7 @@ function updateHashlists(newHashlists) {
 }
 
 // Add updateDiscordRoles function back
-async function updateDiscordRoles(userId, client) {
+async function updateDiscordRoles(userId, client, existingData = null) {
     try {
         console.log('Starting role update for user:', userId);
         
@@ -181,14 +181,20 @@ async function updateDiscordRoles(userId, client) {
             candy_bots: 0
         };
 
-        // Process each wallet
-        for (const wallet of wallets) {
-            const result = await verifyWallet(userId, wallet);
-            if (result.success) {
-                totalBuxBalance += result.data.buxBalance;
-                Object.keys(nftCounts).forEach(key => {
-                    nftCounts[key] += result.data.nftCounts[key];
-                });
+        // Use existing data if provided, otherwise fetch new data
+        if (existingData) {
+            totalBuxBalance = existingData.totalBuxBalance;
+            Object.assign(nftCounts, existingData.nftCounts);
+        } else {
+            // Process each wallet
+            for (const wallet of wallets) {
+                const result = await verifyWallet(userId, wallet);
+                if (result.success) {
+                    totalBuxBalance += result.data.buxBalance;
+                    Object.keys(nftCounts).forEach(key => {
+                        nftCounts[key] += result.data.nftCounts[key];
+                    });
+                }
             }
         }
 
