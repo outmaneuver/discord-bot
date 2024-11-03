@@ -22,11 +22,22 @@ let hashlists = {
     mm3dTop10: new Set()
 };
 
+// Add cache for NFT counts and BUX balance
+const userDataCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 // Simple function to verify NFTs from hashlists
 async function verifyWallet(userId, walletAddress) {
     try {
         console.log(`Checking wallet ${walletAddress} for user ${userId}`);
         
+        // Check cache first
+        const cacheKey = `${userId}:${walletAddress}`;
+        const cached = userDataCache.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+            return cached.data;
+        }
+
         // Get BUX balance
         const buxBalance = await getBUXBalance(walletAddress);
         console.log(`BUX balance for ${walletAddress}:`, buxBalance);
@@ -56,7 +67,6 @@ async function verifyWallet(userId, walletAddress) {
         // Check each token's mint address against hashlists
         for (const account of tokenAccounts.value) {
             const mint = account.account.data.parsed.info.mint;
-            // Only count tokens with amount = 1 (NFTs)
             if (account.account.data.parsed.info.tokenAmount.amount === "1") {
                 if (hashlists.fckedCatz.has(mint)) nftCounts.fcked_catz++;
                 if (hashlists.celebCatz.has(mint)) nftCounts.celebcatz++;
@@ -72,13 +82,21 @@ async function verifyWallet(userId, walletAddress) {
             }
         }
 
-        return {
+        const result = {
             success: true,
             data: {
                 nftCounts,
                 buxBalance: buxBalance || 0
             }
         };
+
+        // Cache the result
+        userDataCache.set(cacheKey, {
+            timestamp: Date.now(),
+            data: result
+        });
+
+        return result;
 
     } catch (error) {
         console.error('Error in verifyWallet:', error);
