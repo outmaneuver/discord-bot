@@ -6,9 +6,27 @@ import { calculateDailyReward } from '../services/rewards.js';
 // Add sleep helper function
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+// Add admin role check helper
+function isAdmin(member) {
+    return member.roles.cache.some(role => role.id === process.env.ADMIN_ROLE_ID);
+}
+
 // Command handler
 async function handleCommand(message) {
-    const command = message.content.toLowerCase();
+    const args = message.content.toLowerCase().split(' ');
+    const command = args[0];
+    const mentionedUser = message.mentions.users.first();
+
+    // Check if admin is trying to view someone else's data
+    if (mentionedUser && !isAdmin(message.member)) {
+        await message.reply('You do not have permission to view other users\' data.');
+        return;
+    }
+
+    // Use mentioned user if admin, otherwise use message author
+    const targetUser = mentionedUser && isAdmin(message.member) ? mentionedUser : message.author;
+    const targetMember = mentionedUser && isAdmin(message.member) ? 
+        await message.guild.members.fetch(mentionedUser.id) : message.member;
 
     try {
         switch (command) {
@@ -16,19 +34,19 @@ async function handleCommand(message) {
                 await showHelp(message);
                 break;
             case '=my.profile':
-                await showProfile(message);
+                await showProfile(message, targetUser, targetMember);
                 break;
             case '=my.wallet':
-                await showWallets(message);
+                await showWallets(message, targetUser);
                 break;
             case '=my.nfts':
-                await showNFTs(message);
+                await showNFTs(message, targetUser);
                 break;
             case '=my.roles':
-                await showRoles(message);
+                await showRoles(message, targetUser, targetMember);
                 break;
             case '=my.bux':
-                await showBUX(message);
+                await showBUX(message, targetUser);
                 break;
             case '=info.catz':
                 await showCatzInfo(message);
@@ -108,16 +126,16 @@ async function verifyAndUpdateRoles(message) {
 }
 
 // Update each =my. command to include role verification
-async function showProfile(message) {
+async function showProfile(message, targetUser, targetMember) {
     try {
-        const userId = message.author.id;
+        const userId = targetUser.id;
         const wallets = await redis.smembers(`wallets:${userId}`);
         
         if (wallets.length === 0) {
             const embed = new EmbedBuilder()
                 .setColor('#FFD700')
-                .setTitle(`${message.author.username}'s BUXDAO Profile`)
-                .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+                .setTitle(`${targetUser.username}'s BUXDAO Profile`)
+                .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
                 .setDescription('❌ No wallets connected. Please connect your wallet at https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify')
                 .setFooter({ 
                     text: 'BUXDAO - Putting community first',
@@ -161,7 +179,7 @@ async function showProfile(message) {
         }
 
         // Use the data we just fetched instead of fetching again
-        await updateDiscordRoles(message.author.id, message.client, {
+        await updateDiscordRoles(targetUser.id, message.client, {
             totalBuxBalance,
             nftCounts
         });
@@ -172,8 +190,8 @@ async function showProfile(message) {
 
         const embed = new EmbedBuilder()
             .setColor('#FFD700')
-            .setTitle(`${message.author.username}'s BUXDAO Profile`)
-            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setTitle(`${targetUser.username}'s BUXDAO Profile`)
+            .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
             .addFields(
                 { 
                     name: '🏦 Connected Wallets', 
@@ -206,8 +224,8 @@ async function showProfile(message) {
                 {
                     name: '🎭 Server',
                     value: 
-                        `Member Since: ${new Date(message.member.joinedAt).toLocaleDateString()}\n` +
-                        `Roles: ${message.member.roles.cache.size - 1}\n` +  // -1 to exclude @everyone
+                        `Member Since: ${new Date(targetMember.joinedAt).toLocaleDateString()}\n` +
+                        `Roles: ${targetMember.roles.cache.size - 1}\n` +  // -1 to exclude @everyone
                         '---------------------------------------------------------------',
                     inline: false
                 },
@@ -237,23 +255,21 @@ async function showProfile(message) {
         await message.channel.send({ embeds: [embed] });
     } catch (error) {
         console.error('Profile command error:', error);
-        await message.reply('An error occurred while fetching your profile. Please try again later.');
+        await message.reply('An error occurred while fetching the profile. Please try again later.');
     }
 }
 
 // Add these functions after showProfile...
 
-async function showWallets(message) {
+async function showWallets(message, targetUser) {
     try {
-        await verifyAndUpdateRoles(message);
-        
-        const userId = message.author.id;
+        const userId = targetUser.id;
         const wallets = await redis.smembers(`wallets:${userId}`);
         
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
-            .setTitle(`${message.author.username}'s Connected Wallets`)
-            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setTitle(`${targetUser.username}'s Connected Wallets`)
+            .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
             .setDescription(wallets.length > 0 ? wallets.join('\n') : 'No wallets connected')
             .setFooter({ 
                 text: 'BUXDAO - Putting community first',
@@ -263,20 +279,20 @@ async function showWallets(message) {
         await message.channel.send({ embeds: [embed] });
     } catch (error) {
         console.error('Wallets command error:', error);
-        await message.reply('An error occurred while fetching your wallets. Please try again later.');
+        await message.reply('An error occurred while fetching the wallets. Please try again later.');
     }
 }
 
-async function showNFTs(message) {
+async function showNFTs(message, targetUser) {
     try {
-        const userId = message.author.id;
+        const userId = targetUser.id;
         const wallets = await redis.smembers(`wallets:${userId}`);
         
         if (wallets.length === 0) {
             const embed = new EmbedBuilder()
                 .setColor('#FFD700')
-                .setTitle(`${message.author.username}'s NFT Holdings`)
-                .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+                .setTitle(`${targetUser.username}'s NFT Holdings`)
+                .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
                 .setDescription('No wallets connected. Please connect your wallet at https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify')
                 .setFooter({ 
                     text: 'BUXDAO - Putting community first',
@@ -320,15 +336,15 @@ async function showNFTs(message) {
         }
 
         // Update roles with the data we just fetched
-        await updateDiscordRoles(message.author.id, message.client, {
+        await updateDiscordRoles(targetUser.id, message.client, {
             totalBuxBalance,
             nftCounts
         });
 
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
-            .setTitle(`${message.author.username}'s NFT Collection`)
-            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setTitle(`${targetUser.username}'s NFT Collection`)
+            .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
             .addFields(
                 { 
                     name: '🎨 Main Collections', 
@@ -363,23 +379,23 @@ async function showNFTs(message) {
         await message.channel.send({ embeds: [embed] });
     } catch (error) {
         console.error('NFTs command error:', error);
-        await message.reply('An error occurred while fetching your NFTs. Please try again later.');
+        await message.reply('An error occurred while fetching the NFTs. Please try again later.');
     }
 }
 
-async function showRoles(message) {
+async function showRoles(message, targetUser, targetMember) {
     try {
         await verifyAndUpdateRoles(message);
         
-        const roles = message.member.roles.cache
+        const roles = targetMember.roles.cache
             .filter(role => role.name !== '@everyone')
             .map(role => role.name)
             .sort();
 
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
-            .setTitle(`${message.author.username}'s Server Roles`)
-            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setTitle(`${targetUser.username}'s Server Roles`)
+            .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
             .setDescription(roles.length > 0 ? roles.join('\n') : 'No roles')
             .setFooter({ 
                 text: 'BUXDAO - Putting community first',
@@ -389,22 +405,22 @@ async function showRoles(message) {
         await message.channel.send({ embeds: [embed] });
     } catch (error) {
         console.error('Roles command error:', error);
-        await message.reply('An error occurred while fetching your roles. Please try again later.');
+        await message.reply('An error occurred while fetching the roles. Please try again later.');
     }
 }
 
-async function showBUX(message) {
+async function showBUX(message, targetUser) {
     try {
         await verifyAndUpdateRoles(message);
         
-        const userId = message.author.id;
+        const userId = targetUser.id;
         const wallets = await redis.smembers(`wallets:${userId}`);
         
         if (wallets.length === 0) {
             const embed = new EmbedBuilder()
                 .setColor('#FFD700')
-                .setTitle(`${message.author.username}'s BUX Info`)
-                .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+                .setTitle(`${targetUser.username}'s BUX Info`)
+                .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
                 .setDescription('No wallets connected. Please connect your wallet at https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify')
                 .setFooter({ 
                     text: 'BUXDAO - Putting community first',
@@ -456,8 +472,8 @@ async function showBUX(message) {
 
         const embed = new EmbedBuilder()
             .setColor('#FFD700')
-            .setTitle(`${message.author.username}'s BUX Info`)
-            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setTitle(`${targetUser.username}'s BUX Info`)
+            .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
             .addFields(
                 { 
                     name: '💰 BUX Balance', 
@@ -484,7 +500,7 @@ async function showBUX(message) {
         await message.channel.send({ embeds: [embed] });
     } catch (error) {
         console.error('BUX command error:', error);
-        await message.reply('An error occurred while fetching your BUX info. Please try again later.');
+        await message.reply('An error occurred while fetching the BUX info. Please try again later.');
     }
 }
 
