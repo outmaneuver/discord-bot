@@ -94,9 +94,22 @@ async function showHelp(message) {
     await message.channel.send({ embeds: [embed] });
 }
 
-// Add command implementations
+// Add role verification helper function
+async function verifyAndUpdateRoles(message) {
+    try {
+        const client = message.client;
+        await updateDiscordRoles(message.author.id, client);
+    } catch (error) {
+        console.error('Role verification error:', error);
+    }
+}
+
+// Update each =my. command to include role verification
 async function showProfile(message) {
     try {
+        // Verify roles first
+        await verifyAndUpdateRoles(message);
+        
         const userId = message.author.id;
         const wallets = await redis.smembers(`wallets:${userId}`) || [];
         
@@ -227,19 +240,30 @@ async function showProfile(message) {
 // Add these functions after showProfile...
 
 async function showWallets(message) {
-    const userId = message.author.id;
-    const wallets = await redis.smembers(`wallets:${userId}`);
-    
-    const embed = new EmbedBuilder()
-        .setColor('#0099ff')
-        .setTitle('Your Connected Wallets')
-        .setDescription(wallets.length > 0 ? wallets.join('\n') : 'No wallets connected');
+    try {
+        // Verify roles first
+        await verifyAndUpdateRoles(message);
+        
+        const userId = message.author.id;
+        const wallets = await redis.smembers(`wallets:${userId}`);
+        
+        const embed = new EmbedBuilder()
+            .setColor('#0099ff')
+            .setTitle('Your Connected Wallets')
+            .setDescription(wallets.length > 0 ? wallets.join('\n') : 'No wallets connected');
 
-    await message.channel.send({ embeds: [embed] });
+        await message.channel.send({ embeds: [embed] });
+    } catch (error) {
+        console.error('Wallets command error:', error);
+        await message.reply('An error occurred while fetching your wallets. Please try again later.');
+    }
 }
 
 async function showNFTs(message) {
     try {
+        // Verify roles first
+        await verifyAndUpdateRoles(message);
+        
         const userId = message.author.id;
         const wallets = await redis.smembers(`wallets:${userId}`);
         
@@ -330,21 +354,32 @@ async function showNFTs(message) {
 }
 
 async function showRoles(message) {
-    const roles = message.member.roles.cache
-        .filter(role => role.name !== '@everyone')
-        .map(role => role.name)
-        .sort();
+    try {
+        // Verify roles first
+        await verifyAndUpdateRoles(message);
+        
+        const roles = message.member.roles.cache
+            .filter(role => role.name !== '@everyone')
+            .map(role => role.name)
+            .sort();
 
-    const embed = new EmbedBuilder()
-        .setColor('#0099ff')
-        .setTitle('Your Server Roles')
-        .setDescription(roles.length > 0 ? roles.join('\n') : 'No roles');
+        const embed = new EmbedBuilder()
+            .setColor('#0099ff')
+            .setTitle('Your Server Roles')
+            .setDescription(roles.length > 0 ? roles.join('\n') : 'No roles');
 
-    await message.channel.send({ embeds: [embed] });
+        await message.channel.send({ embeds: [embed] });
+    } catch (error) {
+        console.error('Roles command error:', error);
+        await message.reply('An error occurred while fetching your roles. Please try again later.');
+    }
 }
 
 async function showBUX(message) {
     try {
+        // Verify roles first
+        await verifyAndUpdateRoles(message);
+        
         const userId = message.author.id;
         const wallets = await redis.smembers(`wallets:${userId}`);
         
