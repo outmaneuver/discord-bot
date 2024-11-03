@@ -211,6 +211,28 @@ async function updateDiscordRoles(userId, client) {
         if (totalBuxBalance >= 10000) rolesToAdd.push(process.env.ROLE_ID_10000_BUX);
         if (totalBuxBalance >= 2500) rolesToAdd.push(process.env.ROLE_ID_2500_BUX);
 
+        // Add whale role checks
+        if (nftCounts.fcked_catz >= parseInt(process.env.WHALE_THRESHOLD_FCKED_CATZ)) {
+            rolesToAdd.push(process.env.WHALE_ROLE_ID_FCKED_CATZ);
+        }
+        if (nftCounts.money_monsters >= parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS)) {
+            rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS);
+        }
+        if (nftCounts.money_monsters3d >= parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS3D)) {
+            rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
+        }
+        if (nftCounts.ai_bitbots >= parseInt(process.env.WHALE_THRESHOLD_AI_BITBOTS)) {
+            rolesToAdd.push(process.env.WHALE_ROLE_ID_AI_BITBOTS);
+        }
+
+        // Also check for top 10 holders
+        if (hashlists.mmTop10.has(walletAddress)) {
+            rolesToAdd.push(process.env.ROLE_ID_MM_TOP10);
+        }
+        if (hashlists.mm3dTop10.has(walletAddress)) {
+            rolesToAdd.push(process.env.ROLE_ID_MM3D_TOP10);
+        }
+
         // Add roles
         if (rolesToAdd.length > 0) {
             const roles = rolesToAdd
