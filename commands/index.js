@@ -186,6 +186,14 @@ async function showProfile(message) {
                         '---------------------------------------------------------------',
                     inline: false
                 },
+                {
+                    name: '🎭 Server',
+                    value: 
+                        `Member Since: ${new Date(message.member.joinedAt).toLocaleDateString()}\n` +
+                        `Roles: ${message.member.roles.cache.size - 1}\n` +  // -1 to exclude @everyone
+                        '---------------------------------------------------------------',
+                    inline: false
+                },
                 { 
                     name: '💰 BUX Balance', 
                     value: `${(totalBuxBalance / 1e9).toLocaleString()} BUX`,
