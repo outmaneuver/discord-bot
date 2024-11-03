@@ -353,4 +353,19 @@ async function showRewards(message) {
     await message.channel.send({ embeds: [embed] });
 }
 
-</code_block_to_apply_changes_from>
+export {
+    handleCommand,
+    showHelp,
+    showProfile,
+    showWallets,
+    showNFTs,
+    showRoles,
+    showBUX,
+    showCatzInfo,
+    showCelebInfo,
+    showMMInfo,
+    showMM3DInfo,
+    showBotsInfo,
+    showBUXInfo,
+    showRewards
+};
