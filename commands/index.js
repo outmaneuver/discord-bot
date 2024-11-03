@@ -96,82 +96,108 @@ async function showHelp(message) {
 
 // Add command implementations
 async function showProfile(message) {
-    const userId = message.author.id;
-    const wallets = await redis.smembers(`wallets:${userId}`);
-    
-    let nftCounts = {
-        fcked_catz: 0,
-        celebcatz: 0,
-        money_monsters: 0,
-        money_monsters3d: 0,
-        ai_bitbots: 0,
-        warriors: 0,
-        squirrels: 0,
-        rjctd_bots: 0,
-        energy_apes: 0,
-        doodle_bots: 0,
-        candy_bots: 0
-    };
+    try {
+        const userId = message.author.id;
+        const wallets = await redis.smembers(`wallets:${userId}`) || [];
+        
+        if (wallets.length === 0) {
+            const embed = new EmbedBuilder()
+                .setColor('#FFD700')
+                .setTitle(`${message.author.username}'s BUXDAO Profile`)
+                .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+                .setDescription('❌ No wallets connected. Please connect your wallet at https://verify.buxdao.io')
+                .setFooter({ 
+                    text: 'BUXDAO - Building the future of Web3 gaming',
+                    iconURL: 'https://buxdao.io/logo.png'
+                })
+                .setTimestamp();
 
-    let totalBuxBalance = 0;
-
-    for (const wallet of wallets) {
-        const result = await verifyWallet(userId, wallet);
-        if (result.success) {
-            totalBuxBalance += result.data.buxBalance;
-            Object.keys(nftCounts).forEach(key => {
-                nftCounts[key] += result.data.nftCounts[key];
-            });
+            await message.channel.send({ embeds: [embed] });
+            return;
         }
-    }
 
-    const dailyReward = await calculateDailyReward(nftCounts);
-    const aiCollabsCount = nftCounts.warriors + nftCounts.squirrels + nftCounts.rjctd_bots + 
-                          nftCounts.energy_apes + nftCounts.doodle_bots + nftCounts.candy_bots;
+        let nftCounts = {
+            fcked_catz: 0,
+            celebcatz: 0,
+            money_monsters: 0,
+            money_monsters3d: 0,
+            ai_bitbots: 0,
+            warriors: 0,
+            squirrels: 0,
+            rjctd_bots: 0,
+            energy_apes: 0,
+            doodle_bots: 0,
+            candy_bots: 0
+        };
 
-    const embed = new EmbedBuilder()
-        .setColor('#FFD700')
-        .setTitle(`${message.author.username}'s BUXDAO Profile`)
-        .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
-        .setDescription('Your NFT holdings and rewards')
-        .addFields(
-            { 
-                name: '🏦 Connected Wallets', 
-                value: wallets.length > 0 ? 
-                    wallets.map(w => `\`${w}\``).join('\n') : 
-                    'No wallets connected',
-                inline: false 
-            },
-            { 
-                name: '🎨 Main Collections', 
-                value: 
-                    `**Fcked Catz:** ${nftCounts.fcked_catz} ${nftCounts.fcked_catz > 0 ? '🐱' : ''}\n` +
-                    `**Celeb Catz:** ${nftCounts.celebcatz} ${nftCounts.celebcatz > 0 ? '👑' : ''}\n` +
-                    `**Money Monsters:** ${nftCounts.money_monsters} ${nftCounts.money_monsters > 0 ? '👾' : ''}\n` +
-                    `**Money Monsters 3D:** ${nftCounts.money_monsters3d} ${nftCounts.money_monsters3d > 0 ? '🎮' : ''}\n` +
-                    `**AI Bitbots:** ${nftCounts.ai_bitbots} ${nftCounts.ai_bitbots > 0 ? '🤖' : ''}\n` +
-                    `**AI Collabs:** ${aiCollabsCount} ${aiCollabsCount > 0 ? '🎨' : ''}`,
-                inline: true
-            },
-            { 
-                name: '💰 BUX Balance', 
-                value: `${totalBuxBalance.toLocaleString()} BUX`,
-                inline: true 
-            },
-            { 
-                name: '🎁 Daily Rewards', 
-                value: `${dailyReward} BUX per day`,
-                inline: true 
+        let totalBuxBalance = 0;
+
+        for (const wallet of wallets) {
+            try {
+                const result = await verifyWallet(userId, wallet);
+                if (result?.success) {
+                    totalBuxBalance += result.data.buxBalance || 0;
+                    if (result.data.nftCounts) {
+                        Object.keys(nftCounts).forEach(key => {
+                            nftCounts[key] += result.data.nftCounts[key] || 0;
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error(`Error verifying wallet ${wallet}:`, err);
+                // Continue with next wallet
             }
-        )
-        .setImage('https://buxdao.io/banner.png')
-        .setFooter({ 
-            text: 'BUXDAO - Building the future of Web3 gaming',
-            iconURL: 'https://buxdao.io/logo.png'
-        })
-        .setTimestamp();
+        }
 
-    await message.channel.send({ embeds: [embed] });
+        const dailyReward = await calculateDailyReward(nftCounts);
+        const aiCollabsCount = nftCounts.warriors + nftCounts.squirrels + nftCounts.rjctd_bots + 
+                              nftCounts.energy_apes + nftCounts.doodle_bots + nftCounts.candy_bots;
+
+        const embed = new EmbedBuilder()
+            .setColor('#FFD700')
+            .setTitle(`${message.author.username}'s BUXDAO Profile`)
+            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setDescription('Your NFT holdings and rewards')
+            .addFields(
+                { 
+                    name: '🏦 Connected Wallets', 
+                    value: wallets.map(w => `\`${w}\``).join('\n'),
+                    inline: false 
+                },
+                { 
+                    name: '🎨 Main Collections', 
+                    value: 
+                        `**Fcked Catz:** ${nftCounts.fcked_catz} ${nftCounts.fcked_catz > 0 ? '🐱' : ''}\n` +
+                        `**Celeb Catz:** ${nftCounts.celebcatz} ${nftCounts.celebcatz > 0 ? '👑' : ''}\n` +
+                        `**Money Monsters:** ${nftCounts.money_monsters} ${nftCounts.money_monsters > 0 ? '👾' : ''}\n` +
+                        `**Money Monsters 3D:** ${nftCounts.money_monsters3d} ${nftCounts.money_monsters3d > 0 ? '🎮' : ''}\n` +
+                        `**AI Bitbots:** ${nftCounts.ai_bitbots} ${nftCounts.ai_bitbots > 0 ? '🤖' : ''}\n` +
+                        `**AI Collabs:** ${aiCollabsCount} ${aiCollabsCount > 0 ? '🎨' : ''}`,
+                    inline: true
+                },
+                { 
+                    name: '💰 BUX Balance', 
+                    value: `${totalBuxBalance.toLocaleString()} BUX`,
+                    inline: true 
+                },
+                { 
+                    name: '🎁 Daily Rewards', 
+                    value: `${dailyReward} BUX per day`,
+                    inline: true 
+                }
+            )
+            .setImage('https://buxdao.io/banner.png')
+            .setFooter({ 
+                text: 'BUXDAO - Building the future of Web3 gaming',
+                iconURL: 'https://buxdao.io/logo.png'
+            })
+            .setTimestamp();
+
+        await message.channel.send({ embeds: [embed] });
+    } catch (error) {
+        console.error('Profile command error:', error);
+        await message.reply('An error occurred while fetching your profile. Please try again later.');
+    }
 }
 
 // Add these functions after showProfile...
