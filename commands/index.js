@@ -115,7 +115,7 @@ async function showProfile(message) {
                 .setColor('#FFD700')
                 .setTitle(`${message.author.username}'s BUXDAO Profile`)
                 .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
-                .setDescription('❌ No wallets connected. Please connect your wallet at https://verify.buxdao.io')
+                .setDescription('❌ No wallets connected. Please connect your wallet at https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify')
                 .setFooter({ 
                     text: 'BUXDAO - Building the future of Web3 gaming',
                     iconURL: 'https://buxdao.io/logo.png'
@@ -274,7 +274,7 @@ async function showNFTs(message) {
                 .setColor('#FFD700')
                 .setTitle(`${message.author.username}'s NFT Holdings`)
                 .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
-                .setDescription('No wallets connected. Please connect your wallet at https://verify.buxdao.io')
+                .setDescription('No wallets connected. Please connect your wallet at https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify')
                 .setFooter({ 
                     text: 'BUXDAO - Putting community first',
                     iconURL: 'https://buxdao.io/logo.png'
@@ -402,7 +402,7 @@ async function showBUX(message) {
                 .setColor('#FFD700')
                 .setTitle(`${message.author.username}'s BUX Info`)
                 .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
-                .setDescription('No wallets connected. Please connect your wallet at https://verify.buxdao.io')
+                .setDescription('No wallets connected. Please connect your wallet at https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify')
                 .setFooter({ 
                     text: 'BUXDAO - Putting community first',
                     iconURL: 'https://buxdao.io/logo.png'
