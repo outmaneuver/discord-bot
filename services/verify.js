@@ -17,7 +17,9 @@ let hashlists = {
     rjctdBots: new Set(),
     energyApes: new Set(),
     doodleBots: new Set(),
-    candyBots: new Set()
+    candyBots: new Set(),
+    mmTop10: new Set(),
+    mm3dTop10: new Set()
 };
 
 // Simple function to verify NFTs from hashlists
@@ -25,7 +27,7 @@ async function verifyWallet(userId, walletAddress) {
     try {
         console.log(`Checking wallet ${walletAddress} for user ${userId}`);
         
-        // Only use RPC for BUX balance
+        // Get BUX balance
         const buxBalance = await getBUXBalance(walletAddress);
         console.log(`BUX balance for ${walletAddress}:`, buxBalance);
 
@@ -74,7 +76,7 @@ async function verifyWallet(userId, walletAddress) {
             success: true,
             data: {
                 nftCounts,
-                buxBalance
+                buxBalance: buxBalance || 0
             }
         };
 
@@ -143,7 +145,9 @@ function updateHashlists(newHashlists) {
         rjctdBots: new Set(newHashlists.rjctdBots),
         energyApes: new Set(newHashlists.energyApes),
         doodleBots: new Set(newHashlists.doodleBots),
-        candyBots: new Set(newHashlists.candyBots)
+        candyBots: new Set(newHashlists.candyBots),
+        mmTop10: new Set(newHashlists.mmTop10),
+        mm3dTop10: new Set(newHashlists.mm3dTop10)
     };
 }
 
@@ -177,27 +181,14 @@ async function updateDiscordRoles(userId, client) {
             candy_bots: 0
         };
 
-        // Check for top 10 holders in any wallet
-        let isMMTop10 = false;
-        let isMM3DTop10 = false;
-
         // Process each wallet
         for (const wallet of wallets) {
             const result = await verifyWallet(userId, wallet);
             if (result.success) {
                 totalBuxBalance += result.data.buxBalance;
-                // Add NFT counts
                 Object.keys(nftCounts).forEach(key => {
                     nftCounts[key] += result.data.nftCounts[key];
                 });
-                
-                // Check if this wallet is in top 10
-                if (hashlists.mmTop10.has(wallet)) {
-                    isMMTop10 = true;
-                }
-                if (hashlists.mm3dTop10.has(wallet)) {
-                    isMM3DTop10 = true;
-                }
             }
         }
 
@@ -237,9 +228,15 @@ async function updateDiscordRoles(userId, client) {
             rolesToAdd.push(process.env.WHALE_ROLE_ID_AI_BITBOTS);
         }
 
-        // Add top 10 roles
-        if (isMMTop10) rolesToAdd.push(process.env.ROLE_ID_MM_TOP10);
-        if (isMM3DTop10) rolesToAdd.push(process.env.ROLE_ID_MM3D_TOP10);
+        // Check for top 10 holders
+        for (const wallet of wallets) {
+            if (hashlists.mmTop10.has(wallet)) {
+                rolesToAdd.push(process.env.ROLE_ID_MM_TOP10);
+            }
+            if (hashlists.mm3dTop10.has(wallet)) {
+                rolesToAdd.push(process.env.ROLE_ID_MM3D_TOP10);
+            }
+        }
 
         console.log('Roles to add:', rolesToAdd);
 
