@@ -509,17 +509,37 @@ async function showBUXInfo(message) {
 
 async function showRewards(message) {
     const embed = new EmbedBuilder()
-        .setColor('#0099ff')
+        .setColor('#FFD700')
         .setTitle('Daily BUX Rewards')
         .addFields(
-            { name: 'Fcked Catz', value: '5 BUX', inline: true },
-            { name: 'Celeb Catz', value: '15 BUX', inline: true },
-            { name: 'Money Monsters', value: '5 BUX', inline: true },
-            { name: 'Money Monsters 3D', value: '10 BUX', inline: true },
-            { name: 'AI Bitbots', value: '3 BUX', inline: true },
-            { name: 'AI Collabs', value: '1 BUX', inline: true }
+            { 
+                name: '🎨 Main Collections', 
+                value: 
+                    'Fcked Catz: 5 BUX\n' +
+                    'Celeb Catz: 15 BUX\n' +
+                    'Money Monsters: 5 BUX\n' +
+                    'Money Monsters 3D: 10 BUX\n' +
+                    'AI Bitbots: 3 BUX\n' +
+                    '---------------------------------------------------------------',
+                inline: false 
+            },
+            {
+                name: '🤖 A.I. Collabs',
+                value: 
+                    'A.I. Warriors: 1 BUX\n' +
+                    'A.I. Squirrels: 1 BUX\n' +
+                    'A.I. Energy Apes: 1 BUX\n' +
+                    'RJCTD bots: 1 BUX\n' +
+                    'Candy bots: 1 BUX\n' +
+                    'Doodle bots: 1 BUX',
+                inline: false
+            }
         )
-        .setFooter({ text: 'Rewards are per NFT and claimed daily' });
+        .setFooter({ 
+            text: 'BUXDAO - Putting community first',
+            iconURL: 'https://buxdao.io/logo.png'
+        })
+        .setTimestamp();
 
     await message.channel.send({ embeds: [embed] });
 }
