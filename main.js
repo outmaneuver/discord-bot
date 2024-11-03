@@ -12,6 +12,7 @@ import { config } from './config/config.js';
 import { promises as fs } from 'fs';
 import cookieParser from 'cookie-parser';
 import verifyRouter from './routes/verify.js';
+import { handleCommand } from './commands/index.js';
 
 import { 
   verifyWallet,
@@ -191,6 +192,13 @@ async function startApp() {
 
     client.on('ready', () => {
       console.log('Discord bot logged in');
+    });
+
+    client.on('messageCreate', async message => {
+      if (message.author.bot) return;
+      if (message.content.startsWith('=')) {
+        await handleCommand(message);
+      }
     });
 
     await client.login(config.discord.token);

@@ -1,0 +1,12 @@
+we are building a discord bot for my solana nft project
+we have 5 collections
+the main function of the bot is holder verification
+when users visit the verify url, sign into discord and connect their wallet the bot will verify nft ownership by comparing to uploaded json Hashlists
+the bux balance in their wallet will be fetched using rpc calls
+the bot will assign discord server roles according to nft and token holdings
+
+we will then add server commands so users can access collection and tioken info aswell as their nft holdings and bux balance
+
+sales and listings bot in designated channels
+
+always provide single command to git commit and push to main and heroku after each change
