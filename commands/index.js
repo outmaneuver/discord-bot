@@ -457,7 +457,7 @@ async function showBUX(message) {
             .addFields(
                 { 
                     name: '💰 BUX Balance', 
-                    value: `${(totalBalance / 1e9).toLocaleString()} BUX\n---------------------------------------------------------------`,
+                    value: `${totalBalance.toLocaleString()} BUX\n---------------------------------------------------------------`,
                     inline: false 
                 },
                 { 
