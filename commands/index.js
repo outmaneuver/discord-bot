@@ -444,12 +444,15 @@ async function showBUX(message) {
                 await sleep(2000);
             } catch (error) {
                 console.error(`Error checking wallet ${wallet}:`, error);
-                // Continue with next wallet
+                // Continue with next wallet, don't reset totalBalance
             }
         }
 
         const dailyReward = await calculateDailyReward(nftCounts);
-        const displayBalance = (totalBalance / 1e9).toLocaleString(); // Convert from raw units
+        const displayBalance = (totalBalance / 1e9).toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 3
+        });
 
         const embed = new EmbedBuilder()
             .setColor('#FFD700')
