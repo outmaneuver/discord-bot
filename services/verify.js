@@ -214,7 +214,7 @@ async function updateDiscordRoles(userId, client) {
         if (totalBuxBalance >= 10000) rolesToAdd.push(process.env.ROLE_ID_10000_BUX);
         if (totalBuxBalance >= 2500) rolesToAdd.push(process.env.ROLE_ID_2500_BUX);
 
-        // Add whale role checks with proper thresholds from .env
+        // Add whale role checks with proper thresholds
         if (nftCounts.fcked_catz >= parseInt(process.env.WHALE_THRESHOLD_FCKED_CATZ)) {
             rolesToAdd.push(process.env.WHALE_ROLE_ID_FCKED_CATZ);
         }
