@@ -231,51 +231,70 @@ async function showWallets(message) {
 }
 
 async function showNFTs(message) {
-    const userId = message.author.id;
-    const wallets = await redis.smembers(`wallets:${userId}`);
-    let nftCounts = {
-        fcked_catz: 0,
-        celebcatz: 0,
-        money_monsters: 0,
-        money_monsters3d: 0,
-        ai_bitbots: 0,
-        warriors: 0,
-        squirrels: 0,
-        rjctd_bots: 0,
-        energy_apes: 0,
-        doodle_bots: 0,
-        candy_bots: 0
-    };
+    try {
+        const userId = message.author.id;
+        const wallets = await redis.smembers(`wallets:${userId}`);
+        let nftCounts = {
+            fcked_catz: 0,
+            celebcatz: 0,
+            money_monsters: 0,
+            money_monsters3d: 0,
+            ai_bitbots: 0,
+            warriors: 0,
+            squirrels: 0,
+            rjctd_bots: 0,
+            energy_apes: 0,
+            doodle_bots: 0,
+            candy_bots: 0
+        };
 
-    for (const wallet of wallets) {
-        const result = await verifyWallet(userId, wallet);
-        if (result.success) {
-            Object.keys(nftCounts).forEach(key => {
-                nftCounts[key] += result.data.nftCounts[key];
-            });
+        for (const wallet of wallets) {
+            const result = await verifyWallet(userId, wallet);
+            if (result?.success) {
+                Object.keys(nftCounts).forEach(key => {
+                    nftCounts[key] += result.data.nftCounts[key] || 0;
+                });
+            }
         }
+
+        const embed = new EmbedBuilder()
+            .setColor('#FFD700')
+            .setTitle(`${message.author.username}'s NFT Holdings`)
+            .addFields(
+                { 
+                    name: '🎨 Main Collections', 
+                    value: 
+                        `Fcked Catz: ${nftCounts.fcked_catz}\n` +
+                        `Celeb Catz: ${nftCounts.celebcatz}\n` +
+                        `Money Monsters: ${nftCounts.money_monsters}\n` +
+                        `Money Monsters 3D: ${nftCounts.money_monsters3d}\n` +
+                        `AI Bitbots: ${nftCounts.ai_bitbots}\n` +
+                        '---------------------------------------------------------------',
+                    inline: false
+                },
+                {
+                    name: '🤖 A.I. Collabs',
+                    value:
+                        `A.I. Warriors: ${nftCounts.warriors}\n` +
+                        `A.I. Squirrels: ${nftCounts.squirrels}\n` +
+                        `A.I. Energy Apes: ${nftCounts.energy_apes}\n` +
+                        `RJCTD bots: ${nftCounts.rjctd_bots}\n` +
+                        `Candy bots: ${nftCounts.candy_bots}\n` +
+                        `Doodle bots: ${nftCounts.doodle_bots}`,
+                    inline: false
+                }
+            )
+            .setFooter({ 
+                text: 'BUXDAO - Putting community first',
+                iconURL: 'https://buxdao.io/logo.png'
+            })
+            .setTimestamp();
+
+        await message.channel.send({ embeds: [embed] });
+    } catch (error) {
+        console.error('NFTs command error:', error);
+        await message.reply('An error occurred while fetching your NFTs. Please try again later.');
     }
-
-    const embed = new EmbedBuilder()
-        .setColor('#0099ff')
-        .setTitle('Your NFT Holdings')
-        .addFields(
-            { name: 'Fcked Catz', value: nftCounts.fcked_catz.toString(), inline: true },
-            { name: 'Celeb Catz', value: nftCounts.celebcatz.toString(), inline: true },
-            { name: 'Money Monsters', value: nftCounts.money_monsters.toString(), inline: true },
-            { name: 'Money Monsters 3D', value: nftCounts.money_monsters3d.toString(), inline: true },
-            { name: 'AI Bitbots', value: nftCounts.ai_bitbots.toString(), inline: true },
-            { name: 'AI Collabs', value: (
-                nftCounts.warriors + 
-                nftCounts.squirrels + 
-                nftCounts.rjctd_bots + 
-                nftCounts.energy_apes + 
-                nftCounts.doodle_bots + 
-                nftCounts.candy_bots
-            ).toString(), inline: true }
-        );
-
-    await message.channel.send({ embeds: [embed] });
 }
 
 async function showRoles(message) {
@@ -293,44 +312,67 @@ async function showRoles(message) {
 }
 
 async function showBUX(message) {
-    const userId = message.author.id;
-    const wallets = await redis.smembers(`wallets:${userId}`);
-    let totalBalance = 0;
-    let nftCounts = {
-        fcked_catz: 0,
-        celebcatz: 0,
-        money_monsters: 0,
-        money_monsters3d: 0,
-        ai_bitbots: 0,
-        warriors: 0,
-        squirrels: 0,
-        rjctd_bots: 0,
-        energy_apes: 0,
-        doodle_bots: 0,
-        candy_bots: 0
-    };
+    try {
+        const userId = message.author.id;
+        const wallets = await redis.smembers(`wallets:${userId}`);
+        let totalBalance = 0;
+        let nftCounts = {
+            fcked_catz: 0,
+            celebcatz: 0,
+            money_monsters: 0,
+            money_monsters3d: 0,
+            ai_bitbots: 0,
+            warriors: 0,
+            squirrels: 0,
+            rjctd_bots: 0,
+            energy_apes: 0,
+            doodle_bots: 0,
+            candy_bots: 0
+        };
 
-    for (const wallet of wallets) {
-        const result = await verifyWallet(userId, wallet);
-        if (result.success) {
-            totalBalance += result.data.buxBalance;
-            Object.keys(nftCounts).forEach(key => {
-                nftCounts[key] += result.data.nftCounts[key];
-            });
+        for (const wallet of wallets) {
+            const result = await verifyWallet(userId, wallet);
+            if (result?.success) {
+                totalBalance += result.data.buxBalance || 0;
+                Object.keys(nftCounts).forEach(key => {
+                    nftCounts[key] += result.data.nftCounts[key] || 0;
+                });
+            }
         }
+
+        const dailyReward = await calculateDailyReward(nftCounts);
+
+        const embed = new EmbedBuilder()
+            .setColor('#FFD700')
+            .setTitle(`${message.author.username}'s BUX Info`)
+            .addFields(
+                { 
+                    name: '💰 BUX Balance', 
+                    value: `${(totalBalance / 1e9).toLocaleString()} BUX\n---------------------------------------------------------------`,
+                    inline: false 
+                },
+                { 
+                    name: '🎁 Daily Rewards', 
+                    value: `${dailyReward} BUX per day\n---------------------------------------------------------------`,
+                    inline: false 
+                },
+                {
+                    name: '💵 BUX Claim',
+                    value: '0 BUX available',
+                    inline: false
+                }
+            )
+            .setFooter({ 
+                text: 'BUXDAO - Putting community first',
+                iconURL: 'https://buxdao.io/logo.png'
+            })
+            .setTimestamp();
+
+        await message.channel.send({ embeds: [embed] });
+    } catch (error) {
+        console.error('BUX command error:', error);
+        await message.reply('An error occurred while fetching your BUX info. Please try again later.');
     }
-
-    const dailyReward = await calculateDailyReward(nftCounts);
-
-    const embed = new EmbedBuilder()
-        .setColor('#0099ff')
-        .setTitle('Your BUX Info')
-        .addFields(
-            { name: 'Total BUX Balance', value: totalBalance.toLocaleString() },
-            { name: 'Daily Reward', value: dailyReward.toString() }
-        );
-
-    await message.channel.send({ embeds: [embed] });
 }
 
 async function showCatzInfo(message) {
