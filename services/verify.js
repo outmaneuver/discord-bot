@@ -37,15 +37,46 @@ let currentVerificationBalances = new Map();
 // Simple function to verify NFTs from hashlists
 async function verifyWallet(userId, walletAddress) {
     try {
-        // Add input validation
         if (!userId || !walletAddress) {
             throw new Error('Invalid input parameters');
         }
 
         console.log(`Checking wallet ${walletAddress} for user ${userId}`);
         
-        // Get BUX balance with retries
-        const buxBalance = await getBUXBalance(walletAddress);
+        // Get all token accounts with retries
+        const connection = new Connection(process.env.SOLANA_RPC_URL);
+        const maxRetries = 5;
+        let attempt = 0;
+        let tokenAccounts;
+
+        while (attempt < maxRetries) {
+            try {
+                tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+                    new PublicKey(walletAddress),
+                    { programId: TOKEN_PROGRAM_ID }
+                );
+                break;
+            } catch (error) {
+                attempt++;
+                if (error.message.includes('429') && attempt < maxRetries) {
+                    const delay = 2000;
+                    console.log(`Rate limited getting NFTs for ${walletAddress}, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    continue;
+                }
+                throw error;
+            }
+        }
+
+        if (!tokenAccounts) {
+            throw new Error('Failed to get token accounts after retries');
+        }
+
+        // Get BUX balance from token accounts we already have
+        const buxAccount = tokenAccounts.value.find(account => 
+            account.account.data.parsed.info.mint === BUX_TOKEN_MINT
+        );
+        const buxBalance = buxAccount ? parseInt(buxAccount.account.data.parsed.info.tokenAmount.amount) : 0;
         console.log(`BUX balance for ${walletAddress}:`, buxBalance);
         
         // Store balance for this verification session
@@ -66,36 +97,7 @@ async function verifyWallet(userId, walletAddress) {
             candy_bots: 0
         };
 
-        // Get NFT token accounts with retries
-        const maxRetries = 5;
-        let attempt = 0;
-        let tokenAccounts;
-
-        while (attempt < maxRetries) {
-            try {
-                const connection = new Connection(process.env.SOLANA_RPC_URL);
-                tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-                    new PublicKey(walletAddress),
-                    { programId: TOKEN_PROGRAM_ID }
-                );
-                break;
-            } catch (error) {
-                attempt++;
-                if (error.message.includes('429') && attempt < maxRetries) {
-                    const delay = 2000; // Simple 2 second delay between retries
-                    console.log(`Rate limited getting NFTs for ${walletAddress}, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    continue;
-                }
-                throw error;
-            }
-        }
-
-        if (!tokenAccounts) {
-            throw new Error('Failed to get token accounts after retries');
-        }
-
-        // Check each token's mint address against hashlists
+        // Check NFTs using the same token accounts data
         for (const account of tokenAccounts.value) {
             const mint = account.account.data.parsed.info.mint;
             if (account.account.data.parsed.info.tokenAmount.amount === "1") {
