@@ -339,65 +339,34 @@ async function showBUX(message) {
 async function displayProfile(message) {
     try {
         const userId = message.author.id;
-        const wallets = await getWallets(userId);
+        const wallets = await redis.smembers(`wallets:${userId}`);
         
         if (!wallets || wallets.length === 0) {
             return message.reply('No wallets found. Please verify a wallet first using =verify');
         }
 
-        let totalBuxBalance = 0;
-        let totalNftCounts = {
-            fcked_catz: 0,
-            celebcatz: 0,
-            money_monsters: 0,
-            money_monsters3d: 0,
-            ai_bitbots: 0,
-            warriors: 0,
-            squirrels: 0,
-            rjctd_bots: 0,
-            energy_apes: 0,
-            doodle_bots: 0,
-            candy_bots: 0
-        };
+        // Get first wallet data
+        const result = await verifyWallet(userId, wallets[0]);
+        let totalBuxBalance = result.data.buxBalance;
+        let totalNftCounts = result.data.nftCounts;
 
-        // Process wallets one at a time
-        for (const wallet of wallets) {
-            const result = await verifyWallet(userId, wallet);
-            if (result.success) {
-                totalBuxBalance += result.data.buxBalance;
-                // Add NFT counts
-                for (const [key, value] of Object.entries(result.data.nftCounts)) {
-                    totalNftCounts[key] += value;
-                }
-            }
-        }
-
-        // Get BUX value after wallet processing
+        // Get BUX value
         const buxValue = await getBUXValue();
-        const buxValueUsd = buxValue.buxValueUsd;
-        const portfolioValue = (totalBuxBalance / 1e9) * buxValueUsd;
+        const portfolioValue = (totalBuxBalance / 1e9) * buxValue.buxValueUsd;
 
-        // Create embed
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle(`Profile for ${message.author.username}`)
             .addFields(
                 { name: '💰 BUX Balance', value: `${(totalBuxBalance / 1e9).toLocaleString()} BUX`, inline: true },
-                { name: '💎 Portfolio Value', value: `$${portfolioValue.toFixed(2)}`, inline: true },
-                { name: '\u200B', value: '\u200B', inline: true }
+                { name: '💎 Portfolio Value', value: `$${portfolioValue.toFixed(2)}`, inline: true }
             );
 
         // Add NFT fields if any
-        const nftFields = [];
         for (const [key, count] of Object.entries(totalNftCounts)) {
             if (count > 0) {
-                nftFields.push({ name: formatNftName(key), value: count.toString(), inline: true });
+                embed.addFields({ name: formatNftName(key), value: count.toString(), inline: true });
             }
-        }
-
-        if (nftFields.length > 0) {
-            embed.addFields({ name: '\u200B', value: '**NFT Holdings:**' });
-            embed.addFields(nftFields);
         }
 
         await message.reply({ embeds: [embed] });
