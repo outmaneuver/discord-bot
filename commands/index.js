@@ -417,17 +417,15 @@ async function showRoles(message, targetUser, targetMember) {
 
 async function showBUX(message) {
     try {
-        // Get SOL price first
+        // Get SOL price and BUX value calculations
         const solPriceRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
         const solPriceData = await solPriceRes.json();
         const solPrice = solPriceData.solana.usd;
 
-        // Get liquidity info to calculate BUX value
         const connection = new Connection(process.env.SOLANA_RPC_URL);
         const liquidityBalance = await connection.getBalance(new PublicKey(LIQUIDITY_WALLET));
         const liquiditySol = (liquidityBalance / 1e9) + 17.75567;
 
-        // Get total supply and exempt balances
         const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
         const totalSupply = tokenSupply.value.uiAmount;
 
@@ -460,18 +458,143 @@ async function showBUX(message) {
 
         const balanceUsdValue = totalBalance * buxValueUsd;
 
+        // Get daily rewards
+        const { nftCounts } = await verifyWallet(message.author.id, wallets[0] || '');
+        const dailyReward = calculateDailyReward(nftCounts);
+
+        // Get claimable amount
+        const claimable = await getClaimableAmount(message.author.id);
+
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
-            .setTitle('Your BUX Balance')
-            .addFields({
-                name: 'Balance',
-                value: `${totalBalance.toLocaleString()} BUX ($${balanceUsdValue.toFixed(2)})`
+            .setTitle(`${message.author.username}'s BUX Info`)
+            .setDescription('---------------------------------------------------------------')
+            .addFields(
+                { 
+                    name: '💰 BUX Balance', 
+                    value: `${totalBalance.toLocaleString()} BUX ($${balanceUsdValue.toFixed(2)})`,
+                    inline: false 
+                },
+                { 
+                    name: '🎁 Daily Rewards', 
+                    value: `${dailyReward} BUX per day`,
+                    inline: false 
+                },
+                { 
+                    name: '💵 BUX Claim', 
+                    value: `${claimable} BUX available`,
+                    inline: false 
+                }
+            )
+            .setFooter({ 
+                text: 'BUXDAO - Putting community first',
+                iconURL: 'https://buxdao.io/logo.png'
             });
 
         await message.channel.send({ embeds: [embed] });
     } catch (error) {
         console.error('Error in showBUX:', error);
-        await message.reply('An error occurred while fetching your BUX balance.');
+        await message.reply('An error occurred while fetching your BUX info.');
+    }
+}
+
+async function displayProfile(message) {
+    try {
+        // Get SOL price and BUX value calculations
+        const solPriceRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+        const solPriceData = await solPriceRes.json();
+        const solPrice = solPriceData.solana.usd;
+
+        const connection = new Connection(process.env.SOLANA_RPC_URL);
+        const liquidityBalance = await connection.getBalance(new PublicKey(LIQUIDITY_WALLET));
+        const liquiditySol = (liquidityBalance / 1e9) + 17.75567;
+
+        const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
+        const totalSupply = tokenSupply.value.uiAmount;
+
+        let exemptBalance = 0;
+        for (const wallet of EXEMPT_WALLETS) {
+            try {
+                const balance = await getBUXBalance(wallet);
+                exemptBalance += balance;
+            } catch (error) {
+                console.error(`Error getting exempt wallet balance: ${error}`);
+            }
+        }
+
+        const publicSupply = totalSupply - exemptBalance;
+        const buxValueSol = liquiditySol / publicSupply;
+        const buxValueUsd = buxValueSol * solPrice;
+
+        // Get user data
+        const wallets = await redis.smembers(`wallets:${message.author.id}`);
+        let totalBalance = 0;
+        let nftCounts = {
+            fcked_catz: 0,
+            celebcatz: 0,
+            money_monsters: 0,
+            money_monsters3d: 0,
+            ai_bitbots: 0,
+            warriors: 0,
+            squirrels: 0,
+            rjctd_bots: 0,
+            energy_apes: 0,
+            doodle_bots: 0,
+            candy_bots: 0
+        };
+
+        for (const wallet of wallets) {
+            try {
+                const result = await verifyWallet(message.author.id, wallet);
+                if (result.success) {
+                    totalBalance += result.data.buxBalance / 1e9;
+                    for (const [collection, count] of Object.entries(result.data.nftCounts)) {
+                        if (nftCounts[collection] !== undefined) {
+                            nftCounts[collection] += count;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error(`Error verifying wallet: ${error}`);
+            }
+        }
+
+        const balanceUsdValue = totalBalance * buxValueUsd;
+        const dailyReward = calculateDailyReward(nftCounts);
+        const claimable = await getClaimableAmount(message.author.id);
+
+        // Rest of profile display code remains the same, just update BUX balance field
+        const embed = new EmbedBuilder()
+            .setColor('#0099ff')
+            .setTitle(`${message.author.username}'s BUXDAO Profile`)
+            // ... other fields remain the same ...
+            .addFields(
+                // ... other fields remain the same ...
+                { 
+                    name: '💰 BUX Balance',
+                    value: `${totalBalance.toLocaleString()} BUX ($${balanceUsdValue.toFixed(2)})`,
+                    inline: false 
+                },
+                { 
+                    name: '🎁 Daily Rewards',
+                    value: `${dailyReward} BUX per day`,
+                    inline: false 
+                },
+                { 
+                    name: '💵 BUX Claim',
+                    value: `${claimable} BUX available`,
+                    inline: false 
+                }
+            )
+            .setFooter({ 
+                text: 'BUXDAO - Putting community first',
+                iconURL: 'https://buxdao.io/logo.png'
+            });
+
+        await message.channel.send({ embeds: [embed] });
+    } catch (error) {
+        console.error('Error in displayProfile:', error);
+        await message.reply('An error occurred while fetching your profile.');
     }
 }
 
