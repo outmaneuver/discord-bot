@@ -41,14 +41,7 @@ async function verifyWallet(userId, walletAddress) {
 
         console.log(`Checking wallet ${walletAddress} for user ${userId}`);
         
-        // Check cache first
-        const cacheKey = `${userId}:${walletAddress}`;
-        const cached = userDataCache.get(cacheKey);
-        if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-            return cached.data;
-        }
-
-        // Get BUX balance
+        // Get BUX balance with retries
         const buxBalance = await getBUXBalance(walletAddress);
         console.log(`BUX balance for ${walletAddress}:`, buxBalance);
 
@@ -67,12 +60,34 @@ async function verifyWallet(userId, walletAddress) {
             candy_bots: 0
         };
 
-        // Get NFT token accounts with single RPC call
-        const connection = new Connection(process.env.SOLANA_RPC_URL);
-        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-            new PublicKey(walletAddress),
-            { programId: TOKEN_PROGRAM_ID }
-        );
+        // Get NFT token accounts with retries
+        const maxRetries = 5;
+        let attempt = 0;
+        let tokenAccounts;
+
+        while (attempt < maxRetries) {
+            try {
+                const connection = new Connection(process.env.SOLANA_RPC_URL);
+                tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+                    new PublicKey(walletAddress),
+                    { programId: TOKEN_PROGRAM_ID }
+                );
+                break;
+            } catch (error) {
+                attempt++;
+                if (error.message.includes('429') && attempt < maxRetries) {
+                    const delay = 2000; // Simple 2 second delay between retries
+                    console.log(`Rate limited getting NFTs for ${walletAddress}, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    continue;
+                }
+                throw error;
+            }
+        }
+
+        if (!tokenAccounts) {
+            throw new Error('Failed to get token accounts after retries');
+        }
 
         // Check each token's mint address against hashlists
         for (const account of tokenAccounts.value) {
@@ -92,21 +107,13 @@ async function verifyWallet(userId, walletAddress) {
             }
         }
 
-        const result = {
+        return {
             success: true,
             data: {
                 nftCounts,
-                buxBalance: buxBalance * 1e9 // Convert to raw units
+                buxBalance: buxBalance
             }
         };
-
-        // Cache the result
-        userDataCache.set(cacheKey, {
-            timestamp: Date.now(),
-            data: result
-        });
-
-        return result;
 
     } catch (error) {
         console.error('Error in verifyWallet:', error);
