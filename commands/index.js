@@ -134,134 +134,15 @@ async function verifyAndUpdateRoles(message) {
 // Update each =my. command to include role verification
 async function showProfile(message, targetUser, targetMember) {
     try {
-        const userId = targetUser.id;
-        const wallets = await redis.smembers(`wallets:${userId}`);
+        // First verify and update roles
+        console.log(`Checking roles for ${targetUser.username}`);
+        await updateDiscordRoles(targetUser.id, message.client);
         
-        if (wallets.length === 0) {
-            const embed = new EmbedBuilder()
-                .setColor('#FFD700')
-                .setTitle(`${targetUser.username}'s BUXDAO Profile`)
-                .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
-                .setDescription('❌ No wallets connected. Please connect your wallet at https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify')
-                .setFooter({ 
-                    text: 'BUXDAO - Putting community first',
-                    iconURL: 'https://buxdao.io/logo.png'
-                })
-                .setTimestamp();
-
-            await message.channel.send({ embeds: [embed] });
-            return;
-        }
-
-        let totalBalance = 0;
-        let nftCounts = {
-            fcked_catz: 0,
-            celebcatz: 0,
-            money_monsters: 0,
-            money_monsters3d: 0,
-            ai_bitbots: 0,
-            warriors: 0,
-            squirrels: 0,
-            rjctd_bots: 0,
-            energy_apes: 0,
-            doodle_bots: 0,
-            candy_bots: 0
-        };
-
-        // Process each wallet
-        for (const wallet of wallets) {
-            try {
-                console.log(`Checking wallet ${wallet} for profile...`);
-                const result = await verifyWallet(userId, wallet);
-                if (result?.success) {
-                    console.log(`Got balance for ${wallet}:`, result.data.buxBalance);
-                    totalBalance += result.data.buxBalance || 0;
-                    Object.keys(nftCounts).forEach(key => {
-                        nftCounts[key] += result.data.nftCounts[key] || 0;
-                    });
-                }
-                await sleep(2000); // Add delay between wallets
-            } catch (error) {
-                console.error(`Error checking wallet ${wallet}:`, error);
-                // Continue with next wallet
-            }
-        }
-
-        console.log('Total BUX balance for profile:', totalBalance);
-        const dailyReward = await calculateDailyReward(nftCounts);
-        const displayBalance = (totalBalance / 1e9).toLocaleString(undefined, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 3
-        });
-
-        const embed = new EmbedBuilder()
-            .setColor('#FFD700')
-            .setTitle(`${targetUser.username}'s BUXDAO Profile`)
-            .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
-            .addFields(
-                { 
-                    name: '🏦 Connected Wallets', 
-                    value: wallets.join('\n') + '\n---------------------------------------------------------------',
-                    inline: false 
-                },
-                { 
-                    name: '🎨 Main Collections', 
-                    value: 
-                        `Fcked Catz: ${nftCounts.fcked_catz}\n` +
-                        `Celeb Catz: ${nftCounts.celebcatz}\n` +
-                        `Money Monsters: ${nftCounts.money_monsters}\n` +
-                        `Money Monsters 3D: ${nftCounts.money_monsters3d}\n` +
-                        `AI Bitbots: ${nftCounts.ai_bitbots}\n` +
-                        '---------------------------------------------------------------',
-                    inline: false
-                },
-                {
-                    name: '🤖 A.I. Collabs',
-                    value:
-                        `A.I. Warriors: ${nftCounts.warriors}\n` +
-                        `A.I. Squirrels: ${nftCounts.squirrels}\n` +
-                        `A.I. Energy Apes: ${nftCounts.energy_apes}\n` +
-                        `RJCTD bots: ${nftCounts.rjctd_bots}\n` +
-                        `Candy bots: ${nftCounts.candy_bots}\n` +
-                        `Doodle bots: ${nftCounts.doodle_bots}\n` +
-                        '---------------------------------------------------------------',
-                    inline: false
-                },
-                {
-                    name: '🎭 Server',
-                    value: 
-                        `Member Since: ${new Date(targetMember.joinedAt).toLocaleDateString()}\n` +
-                        `Roles: ${targetMember.roles.cache.size - 1}\n` +  // -1 to exclude @everyone
-                        '---------------------------------------------------------------',
-                    inline: false
-                },
-                { 
-                    name: '💰 BUX Balance', 
-                    value: `${displayBalance} BUX`,
-                    inline: false 
-                },
-                { 
-                    name: '🎁 Daily Rewards', 
-                    value: `${dailyReward} BUX per day`,
-                    inline: false 
-                },
-                {
-                    name: '💵 BUX Claim',
-                    value: `0 BUX available`,
-                    inline: false
-                }
-            )
-            .setImage('https://buxdao.io/banner.png')
-            .setFooter({ 
-                text: 'BUXDAO - Putting community first',
-                iconURL: 'https://buxdao.io/logo.png'
-            })
-            .setTimestamp();
-
-        await message.channel.send({ embeds: [embed] });
+        // Then display profile
+        await displayProfile(message, targetUser, targetMember);
     } catch (error) {
         console.error('Profile command error:', error);
-        await message.reply('An error occurred while fetching the profile. Please try again later.');
+        await message.reply('An error occurred while fetching your profile.');
     }
 }
 
@@ -291,25 +172,11 @@ async function showWallets(message, targetUser) {
 
 async function showNFTs(message, targetUser) {
     try {
-        const userId = targetUser.id;
-        const wallets = await redis.smembers(`wallets:${userId}`);
-        
-        if (wallets.length === 0) {
-            const embed = new EmbedBuilder()
-                .setColor('#FFD700')
-                .setTitle(`${targetUser.username}'s NFT Holdings`)
-                .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
-                .setDescription('No wallets connected. Please connect your wallet at https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify')
-                .setFooter({ 
-                    text: 'BUXDAO - Putting community first',
-                    iconURL: 'https://buxdao.io/logo.png'
-                })
-                .setTimestamp();
+        // First verify and update roles
+        console.log(`Checking roles for ${targetUser.username}`);
+        await updateDiscordRoles(targetUser.id, message.client);
 
-            await message.channel.send({ embeds: [embed] });
-            return;
-        }
-
+        const wallets = await redis.smembers(`wallets:${targetUser.id}`);
         let nftCounts = {
             fcked_catz: 0,
             celebcatz: 0,
@@ -324,28 +191,20 @@ async function showNFTs(message, targetUser) {
             candy_bots: 0
         };
 
-        let totalBuxBalance = 0;
-
-        // Process each wallet
         for (const wallet of wallets) {
             try {
-                const result = await verifyWallet(userId, wallet);
+                const result = await verifyWallet(targetUser.id, wallet);
                 if (result?.success) {
-                    totalBuxBalance += result.data.buxBalance;
-                    Object.keys(nftCounts).forEach(key => {
-                        nftCounts[key] += result.data.nftCounts[key] || 0;
-                    });
+                    for (const [collection, count] of Object.entries(result.data.nftCounts)) {
+                        if (nftCounts[collection] !== undefined) {
+                            nftCounts[collection] += count;
+                        }
+                    }
                 }
             } catch (error) {
                 console.error(`Error verifying wallet ${wallet}:`, error);
             }
         }
-
-        // Update roles with the data we just fetched
-        await updateDiscordRoles(targetUser.id, message.client, {
-            totalBuxBalance,
-            nftCounts
-        });
 
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
@@ -361,11 +220,11 @@ async function showNFTs(message, targetUser) {
                         `Money Monsters 3D: ${nftCounts.money_monsters3d}\n` +
                         `AI Bitbots: ${nftCounts.ai_bitbots}\n` +
                         '---------------------------------------------------------------',
-                    inline: false
+                    inline: false 
                 },
                 {
                     name: '🤖 A.I. Collabs',
-                    value:
+                    value: 
                         `A.I. Warriors: ${nftCounts.warriors}\n` +
                         `A.I. Squirrels: ${nftCounts.squirrels}\n` +
                         `A.I. Energy Apes: ${nftCounts.energy_apes}\n` +

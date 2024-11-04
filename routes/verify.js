@@ -16,24 +16,7 @@ router.post('/verify', verifyLimiter, async (req, res) => {
     if (!req.session.user) {
       return res.status(401).json({ 
         success: false, 
-        error: 'Not authenticated',
-        data: {
-          nftCounts: {
-            fcked_catz: 0,
-            celebcatz: 0,
-            money_monsters: 0,
-            money_monsters3d: 0,
-            ai_bitbots: 0,
-            warriors: 0,
-            squirrels: 0,
-            rjctd_bots: 0,
-            energy_apes: 0,
-            doodle_bots: 0,
-            candy_bots: 0
-          },
-          buxBalance: 0,
-          dailyReward: 0
-        }
+        error: 'Not authenticated'
       });
     }
 
@@ -41,34 +24,18 @@ router.post('/verify', verifyLimiter, async (req, res) => {
     if (!walletAddress) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Wallet address required',
-        data: {
-          nftCounts: {
-            fcked_catz: 0,
-            celebcatz: 0,
-            money_monsters: 0,
-            money_monsters3d: 0,
-            ai_bitbots: 0,
-            warriors: 0,
-            squirrels: 0,
-            rjctd_bots: 0,
-            energy_apes: 0,
-            doodle_bots: 0,
-            candy_bots: 0
-          },
-          buxBalance: 0,
-          dailyReward: 0
-        }
+        error: 'Wallet address required'
       });
     }
 
+    console.log(`Verifying wallet ${walletAddress} for user ${req.session.user.id}`);
     const result = await verifyWallet(req.session.user.id, walletAddress);
 
     if (result.success) {
       console.log('Verification successful, updating Discord roles...');
       try {
-        await updateDiscordRoles(req.session.user.id, global.discordClient);
-        console.log('Discord roles updated successfully');
+        const roleResult = await updateDiscordRoles(req.session.user.id, global.discordClient);
+        console.log('Role update result:', roleResult);
       } catch (error) {
         console.error('Error updating Discord roles:', error);
         // Don't fail the request if role update fails
@@ -78,28 +45,11 @@ router.post('/verify', verifyLimiter, async (req, res) => {
     res.json(result);
 
   } catch (error) {
-    console.error('Verify error:', error.message);
+    console.error('Verify error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to verify wallet',
-      details: error.message,
-      data: {
-        nftCounts: {
-          fcked_catz: 0,
-          celebcatz: 0,
-          money_monsters: 0,
-          money_monsters3d: 0,
-          ai_bitbots: 0,
-          warriors: 0,
-          squirrels: 0,
-          rjctd_bots: 0,
-          energy_apes: 0,
-          doodle_bots: 0,
-          candy_bots: 0
-        },
-        buxBalance: 0,
-        dailyReward: 0
-      }
+      details: error.message
     });
   }
 });
