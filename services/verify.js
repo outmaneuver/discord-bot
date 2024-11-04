@@ -41,6 +41,9 @@ async function verifyWallet(userId, walletAddress) {
             throw new Error('Invalid input parameters');
         }
 
+        // Add delay between wallet checks to avoid rate limits
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
         console.log(`Checking wallet ${walletAddress} for user ${userId}`);
         
         // Single RPC call to get all token accounts
@@ -109,7 +112,13 @@ async function verifyWallet(userId, walletAddress) {
                     { programId: TOKEN_PROGRAM_ID }
                 );
                 // Process tokens same as above...
-                // (duplicate code omitted for brevity)
+                return {
+                    success: true,
+                    data: {
+                        nftCounts: processTokenAccounts(tokenAccounts),
+                        buxBalance: getBuxBalance(tokenAccounts)
+                    }
+                };
             } catch (retryError) {
                 console.error('Error in verifyWallet:', retryError);
                 throw retryError;
