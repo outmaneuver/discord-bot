@@ -1,11 +1,10 @@
 import { EmbedBuilder } from 'discord.js';
-import { verifyWallet, getBUXBalance, updateDiscordRoles, getBUXValue } from '../services/verify.js';
+import { verifyWallet, getBUXBalance, updateDiscordRoles, getBUXValue, LIQUIDITY_WALLET, BUX_TOKEN_MINT } from '../services/verify.js';
 import { redis } from '../config/redis.js';
 import { calculateDailyReward, getClaimableAmount } from '../services/rewards.js';
 import { Connection, PublicKey } from '@solana/web3.js';
 import fetch from 'node-fetch';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { LIQUIDITY_WALLET } from '../services/verify.js';
 
 // Add sleep helper function
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -537,30 +536,26 @@ async function showBotsInfo(message) {
 async function showBUXInfo(message) {
     try {
         const buxValue = await getBUXValue();
-        
+        const connection = new Connection(process.env.SOLANA_RPC_URL);
+        const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
+
         const embed = new EmbedBuilder()
-            .setColor('#FFD700')
+            .setColor('#0099ff')
             .setTitle('BUX Token Info')
-            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/bux.jpg')
             .addFields(
                 { 
-                    name: 'Token Address', 
-                    value: `[${BUX_TOKEN_MINT}](https://solscan.io/token/${BUX_TOKEN_MINT}#holders)`,
+                    name: '💰 Token Supply',
+                    value: `${tokenSupply.value.uiAmount.toLocaleString()} BUX`,
                     inline: false 
                 },
                 { 
-                    name: 'Public Supply', 
-                    value: `${Math.floor(buxValue.publicSupply).toLocaleString()} BUX`,
+                    name: '💎 BUX Value',
+                    value: `$${buxValue.buxValueUsd.toFixed(8)}`,
                     inline: false 
                 },
                 { 
-                    name: 'Liquidity', 
+                    name: '🌊 Liquidity',
                     value: `${buxValue.liquiditySol.toFixed(2)} SOL ($${(buxValue.liquiditySol * buxValue.solPrice).toFixed(2)})`,
-                    inline: false 
-                },
-                { 
-                    name: 'BUX Value', 
-                    value: `${buxValue.buxValueSol.toFixed(8)} SOL ($${buxValue.buxValueUsd.toFixed(8)})`,
                     inline: false 
                 }
             )
