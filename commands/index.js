@@ -2,6 +2,8 @@ import { EmbedBuilder } from 'discord.js';
 import { verifyWallet, getBUXBalance, updateDiscordRoles } from '../services/verify.js';
 import { redis } from '../config/redis.js';
 import { calculateDailyReward } from '../services/rewards.js';
+import { Connection, PublicKey } from '@solana/web3.js';
+import fetch from 'node-fetch';
 
 // Add sleep helper function
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -577,45 +579,83 @@ async function showBotsInfo(message) {
     await message.channel.send({ embeds: [embed] });
 }
 
-async function showBUXInfo(message) {
-    const embed = new EmbedBuilder()
-        .setColor('#FFD700')
-        .setTitle('BUX Token Info')
-        .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/bux.jpg')
-        .addFields(
-            { 
-                name: 'Token Address', 
-                value: 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK',
-                inline: false 
-            },
-            { 
-                name: 'Public Supply', 
-                value: '1,000,000,000 BUX',
-                inline: true 
-            },
-            { 
-                name: 'Liquidity', 
-                value: '~$50,000',
-                inline: true 
-            },
-            { 
-                name: 'BUX Value', 
-                value: '$0.00005',
-                inline: true 
-            },
-            { 
-                name: 'Trade BUX', 
-                value: '[Jupiter](https://jup.ag/swap/SOL-BUX)\n[Raydium](https://raydium.io/swap/?inputCurrency=sol&outputCurrency=FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK&fixed=in)',
-                inline: false 
-            }
-        )
-        .setFooter({ 
-            text: 'BUXDAO - Putting community first',
-            iconURL: 'https://buxdao.io/logo.png'
-        })
-        .setTimestamp();
+// Add constants
+const EXEMPT_WALLETS = [
+    'DXM1SKEbtDVFJcqLDJvSBSh83CeHkYv4qM88JG9BwJ5t',
+    'BX1PEe4FJiWuHjFnYuYFB8edZsFg39BWggi65yTH52or',
+    '95vRUfprVqvURhPryNdEsaBrSNmbE1uuufYZkyrxyjir',
+    'FAEjAsCtpoapdsCF1DDhj71vdjQjSeAJt8gt9uYxL7gz',
+    'He7HLAH2v8pnVafzxmfkqZUVefy4DUGiHmpetQFZNjrg',
+    'FFfTserUJGZEFLKB7ffqxaXvoHfdRJDtNYgXu7NEn8an',
+    '9pRsKWUw2nQBfdVhfknyWQ4KEiDiYvahRXCf9an4kpW4',
+    'FYfLzXckAf2JZoMYBz2W4fpF9vejqpA6UFV17d1A7C75',
+    'H4RPEi5Sfpapy1B233b4DUhh6hsmFTTKx4pXqWnpW637'
+];
 
-    await message.channel.send({ embeds: [embed] });
+const LIQUIDITY_WALLET = '3WNHW6sr1sQdbRjovhPrxgEJdWASZ43egGWMMNrhgoRR';
+const TOTAL_SUPPLY = 1_000_000_000;
+
+async function showBUXInfo(message) {
+    try {
+        // Get SOL price
+        const solPriceRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+        const solPriceData = await solPriceRes.json();
+        const solPrice = solPriceData.solana.usd;
+
+        // Get liquidity wallet SOL balance
+        const connection = new Connection(process.env.SOLANA_RPC_URL);
+        const liquidityBalance = await connection.getBalance(new PublicKey(LIQUIDITY_WALLET));
+        const liquiditySol = (liquidityBalance / 1e9) + 17.75567; // Add fixed SOL amount
+
+        // Calculate public supply by fetching exempt wallet balances
+        let exemptBalance = 0;
+        for (const wallet of EXEMPT_WALLETS) {
+            const tokenBalance = await getBUXBalance(wallet);
+            exemptBalance += tokenBalance;
+        }
+        const publicSupply = TOTAL_SUPPLY - exemptBalance;
+
+        // Calculate BUX value
+        const buxValueSol = liquiditySol / publicSupply;
+        const buxValueUsd = buxValueSol * solPrice;
+
+        const embed = new EmbedBuilder()
+            .setColor('#FFD700')
+            .setTitle('BUX Token Info')
+            .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/bux.jpg')
+            .addFields(
+                { 
+                    name: 'Token Address', 
+                    value: '[FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK](https://solscan.io/token/FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK#holders)',
+                    inline: false 
+                },
+                { 
+                    name: 'Public Supply', 
+                    value: `${publicSupply.toLocaleString()} BUX`,
+                    inline: true 
+                },
+                { 
+                    name: 'Liquidity', 
+                    value: `${liquiditySol.toFixed(2)} SOL ($${(liquiditySol * solPrice).toFixed(2)})`,
+                    inline: true 
+                },
+                { 
+                    name: 'BUX Value', 
+                    value: `${buxValueSol.toFixed(8)} SOL ($${buxValueUsd.toFixed(8)})`,
+                    inline: true 
+                }
+            )
+            .setFooter({ 
+                text: 'BUXDAO - Putting community first',
+                iconURL: 'https://buxdao.io/logo.png'
+            })
+            .setTimestamp();
+
+        await message.channel.send({ embeds: [embed] });
+    } catch (error) {
+        console.error('Error in showBUXInfo:', error);
+        await message.reply('An error occurred while fetching BUX info. Please try again later.');
+    }
 }
 
 async function showRewards(message) {
