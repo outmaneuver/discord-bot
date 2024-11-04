@@ -31,6 +31,9 @@ let hashlists = {
 const userDataCache = new Map();
 const CACHE_TTL = 60 * 1000; // 1 minute
 
+// Add a cache for the current verification session
+let currentVerificationBalances = new Map();
+
 // Simple function to verify NFTs from hashlists
 async function verifyWallet(userId, walletAddress) {
     try {
@@ -44,6 +47,9 @@ async function verifyWallet(userId, walletAddress) {
         // Get BUX balance with retries
         const buxBalance = await getBUXBalance(walletAddress);
         console.log(`BUX balance for ${walletAddress}:`, buxBalance);
+        
+        // Store balance for this verification session
+        currentVerificationBalances.set(walletAddress, buxBalance);
 
         // Initialize NFT counts
         const nftCounts = {
@@ -326,44 +332,58 @@ async function updateDiscordRoles(userId, client) {
 
 // Add this function to services/verify.js
 async function getBUXValue() {
-    // Get SOL price
-    const solPriceRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
-    const solPriceData = await solPriceRes.json();
-    const solPrice = solPriceData.solana.usd;
+    try {
+        // Get SOL price
+        const solPriceRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+        const solPriceData = await solPriceRes.json();
+        const solPrice = solPriceData.solana.usd;
 
-    // Get liquidity wallet SOL balance
-    const connection = new Connection(process.env.SOLANA_RPC_URL);
-    const liquidityBalance = await connection.getBalance(new PublicKey(LIQUIDITY_WALLET));
-    const liquiditySol = (liquidityBalance / 1e9) + 17.75567;
+        // Get liquidity wallet SOL balance
+        const connection = new Connection(process.env.SOLANA_RPC_URL);
+        const liquidityBalance = await connection.getBalance(new PublicKey(LIQUIDITY_WALLET));
+        const liquiditySol = (liquidityBalance / 1e9) + 17.75567;
 
-    // Get total supply and exempt balances
-    const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
-    const totalSupply = tokenSupply.value.uiAmount;
+        // Get total supply from token mint
+        const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
+        const totalSupply = tokenSupply.value.uiAmount;
 
-    let exemptBalance = 0;
-    for (const wallet of EXEMPT_WALLETS) {
-        try {
-            const balance = await getBUXBalance(wallet);
-            exemptBalance += balance;
-        } catch (error) {
-            console.error(`Error getting exempt wallet balance: ${error}`);
-            throw error;
+        // Use cached balances if available
+        let exemptBalance = 0;
+        for (const wallet of EXEMPT_WALLETS) {
+            const cachedBalance = currentVerificationBalances.get(wallet);
+            if (cachedBalance !== undefined) {
+                exemptBalance += cachedBalance / 1e9;
+            } else {
+                try {
+                    const balance = await getBUXBalance(wallet);
+                    exemptBalance += balance / 1e9;
+                } catch (error) {
+                    console.error(`Error getting exempt wallet balance: ${error}`);
+                    throw error;
+                }
+            }
         }
+
+        const publicSupply = totalSupply - exemptBalance;
+        const buxValueSol = liquiditySol / publicSupply;
+        const buxValueUsd = buxValueSol * solPrice;
+
+        // Clear the cache after use
+        currentVerificationBalances.clear();
+
+        return {
+            solPrice,
+            liquiditySol,
+            totalSupply,
+            exemptBalance,
+            publicSupply,
+            buxValueSol,
+            buxValueUsd
+        };
+    } catch (error) {
+        console.error('Error getting BUX value:', error);
+        throw error;
     }
-
-    const publicSupply = totalSupply - exemptBalance;
-    const buxValueSol = liquiditySol / publicSupply;
-    const buxValueUsd = buxValueSol * solPrice;
-
-    return {
-        solPrice,
-        liquiditySol,
-        totalSupply,
-        exemptBalance,
-        publicSupply,
-        buxValueSol,
-        buxValueUsd
-    };
 }
 
 export {
