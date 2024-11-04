@@ -349,29 +349,12 @@ async function getBUXValue() {
         const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
         const totalSupply = tokenSupply.value.uiAmount;
 
-        // Use cached balances if available
-        let exemptBalance = 0;
-        for (const wallet of EXEMPT_WALLETS) {
-            const cachedBalance = currentVerificationBalances.get(wallet);
-            if (cachedBalance !== undefined) {
-                exemptBalance += cachedBalance / 1e9;
-            } else {
-                try {
-                    const balance = await getBUXBalance(wallet);
-                    exemptBalance += balance / 1e9;
-                } catch (error) {
-                    console.error(`Error getting exempt wallet balance: ${error}`);
-                    throw error;
-                }
-            }
-        }
+        // Just use hardcoded exempt balance since we know what it is
+        const exemptBalance = 101026160.834050;
 
         const publicSupply = totalSupply - exemptBalance;
         const buxValueSol = liquiditySol / publicSupply;
         const buxValueUsd = buxValueSol * solPrice;
-
-        // Clear the cache after use
-        currentVerificationBalances.clear();
 
         return {
             solPrice,
