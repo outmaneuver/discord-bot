@@ -6,7 +6,7 @@ const redis = new Redis(process.env.REDIS_URL, {
   }
 });
 
-export async function calculateDailyReward(nftCounts, buxBalance) {
+async function calculateDailyReward(nftCounts, buxBalance) {
   try {
     const rewardRates = {
       fcked_catz: 5,
@@ -36,7 +36,7 @@ export async function calculateDailyReward(nftCounts, buxBalance) {
   }
 }
 
-export async function startOrUpdateDailyTimer(userId, nftCounts, buxBalance) {
+async function startOrUpdateDailyTimer(userId, nftCounts, buxBalance) {
   try {
     const key = `timer:${userId}`;
     const timerData = await redis.get(key);
@@ -61,7 +61,7 @@ export async function startOrUpdateDailyTimer(userId, nftCounts, buxBalance) {
   }
 }
 
-export async function getTimeUntilNextClaim(userId) {
+async function getTimeUntilNextClaim(userId) {
   try {
     const key = `daily_timer:${userId}`;
     const lastCheck = await redis.get(key);
@@ -84,7 +84,6 @@ export async function getTimeUntilNextClaim(userId) {
   }
 }
 
-// Add this function to get claimable BUX amount
 async function getClaimableAmount(userId) {
     try {
         const claimable = await redis.get(`claimable:${userId}`);
@@ -95,8 +94,10 @@ async function getClaimableAmount(userId) {
     }
 }
 
-// Add getClaimableAmount to exports
+// Single export statement for all functions
 export {
     calculateDailyReward,
+    startOrUpdateDailyTimer,
+    getTimeUntilNextClaim,
     getClaimableAmount
 };
