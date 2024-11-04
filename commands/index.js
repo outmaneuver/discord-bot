@@ -684,13 +684,32 @@ async function showBUXInfo(message) {
         const liquidityBalance = await connection.getBalance(new PublicKey(LIQUIDITY_WALLET));
         const liquiditySol = (liquidityBalance / 1e9) + 17.75567; // Add fixed SOL amount
 
-        // Get BUX token info from Solscan
+        // Get BUX token info from Solscan with error handling
         const solscanRes = await fetch(`https://public-api.solscan.io/token/meta/${BUX_TOKEN_MINT}`, {
             headers: {
-                'token': process.env.SOLSCAN_API_KEY
+                'token': process.env.SOLSCAN_API_KEY,
+                'Accept': 'application/json'
             }
         });
-        const tokenData = await solscanRes.json();
+        
+        // Log the raw response for debugging
+        const rawResponse = await solscanRes.text();
+        console.log('Solscan raw response:', rawResponse);
+        
+        let tokenData;
+        try {
+            tokenData = JSON.parse(rawResponse);
+        } catch (error) {
+            console.error('Failed to parse Solscan response:', error);
+            console.error('Raw response:', rawResponse);
+            throw new Error('Invalid response from Solscan API');
+        }
+
+        if (!tokenData || !tokenData.supply) {
+            console.error('Invalid token data from Solscan:', tokenData);
+            throw new Error('Invalid token data from Solscan API');
+        }
+
         console.log('Solscan token data:', tokenData);
         const totalSupply = tokenData.supply / 1e9; // Convert from raw to display units
 
@@ -700,10 +719,16 @@ async function showBUXInfo(message) {
             try {
                 const walletRes = await fetch(`https://public-api.solscan.io/account/tokens?account=${wallet}`, {
                     headers: {
-                        'token': process.env.SOLSCAN_API_KEY
+                        'token': process.env.SOLSCAN_API_KEY,
+                        'Accept': 'application/json'
                     }
                 });
-                const walletTokens = await walletRes.json();
+                
+                // Log raw response for debugging
+                const rawWalletResponse = await walletRes.text();
+                console.log(`Solscan wallet ${wallet} raw response:`, rawWalletResponse);
+                
+                const walletTokens = JSON.parse(rawWalletResponse);
                 const buxToken = walletTokens.find(t => t.tokenAddress === BUX_TOKEN_MINT);
                 if (buxToken) {
                     const balance = buxToken.tokenAmount.uiAmount;
