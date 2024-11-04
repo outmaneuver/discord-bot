@@ -34,18 +34,20 @@ const CACHE_TTL = 60 * 1000; // 1 minute
 // Add a cache for the current verification session
 let currentVerificationBalances = new Map();
 
-// Add rate limiting for wallet verification
+// Modify rate limiting to be per-wallet instead of per-user
 const verificationRateLimit = new Map();
 
 // Simple function to verify NFTs from hashlists
 async function verifyWallet(userId, walletAddress) {
-    // Check rate limit
+    // Check rate limit for specific wallet
     const now = Date.now();
-    const lastVerify = verificationRateLimit.get(userId) || 0;
-    if (now - lastVerify < 60000) { // 1 minute cooldown
-        throw new Error('Please wait before verifying another wallet');
+    const lastVerify = verificationRateLimit.get(walletAddress) || 0;
+    if (now - lastVerify < 30000) { // 30 second cooldown per wallet
+        console.log(`Rate limit hit for wallet ${walletAddress}`);
+        // Don't throw error, just use cached data
+        return await getCachedWalletData(walletAddress);
     }
-    verificationRateLimit.set(userId, now);
+    verificationRateLimit.set(walletAddress, now);
 
     try {
         if (!userId || !walletAddress) {
@@ -135,7 +137,7 @@ async function verifyWallet(userId, walletAddress) {
                 throw retryError;
             }
         }
-        console.error('Error in verifyWallet:', error);
+        console.error(`Verification error for wallet ${walletAddress}:`, error);
         throw error;
     }
 }
@@ -380,6 +382,16 @@ async function getBUXValue() {
         console.error('Error getting BUX value:', error);
         throw error;
     }
+}
+
+// Add cache function
+async function getCachedWalletData(walletAddress) {
+    const cacheKey = `wallet:${walletAddress}:data`;
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+        return JSON.parse(cached);
+    }
+    return null;
 }
 
 export {
