@@ -150,6 +150,7 @@ async function showProfile(message, targetUser, targetMember) {
             return;
         }
 
+        let totalBalance = 0;
         let nftCounts = {
             fcked_catz: 0,
             celebcatz: 0,
@@ -164,32 +165,31 @@ async function showProfile(message, targetUser, targetMember) {
             candy_bots: 0
         };
 
-        let totalBuxBalance = 0;
-
-        // Fetch data ONCE
+        // Process each wallet
         for (const wallet of wallets) {
             try {
+                console.log(`Checking wallet ${wallet} for profile...`);
                 const result = await verifyWallet(userId, wallet);
                 if (result?.success) {
-                    totalBuxBalance += result.data.buxBalance;
+                    console.log(`Got balance for ${wallet}:`, result.data.buxBalance);
+                    totalBalance += result.data.buxBalance || 0;
                     Object.keys(nftCounts).forEach(key => {
-                        nftCounts[key] += result.data.nftCounts[key];
+                        nftCounts[key] += result.data.nftCounts[key] || 0;
                     });
                 }
-            } catch (err) {
-                console.error(`Error verifying wallet ${wallet}:`, err);
+                await sleep(2000); // Add delay between wallets
+            } catch (error) {
+                console.error(`Error checking wallet ${wallet}:`, error);
+                // Continue with next wallet
             }
         }
 
-        // Use the data we just fetched instead of fetching again
-        await updateDiscordRoles(targetUser.id, message.client, {
-            totalBuxBalance,
-            nftCounts
-        });
-
+        console.log('Total BUX balance for profile:', totalBalance);
         const dailyReward = await calculateDailyReward(nftCounts);
-        const aiCollabsCount = nftCounts.warriors + nftCounts.squirrels + nftCounts.rjctd_bots + 
-                              nftCounts.energy_apes + nftCounts.doodle_bots + nftCounts.candy_bots;
+        const displayBalance = (totalBalance / 1e9).toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 3
+        });
 
         const embed = new EmbedBuilder()
             .setColor('#FFD700')
@@ -198,7 +198,7 @@ async function showProfile(message, targetUser, targetMember) {
             .addFields(
                 { 
                     name: '🏦 Connected Wallets', 
-                    value: wallets.map(w => `\`${w}\``).join('\n') + '\n---------------------------------------------------------------',
+                    value: wallets.join('\n') + '\n---------------------------------------------------------------',
                     inline: false 
                 },
                 { 
@@ -234,7 +234,7 @@ async function showProfile(message, targetUser, targetMember) {
                 },
                 { 
                     name: '💰 BUX Balance', 
-                    value: `${(totalBuxBalance / 1e9).toLocaleString()} BUX`,
+                    value: `${displayBalance} BUX`,
                     inline: false 
                 },
                 { 
