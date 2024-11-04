@@ -135,6 +135,8 @@ async function getBUXBalance(walletAddress) {
 
         } catch (error) {
             attempt++;
+            
+            // Only retry on rate limit errors
             if (error.message.includes('429') && attempt < maxRetries) {
                 const delay = 2000; // Simple 2 second delay between retries
                 console.log(`Rate limited getting balance for ${walletAddress}, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`);
