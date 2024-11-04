@@ -243,43 +243,67 @@ async function updateDiscordRoles(userId, client) {
         console.log('NFT counts:', nftCounts);
         console.log('Total BUX balance:', totalBuxBalance);
 
-        // Determine roles
+        // Determine roles - only add roles that exist in env vars
         const rolesToAdd = [];
         
         // NFT roles
-        if (nftCounts.fcked_catz > 0) rolesToAdd.push(process.env.ROLE_ID_FCKED_CATZ);
-        if (nftCounts.celebcatz > 0) rolesToAdd.push(process.env.ROLE_ID_CELEB_CATZ);
-        if (nftCounts.money_monsters > 0) rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS);
-        if (nftCounts.money_monsters3d > 0) rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
-        if (nftCounts.ai_bitbots > 0) rolesToAdd.push(process.env.ROLE_ID_AI_BITBOTS);
-        if (nftCounts.warriors > 0) rolesToAdd.push(process.env.ROLE_ID_WARRIORS);
-        if (nftCounts.squirrels > 0) rolesToAdd.push(process.env.ROLE_ID_SQUIRRELS);
-        if (nftCounts.rjctd_bots > 0) rolesToAdd.push(process.env.ROLE_ID_RJCTD_BOTS);
-        if (nftCounts.energy_apes > 0) rolesToAdd.push(process.env.ROLE_ID_ENERGY_APES);
-        if (nftCounts.doodle_bots > 0) rolesToAdd.push(process.env.ROLE_ID_DOODLE_BOTS);
-        if (nftCounts.candy_bots > 0) rolesToAdd.push(process.env.ROLE_ID_CANDY_BOTS);
+        if (nftCounts.fcked_catz > 0 && process.env.ROLE_ID_FCKED_CATZ) 
+            rolesToAdd.push(process.env.ROLE_ID_FCKED_CATZ);
+        if (nftCounts.celebcatz > 0 && process.env.ROLE_ID_CELEB_CATZ) 
+            rolesToAdd.push(process.env.ROLE_ID_CELEB_CATZ);
+        if (nftCounts.money_monsters > 0 && process.env.ROLE_ID_MONEY_MONSTERS) 
+            rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS);
+        if (nftCounts.money_monsters3d > 0 && process.env.ROLE_ID_MONEY_MONSTERS3D) 
+            rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
+        if (nftCounts.ai_bitbots > 0 && process.env.ROLE_ID_AI_BITBOTS) 
+            rolesToAdd.push(process.env.ROLE_ID_AI_BITBOTS);
+        if (nftCounts.warriors > 0 && process.env.ROLE_ID_WARRIORS) 
+            rolesToAdd.push(process.env.ROLE_ID_WARRIORS);
+        if (nftCounts.squirrels > 0 && process.env.ROLE_ID_SQUIRRELS) 
+            rolesToAdd.push(process.env.ROLE_ID_SQUIRRELS);
+        if (nftCounts.rjctd_bots > 0 && process.env.ROLE_ID_RJCTD_BOTS) 
+            rolesToAdd.push(process.env.ROLE_ID_RJCTD_BOTS);
+        if (nftCounts.energy_apes > 0 && process.env.ROLE_ID_ENERGY_APES) 
+            rolesToAdd.push(process.env.ROLE_ID_ENERGY_APES);
+        if (nftCounts.doodle_bots > 0 && process.env.ROLE_ID_DOODLE_BOTS) 
+            rolesToAdd.push(process.env.ROLE_ID_DOODLE_BOTS);
+        if (nftCounts.candy_bots > 0 && process.env.ROLE_ID_CANDY_BOTS) 
+            rolesToAdd.push(process.env.ROLE_ID_CANDY_BOTS);
 
         // BUX roles
-        if (totalBuxBalance >= 50000) rolesToAdd.push(process.env.ROLE_ID_50000_BUX);
-        if (totalBuxBalance >= 25000) rolesToAdd.push(process.env.ROLE_ID_25000_BUX);
-        if (totalBuxBalance >= 10000) rolesToAdd.push(process.env.ROLE_ID_10000_BUX);
-        if (totalBuxBalance >= 2500) rolesToAdd.push(process.env.ROLE_ID_2500_BUX);
+        if (totalBuxBalance >= 50000 && process.env.ROLE_ID_50000_BUX) 
+            rolesToAdd.push(process.env.ROLE_ID_50000_BUX);
+        if (totalBuxBalance >= 25000 && process.env.ROLE_ID_25000_BUX) 
+            rolesToAdd.push(process.env.ROLE_ID_25000_BUX);
+        if (totalBuxBalance >= 10000 && process.env.ROLE_ID_10000_BUX) 
+            rolesToAdd.push(process.env.ROLE_ID_10000_BUX);
+        if (totalBuxBalance >= 2500 && process.env.ROLE_ID_2500_BUX) 
+            rolesToAdd.push(process.env.ROLE_ID_2500_BUX);
 
         // Whale roles
-        if (nftCounts.fcked_catz >= 25) rolesToAdd.push(process.env.WHALE_ROLE_ID_FCKED_CATZ);
-        if (nftCounts.money_monsters >= 25) rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS);
-        if (nftCounts.money_monsters3d >= 25) rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
-        if (nftCounts.ai_bitbots >= 25) rolesToAdd.push(process.env.WHALE_ROLE_ID_AI_BITBOTS);
+        if (nftCounts.fcked_catz >= 25 && process.env.WHALE_ROLE_ID_FCKED_CATZ) 
+            rolesToAdd.push(process.env.WHALE_ROLE_ID_FCKED_CATZ);
+        if (nftCounts.money_monsters >= 25 && process.env.WHALE_ROLE_ID_MONEY_MONSTERS) 
+            rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS);
+        if (nftCounts.money_monsters3d >= 25 && process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D) 
+            rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
+        if (nftCounts.ai_bitbots >= 25 && process.env.WHALE_ROLE_ID_AI_BITBOTS) 
+            rolesToAdd.push(process.env.WHALE_ROLE_ID_AI_BITBOTS);
 
         // Get current roles
         const currentRoles = member.roles.cache
             .filter(role => role.id !== guild.id)
             .map(role => role.id);
 
-        // Determine roles to remove
+        // Get all possible NFT/BUX role IDs from env
+        const allPossibleRoles = Object.entries(process.env)
+            .filter(([key, value]) => key.includes('ROLE_ID') && value)
+            .map(([_, value]) => value);
+
+        // Only remove roles that are NFT/BUX related and not in rolesToAdd
         const rolesToRemove = currentRoles.filter(roleId => 
             !rolesToAdd.includes(roleId) && 
-            Object.values(process.env).includes(roleId)
+            allPossibleRoles.includes(roleId)
         );
 
         console.log('Roles to add:', rolesToAdd);
