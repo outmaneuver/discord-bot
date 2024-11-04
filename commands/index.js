@@ -5,6 +5,7 @@ import { calculateDailyReward, getClaimableAmount } from '../services/rewards.js
 import { Connection, PublicKey } from '@solana/web3.js';
 import fetch from 'node-fetch';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { LIQUIDITY_WALLET } from '../services/verify.js';
 
 // Add sleep helper function
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -331,37 +332,11 @@ async function showBUX(message) {
     }
 }
 
-async function displayProfile(message) {
+async function displayProfile(message, targetUser, targetMember) {
     try {
-        // Get SOL price and BUX value calculations
-        const solPriceRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
-        const solPriceData = await solPriceRes.json();
-        const solPrice = solPriceData.solana.usd;
-
-        const connection = new Connection(process.env.SOLANA_RPC_URL);
-        const liquidityBalance = await connection.getBalance(new PublicKey(LIQUIDITY_WALLET));
-        const liquiditySol = (liquidityBalance / 1e9) + 17.75567;
-
-        const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
-        const totalSupply = tokenSupply.value.uiAmount;
-
-        let exemptBalance = 0;
-        for (const wallet of EXEMPT_WALLETS) {
-            try {
-                const balance = await getBUXBalance(wallet);
-                exemptBalance += balance;
-            } catch (error) {
-                console.error(`Error getting exempt wallet balance: ${error}`);
-            }
-        }
-
-        const publicSupply = totalSupply - exemptBalance;
-        const buxValueSol = liquiditySol / publicSupply;
-        const buxValueUsd = buxValueSol * solPrice;
-
-        // Get user data
-        const wallets = await redis.smembers(`wallets:${message.author.id}`);
-        let totalBalance = 0;
+        const userId = targetUser.id;
+        const wallets = await redis.smembers(`wallets:${userId}`);
+        let totalBuxBalance = 0;
         let nftCounts = {
             fcked_catz: 0,
             celebcatz: 0,
@@ -376,11 +351,15 @@ async function displayProfile(message) {
             candy_bots: 0
         };
 
+        // Get BUX value for USD conversion
+        const buxValue = await getBUXValue();
+
+        // Get NFT counts and BUX balance
         for (const wallet of wallets) {
             try {
-                const result = await verifyWallet(message.author.id, wallet);
+                const result = await verifyWallet(userId, wallet);
                 if (result.success) {
-                    totalBalance += result.data.buxBalance / 1e9;
+                    totalBuxBalance += result.data.buxBalance / 1e9;
                     for (const [collection, count] of Object.entries(result.data.nftCounts)) {
                         if (nftCounts[collection] !== undefined) {
                             nftCounts[collection] += count;
@@ -388,34 +367,84 @@ async function displayProfile(message) {
                     }
                 }
             } catch (error) {
-                console.error(`Error verifying wallet: ${error}`);
+                console.error(`Error verifying wallet ${wallet}:`, error);
             }
         }
 
-        const balanceUsdValue = totalBalance * buxValueUsd;
-        const dailyReward = calculateDailyReward(nftCounts);
-        const claimable = await getClaimableAmount(message.author.id);
+        // Calculate USD value
+        const buxUsdValue = totalBuxBalance * buxValue.buxValueUsd;
 
-        // Rest of profile display code remains the same, just update BUX balance field
+        // Create embed
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
-            .setTitle(`${message.author.username}'s BUXDAO Profile`)
-            // ... other fields remain the same ...
+            .setTitle(`${targetUser.username}'s BUXDAO Profile`)
             .addFields(
-                // ... other fields remain the same ...
+                { 
+                    name: '🏦 Connected Wallets',
+                    value: wallets.length > 0 ? wallets.join('\n') : 'No wallets connected',
+                    inline: false 
+                },
+                {
+                    name: '---------------------------------------------------------------',
+                    value: '\u200B',
+                    inline: false
+                },
+                { 
+                    name: '🎨 Main Collections',
+                    value: 
+                        `Fcked Catz: ${nftCounts.fcked_catz}\n` +
+                        `Celeb Catz: ${nftCounts.celebcatz}\n` +
+                        `Money Monsters: ${nftCounts.money_monsters}\n` +
+                        `Money Monsters 3D: ${nftCounts.money_monsters3d}\n` +
+                        `AI Bitbots: ${nftCounts.ai_bitbots}`,
+                    inline: false 
+                },
+                {
+                    name: '---------------------------------------------------------------',
+                    value: '\u200B',
+                    inline: false
+                },
+                {
+                    name: '🤖 A.I. Collabs',
+                    value: 
+                        `A.I. Warriors: ${nftCounts.warriors}\n` +
+                        `A.I. Squirrels: ${nftCounts.squirrels}\n` +
+                        `A.I. Energy Apes: ${nftCounts.energy_apes}\n` +
+                        `RJCTD bots: ${nftCounts.rjctd_bots}\n` +
+                        `Candy bots: ${nftCounts.candy_bots}\n` +
+                        `Doodle bots: ${nftCounts.doodle_bots}`,
+                    inline: false
+                },
+                {
+                    name: '---------------------------------------------------------------',
+                    value: '\u200B',
+                    inline: false
+                },
+                {
+                    name: '🎭 Server',
+                    value: 
+                        `Member Since: ${targetMember.joinedAt.toLocaleDateString()}\n` +
+                        `Roles: ${targetMember.roles.cache.size - 1}`,
+                    inline: false
+                },
+                {
+                    name: '---------------------------------------------------------------',
+                    value: '\u200B',
+                    inline: false
+                },
                 { 
                     name: '💰 BUX Balance',
-                    value: `${totalBalance.toLocaleString()} BUX ($${balanceUsdValue.toFixed(2)})`,
+                    value: `${totalBuxBalance.toLocaleString()} BUX ($${buxUsdValue.toFixed(2)})`,
                     inline: false 
                 },
                 { 
                     name: '🎁 Daily Rewards',
-                    value: `${dailyReward} BUX per day`,
+                    value: `${await calculateDailyReward(nftCounts)} BUX per day`,
                     inline: false 
                 },
                 { 
                     name: '💵 BUX Claim',
-                    value: `${claimable} BUX available`,
+                    value: `${await getClaimableAmount(userId)} BUX available`,
                     inline: false 
                 }
             )
@@ -424,10 +453,14 @@ async function displayProfile(message) {
                 iconURL: 'https://buxdao.io/logo.png'
             });
 
+        if (targetUser.avatarURL()) {
+            embed.setThumbnail(targetUser.avatarURL({ dynamic: true }));
+        }
+
         await message.channel.send({ embeds: [embed] });
     } catch (error) {
         console.error('Error in displayProfile:', error);
-        await message.reply('An error occurred while fetching your profile.');
+        throw error;
     }
 }
 
