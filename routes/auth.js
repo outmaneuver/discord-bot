@@ -7,7 +7,6 @@ import session from 'express-session';
 import RedisStore from 'connect-redis';
 import { redis } from '../config/redis.js';
 import helmet from 'helmet';
-import csrf from 'csurf';
 
 const router = express.Router();
 
@@ -51,9 +50,6 @@ router.use((req, res, next) => {
 
 // Add security headers middleware
 router.use(helmet());
-
-// Add CSRF protection
-router.use(csrf({ cookie: true }));
 
 const DISCORD_API_URL = 'https://discord.com/api/v10';
 
