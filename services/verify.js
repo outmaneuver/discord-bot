@@ -218,20 +218,14 @@ function updateHashlists(newHashlists) {
 // Add updateDiscordRoles function back
 async function updateDiscordRoles(userId, client) {
     try {
-        const guild = client.guilds.cache.get(process.env.GUILD_ID);
-        const member = await guild.members.fetch(userId);
-        
-        console.log(`Starting role update for ${member.user.username}`);
-
-        // Get wallet data first
+        console.log(`Starting role update for ${userId}`);
         const wallets = await redis.smembers(`wallets:${userId}`);
-        if (!wallets.length) {
-            console.log('No wallets found for user');
-            return { success: false, error: 'No wallets found' };
+        if (!wallets || wallets.length === 0) {
+            return { nftCounts: {} };
         }
 
         let totalBuxBalance = 0;
-        let nftCounts = {
+        const nftCounts = {
             fcked_catz: 0,
             celebcatz: 0,
             money_monsters: 0,
@@ -245,100 +239,118 @@ async function updateDiscordRoles(userId, client) {
             candy_bots: 0
         };
 
-        // Get data from all wallets
+        // Check each wallet
         for (const wallet of wallets) {
             console.log(`Checking wallet ${wallet}`);
-            const result = await verifyWallet(userId, wallet);
             
-            if (result.success) {
-                totalBuxBalance += result.data.buxBalance / 1e9;
-                for (const [collection, count] of Object.entries(result.data.nftCounts)) {
-                    nftCounts[collection] += count;
+            // Add delay between wallet checks
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            try {
+                const connection = new Connection(process.env.SOLANA_RPC_URL);
+                const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+                    new PublicKey(wallet),
+                    { programId: TOKEN_PROGRAM_ID }
+                );
+
+                // Process NFTs
+                for (const { account } of tokenAccounts.value) {
+                    const mint = account.data.parsed.info.mint;
+                    const amount = parseInt(account.data.parsed.info.tokenAmount.amount);
+                    
+                    if (amount > 0) {
+                        if (hashlists.fckedCatz.has(mint)) nftCounts.fcked_catz++;
+                        if (hashlists.celebCatz.has(mint)) nftCounts.celebcatz++;
+                        if (hashlists.moneyMonsters.has(mint)) nftCounts.money_monsters++;
+                        if (hashlists.moneyMonsters3d.has(mint)) nftCounts.money_monsters3d++;
+                        if (hashlists.aiBitbots.has(mint)) nftCounts.ai_bitbots++;
+                        if (hashlists.warriors.has(mint)) nftCounts.warriors++;
+                        if (hashlists.squirrels.has(mint)) nftCounts.squirrels++;
+                        if (hashlists.rjctdBots.has(mint)) nftCounts.rjctd_bots++;
+                        if (hashlists.energyApes.has(mint)) nftCounts.energy_apes++;
+                        if (hashlists.doodleBots.has(mint)) nftCounts.doodle_bots++;
+                        if (hashlists.candyBots.has(mint)) nftCounts.candy_bots++;
+                    }
                 }
+
+                // Get BUX balance
+                const buxBalance = await getBUXBalance(wallet);
+                console.log(`BUX balance for ${wallet}: ${buxBalance}`);
+                totalBuxBalance += buxBalance;
+
+            } catch (error) {
+                console.error(`Error checking wallet ${wallet}:`, error);
+                continue; // Continue with next wallet if one fails
             }
         }
 
         console.log('NFT counts:', nftCounts);
-        console.log('Total BUX balance:', totalBuxBalance);
+        console.log('Total BUX balance:', totalBuxBalance / 1e9);
 
-        // Determine roles - only add roles that exist in env vars
-        const rolesToAdd = [];
+        // Update roles
+        const guild = await client.guilds.fetch(process.env.GUILD_ID);
+        const member = await guild.members.fetch(userId);
         
-        // NFT roles
-        if (nftCounts.fcked_catz > 0 && process.env.ROLE_ID_FCKED_CATZ) 
-            rolesToAdd.push(process.env.ROLE_ID_FCKED_CATZ);
-        if (nftCounts.celebcatz > 0 && process.env.ROLE_ID_CELEB_CATZ) 
-            rolesToAdd.push(process.env.ROLE_ID_CELEB_CATZ);
-        if (nftCounts.money_monsters > 0 && process.env.ROLE_ID_MONEY_MONSTERS) 
-            rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS);
-        if (nftCounts.money_monsters3d > 0 && process.env.ROLE_ID_MONEY_MONSTERS3D) 
-            rolesToAdd.push(process.env.ROLE_ID_MONEY_MONSTERS3D);
-        if (nftCounts.ai_bitbots > 0 && process.env.ROLE_ID_AI_BITBOTS) 
-            rolesToAdd.push(process.env.ROLE_ID_AI_BITBOTS);
-        if (nftCounts.warriors > 0 && process.env.ROLE_ID_WARRIORS) 
-            rolesToAdd.push(process.env.ROLE_ID_WARRIORS);
-        if (nftCounts.squirrels > 0 && process.env.ROLE_ID_SQUIRRELS) 
-            rolesToAdd.push(process.env.ROLE_ID_SQUIRRELS);
-        if (nftCounts.rjctd_bots > 0 && process.env.ROLE_ID_RJCTD_BOTS) 
-            rolesToAdd.push(process.env.ROLE_ID_RJCTD_BOTS);
-        if (nftCounts.energy_apes > 0 && process.env.ROLE_ID_ENERGY_APES) 
-            rolesToAdd.push(process.env.ROLE_ID_ENERGY_APES);
-        if (nftCounts.doodle_bots > 0 && process.env.ROLE_ID_DOODLE_BOTS) 
-            rolesToAdd.push(process.env.ROLE_ID_DOODLE_BOTS);
-        if (nftCounts.candy_bots > 0 && process.env.ROLE_ID_CANDY_BOTS) 
-            rolesToAdd.push(process.env.ROLE_ID_CANDY_BOTS);
+        const rolesToAdd = [];
+        const rolesToRemove = [];
 
-        // BUX roles
-        if (totalBuxBalance >= 50000 && process.env.ROLE_ID_50000_BUX) 
-            rolesToAdd.push(process.env.ROLE_ID_50000_BUX);
-        if (totalBuxBalance >= 25000 && process.env.ROLE_ID_25000_BUX) 
-            rolesToAdd.push(process.env.ROLE_ID_25000_BUX);
-        if (totalBuxBalance >= 10000 && process.env.ROLE_ID_10000_BUX) 
-            rolesToAdd.push(process.env.ROLE_ID_10000_BUX);
-        if (totalBuxBalance >= 2500 && process.env.ROLE_ID_2500_BUX) 
-            rolesToAdd.push(process.env.ROLE_ID_2500_BUX);
+        // Define role mappings
+        const roleMapping = {
+            fcked_catz: ['1095033759612547133'],
+            celebcatz: ['1093607056696692828'],
+            money_monsters: ['1093607187454111825'],
+            money_monsters3d: ['1095034117877399686'],
+            ai_bitbots: ['1300968613179686943'],
+            warriors: ['1300969147441610773'],
+            squirrels: ['1300968964276621313'],
+            rjctd_bots: ['1300969353952362557'],
+            energy_apes: ['1300969268665389157'],
+            doodle_bots: ['1095363984581984357'],
+            candy_bots: ['1248417591215784019']
+        };
 
-        // Whale roles
-        if (nftCounts.fcked_catz >= 25 && process.env.WHALE_ROLE_ID_FCKED_CATZ) 
-            rolesToAdd.push(process.env.WHALE_ROLE_ID_FCKED_CATZ);
-        if (nftCounts.money_monsters >= 25 && process.env.WHALE_ROLE_ID_MONEY_MONSTERS) 
-            rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS);
-        if (nftCounts.money_monsters3d >= 25 && process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D) 
-            rolesToAdd.push(process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D);
-        if (nftCounts.ai_bitbots >= 25 && process.env.WHALE_ROLE_ID_AI_BITBOTS) 
-            rolesToAdd.push(process.env.WHALE_ROLE_ID_AI_BITBOTS);
+        // Add roles based on NFT counts
+        for (const [collection, roles] of Object.entries(roleMapping)) {
+            if (nftCounts[collection] > 0) {
+                rolesToAdd.push(...roles);
+            }
+        }
 
-        // Get current roles
-        const currentRoles = member.roles.cache
-            .filter(role => role.id !== guild.id)
-            .map(role => role.id);
-
-        // Get all possible NFT/BUX role IDs from env
-        const allPossibleRoles = Object.entries(process.env)
-            .filter(([key, value]) => key.includes('ROLE_ID') && value)
-            .map(([_, value]) => value);
-
-        // Only remove roles that are NFT/BUX related and not in rolesToAdd
-        const rolesToRemove = currentRoles.filter(roleId => 
-            !rolesToAdd.includes(roleId) && 
-            allPossibleRoles.includes(roleId)
-        );
+        // Add BUX holder roles
+        if (totalBuxBalance >= 100000 * 1e9) rolesToAdd.push('1248417674476916809');
+        if (totalBuxBalance >= 1000000 * 1e9) rolesToAdd.push('1248416679504117861');
+        if (totalBuxBalance >= 10000000 * 1e9) rolesToAdd.push('1093606438674382858');
+        if (totalBuxBalance >= 100000000 * 1e9) rolesToAdd.push('1093606579355525252');
 
         console.log('Roles to add:', rolesToAdd);
         console.log('Roles to remove:', rolesToRemove);
 
-        // Update roles
-        if (rolesToRemove.length > 0) {
-            await member.roles.remove(rolesToRemove);
-            console.log('Removed roles:', rolesToRemove);
+        // Add new roles
+        for (const roleId of rolesToAdd) {
+            try {
+                await member.roles.add(roleId);
+            } catch (error) {
+                console.error(`Error adding role ${roleId}:`, error);
+            }
         }
 
-        if (rolesToAdd.length > 0) {
-            await member.roles.add(rolesToAdd);
-            console.log('Added roles:', rolesToAdd);
+        // Remove roles
+        for (const roleId of rolesToRemove) {
+            try {
+                await member.roles.remove(roleId);
+            } catch (error) {
+                console.error(`Error removing role ${roleId}:`, error);
+            }
         }
 
-        return { success: true };
+        console.log('Added roles:', rolesToAdd);
+
+        return {
+            success: true,
+            nftCounts,
+            buxBalance: totalBuxBalance / 1e9
+        };
+
     } catch (error) {
         console.error('Error updating roles:', error);
         throw error;
