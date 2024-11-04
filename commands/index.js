@@ -345,29 +345,23 @@ async function displayProfile(message) {
             return message.reply('No wallets found. Please verify a wallet first using =verify');
         }
 
-        let totalBuxBalance = 0;
-        let totalNftCounts = {
-            fcked_catz: 0,
-            celebcatz: 0,
-            money_monsters: 0,
-            money_monsters3d: 0,
-            ai_bitbots: 0,
-            warriors: 0,
-            squirrels: 0,
-            rjctd_bots: 0,
-            energy_apes: 0,
-            doodle_bots: 0,
-            candy_bots: 0
-        };
+        // Get first wallet data
+        const result = await verifyWallet(userId, wallets[0]);
+        let totalBuxBalance = result.data.buxBalance;
+        let totalNftCounts = result.data.nftCounts;
 
-        // Process all wallets
-        for (const wallet of wallets) {
-            const result = await verifyWallet(userId, wallet);
-            if (result.success) {
-                totalBuxBalance += result.data.buxBalance;
-                for (const [key, count] of Object.entries(result.data.nftCounts)) {
-                    totalNftCounts[key] += count;
+        // Process remaining wallets
+        for (let i = 1; i < wallets.length; i++) {
+            try {
+                const result = await verifyWallet(userId, wallets[i]);
+                if (result.success) {
+                    totalBuxBalance += result.data.buxBalance;
+                    for (const [key, count] of Object.entries(result.data.nftCounts)) {
+                        totalNftCounts[key] += count;
+                    }
                 }
+            } catch (error) {
+                console.error(`Error getting wallet balance: ${error}`);
             }
         }
 
