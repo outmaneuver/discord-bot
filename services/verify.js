@@ -109,32 +109,53 @@ async function verifyWallet(userId, walletAddress) {
     }
 }
 
-// Get BUX balance with caching and retries
+// Get BUX balance with retries but no caching
 async function getBUXBalance(walletAddress) {
     try {
-        const cacheKey = `bux:${walletAddress}`;
-        const cached = await redis.get(cacheKey);
-        if (cached) {
-            return parseInt(cached);
-        }
-
         const connection = new Connection(process.env.SOLANA_RPC_URL);
-        const buxAccounts = await connection.getParsedTokenAccountsByOwner(
-            new PublicKey(walletAddress),
-            { mint: new PublicKey(BUX_TOKEN_MINT) }
-        );
+        const maxRetries = 5;
+        let retryCount = 0;
 
-        let totalBalance = 0;
-        for (const account of buxAccounts.value) {
-            totalBalance += Number(account.account.data.parsed.info.tokenAmount.amount);
+        while (retryCount < maxRetries) {
+            try {
+                const buxAccounts = await connection.getParsedTokenAccountsByOwner(
+                    new PublicKey(walletAddress),
+                    { mint: new PublicKey(BUX_TOKEN_MINT) }
+                );
+
+                let totalBalance = 0;
+                for (const account of buxAccounts.value) {
+                    totalBalance += Number(account.account.data.parsed.info.tokenAmount.amount);
+                }
+
+                return totalBalance / Math.pow(10, 9);
+
+            } catch (error) {
+                retryCount++;
+
+                // Only retry on rate limit errors
+                if (!error.message.includes('429 Too Many Requests')) {
+                    throw error;
+                }
+
+                // If we've used all retries, throw the error
+                if (retryCount === maxRetries) {
+                    throw new Error(`Failed to get balance after ${maxRetries} attempts: ${error.message}`);
+                }
+
+                // Exponential backoff with jitter
+                const baseDelay = Math.min(1000 * Math.pow(2, retryCount), 8000);
+                const jitter = Math.random() * 1000;
+                const delay = baseDelay + jitter;
+                
+                console.log(`Rate limited getting balance for ${walletAddress}, retrying in ${delay}ms (attempt ${retryCount}/${maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
         }
 
-        // Update Redis cache TTL to 1 minute (60 seconds)
-        await redis.setex(cacheKey, 60, totalBalance.toString());
-        return totalBalance / Math.pow(10, 9);
     } catch (error) {
-        console.error('Error getting BUX balance:', error);
-        return 0;
+        console.error(`Error getting BUX balance for ${walletAddress}:`, error);
+        throw error; // Propagate error up instead of returning 0
     }
 }
 
