@@ -1,10 +1,17 @@
 import express from 'express';
 import { verifyWallet, updateDiscordRoles } from '../services/verify.js';
 import { redis } from '../config/redis.js';
+import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
 
-router.post('/verify', async (req, res) => {
+const verifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many verification requests, please try again later'
+});
+
+router.post('/verify', verifyLimiter, async (req, res) => {
   try {
     if (!req.session.user) {
       return res.status(401).json({ 

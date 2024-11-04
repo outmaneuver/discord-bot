@@ -29,6 +29,11 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 // Simple function to verify NFTs from hashlists
 async function verifyWallet(userId, walletAddress) {
     try {
+        // Add input validation
+        if (!userId || !walletAddress) {
+            throw new Error('Invalid input parameters');
+        }
+
         console.log(`Checking wallet ${walletAddress} for user ${userId}`);
         
         // Check cache first
