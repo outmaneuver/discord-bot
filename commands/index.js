@@ -596,6 +596,32 @@ const EXEMPT_WALLETS = [
 const LIQUIDITY_WALLET = '3WNHW6sr1sQdbRjovhPrxgEJdWASZ43egGWMMNrhgoRR';
 const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
 
+// Add constants for retry logic
+const MAX_RETRIES = 5;
+const INITIAL_RETRY_DELAY = 2000;
+
+async function getBUXBalanceWithRetry(wallet) {
+    let retryCount = 0;
+    let delay = INITIAL_RETRY_DELAY;
+
+    while (retryCount < MAX_RETRIES) {
+        try {
+            const balance = await getBUXBalance(wallet);
+            return balance;
+        } catch (error) {
+            if (error.message.includes('429 Too Many Requests')) {
+                console.log(`Retry ${retryCount + 1} for wallet ${wallet}, waiting ${delay}ms`);
+                await sleep(delay);
+                retryCount++;
+                delay *= 2; // Double the delay for next retry
+            } else {
+                throw error; // Throw non-429 errors
+            }
+        }
+    }
+    throw new Error(`Failed to get balance for ${wallet} after ${MAX_RETRIES} retries`);
+}
+
 async function showBUXInfo(message) {
     try {
         // Get SOL price
@@ -617,12 +643,14 @@ async function showBUXInfo(message) {
         let exemptBalance = 0;
         for (const wallet of EXEMPT_WALLETS) {
             try {
-                const balance = await getBUXBalance(wallet);
+                const balance = await getBUXBalanceWithRetry(wallet);
                 console.log(`Exempt wallet ${wallet} balance:`, balance);
                 exemptBalance += balance;
-                await sleep(1000); // Add delay between RPC calls
+                await sleep(2000); // Add longer delay between wallets
             } catch (error) {
-                console.error(`Error getting balance for exempt wallet ${wallet}:`, error);
+                console.error(`Failed to get balance for exempt wallet ${wallet} after retries:`, error);
+                await message.reply('Error fetching BUX info. Please try again in a few minutes.');
+                return;
             }
         }
 
