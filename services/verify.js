@@ -5,6 +5,10 @@ import { calculateDailyReward } from './rewards.js';
 
 const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
 const LIQUIDITY_WALLET = 'BXQdPJNGXkDdQEgM6gMAxNu9YLhZJfBc9Y3qdJgpJ1Lw';
+const EXEMPT_WALLETS = [
+    'BXQdPJNGXkDdQEgM6gMAxNu9YLhZJfBc9Y3qdJgpJ1Lw', // Liquidity wallet
+    'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK'  // Token mint
+];
 
 // Hashlists for NFT verification
 let hashlists = {
@@ -378,5 +382,6 @@ export {
     updateDiscordRoles,
     getBUXValue,
     LIQUIDITY_WALLET,
-    BUX_TOKEN_MINT
+    BUX_TOKEN_MINT,
+    EXEMPT_WALLETS
 };
