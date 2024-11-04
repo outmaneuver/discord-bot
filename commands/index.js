@@ -604,12 +604,39 @@ const INITIAL_RETRY_DELAY = 2000;
 const buxBalanceCache = new Map();
 const BUX_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Add initial exempt wallet balances
+const EXEMPT_WALLET_BALANCES = {
+    'DXM1SKEbtDVFJcqLDJvSBSh83CeHkYv4qM88JG9BwJ5t': 4136196, // Team wallet
+    'BX1PEe4FJiWuHjFnYuYFB8edZsFg39BWggi65yTH52or': 1000300, // Marketing wallet
+    '95vRUfprVqvURhPryNdEsaBrSNmbE1uuufYZkyrxyjir': 499528,  // Development wallet
+    'FAEjAsCtpoapdsCF1DDhj71vdjQjSeAJt8gt9uYxL7gz': 494960,  // Treasury wallet
+    'He7HLAH2v8pnVafzxmfkqZUVefy4DUGiHmpetQFZNjrg': 472070,  // Staking wallet
+    'FFfTserUJGZEFLKB7ffqxaXvoHfdRJDtNYgXu7NEn8an': 467532,  // Rewards wallet
+    '9pRsKWUw2nQBfdVhfknyWQ4KEiDiYvahRXCf9an4kpW4': 452008,  // Burn wallet
+    'FYfLzXckAf2JZoMYBz2W4fpF9vejqpA6UFV17d1A7C75': 199100,  // Burn wallet 2
+    'H4RPEi5Sfpapy1B233b4DUhh6hsmFTTKx4pXqWnpW637': 199100   // Burn wallet 3
+};
+
+// Initialize cache with known balances
+for (const [wallet, balance] of Object.entries(EXEMPT_WALLET_BALANCES)) {
+    buxBalanceCache.set(wallet, {
+        balance,
+        timestamp: Date.now()
+    });
+}
+
 async function getBUXBalanceWithRetry(wallet) {
     // Check cache first
     const cached = buxBalanceCache.get(wallet);
     if (cached && (Date.now() - cached.timestamp) < BUX_CACHE_TTL) {
         console.log(`Using cached balance for ${wallet}:`, cached.balance);
         return cached.balance;
+    }
+
+    // For exempt wallets, use known balance if cache expired
+    if (EXEMPT_WALLET_BALANCES[wallet]) {
+        console.log(`Using known balance for exempt wallet ${wallet}:`, EXEMPT_WALLET_BALANCES[wallet]);
+        return EXEMPT_WALLET_BALANCES[wallet];
     }
 
     let retryCount = 0;
@@ -652,32 +679,44 @@ async function showBUXInfo(message) {
         const solPriceData = await solPriceRes.json();
         const solPrice = solPriceData.solana.usd;
 
+        // Get BUX token info from Solscan
+        const solscanRes = await fetch(`https://public-api.solscan.io/token/meta/${BUX_TOKEN_MINT}`, {
+            headers: {
+                'token': process.env.SOLSCAN_API_KEY
+            }
+        });
+        const tokenData = await solscanRes.json();
+        const totalSupply = tokenData.supply / 1e9; // Convert from raw to display units
+
         // Get liquidity wallet SOL balance
         const connection = new Connection(process.env.SOLANA_RPC_URL);
         const liquidityBalance = await connection.getBalance(new PublicKey(LIQUIDITY_WALLET));
         const liquiditySol = (liquidityBalance / 1e9) + 17.75567; // Add fixed SOL amount
 
-        // Get total supply from token mint
-        const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
-        const totalSupply = tokenSupply.value.uiAmount;
-        console.log('Total supply:', totalSupply);
-
-        // Calculate public supply by fetching exempt wallet balances
+        // Get exempt wallet balances from Solscan
         let exemptBalance = 0;
         for (const wallet of EXEMPT_WALLETS) {
             try {
-                const balance = await getBUXBalanceWithRetry(wallet);
-                console.log(`Exempt wallet ${wallet} balance:`, balance);
-                exemptBalance += balance;
-                await sleep(2000); // Add longer delay between wallets
+                const walletRes = await fetch(`https://public-api.solscan.io/account/tokens?account=${wallet}`, {
+                    headers: {
+                        'token': process.env.SOLSCAN_API_KEY
+                    }
+                });
+                const walletTokens = await walletRes.json();
+                const buxToken = walletTokens.find(t => t.tokenAddress === BUX_TOKEN_MINT);
+                if (buxToken) {
+                    const balance = buxToken.tokenAmount.uiAmount;
+                    console.log(`Exempt wallet ${wallet} balance:`, balance);
+                    exemptBalance += balance;
+                }
+                await sleep(500); // Small delay between API calls
             } catch (error) {
-                console.error(`Failed to get balance for exempt wallet ${wallet} after retries:`, error);
-                await message.reply('Error fetching BUX info. Please try again in a few minutes.');
-                return;
+                console.error(`Error getting balance for ${wallet}:`, error);
             }
         }
 
         const publicSupply = totalSupply - exemptBalance;
+        console.log('Total supply:', totalSupply);
         console.log('Total exempt balance:', exemptBalance);
         console.log('Calculated public supply:', publicSupply);
 
