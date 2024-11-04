@@ -684,10 +684,10 @@ async function showBUXInfo(message) {
         const liquidityBalance = await connection.getBalance(new PublicKey(LIQUIDITY_WALLET));
         const liquiditySol = (liquidityBalance / 1e9) + 17.75567; // Add fixed SOL amount
 
-        // Get BUX token info from Solscan with error handling
-        const solscanRes = await fetch(`https://public-api.solscan.io/token/meta/${BUX_TOKEN_MINT}`, {
+        // Get BUX token info from Solscan v2 API
+        const solscanRes = await fetch(`https://api.solscan.io/v2/token/meta/${BUX_TOKEN_MINT}`, {
             headers: {
-                'token': process.env.SOLSCAN_API_KEY,
+                'Authorization': `Bearer ${process.env.SOLSCAN_API_KEY}`,
                 'Accept': 'application/json'
             }
         });
@@ -705,21 +705,21 @@ async function showBUXInfo(message) {
             throw new Error('Invalid response from Solscan API');
         }
 
-        if (!tokenData || !tokenData.supply) {
+        if (!tokenData?.data?.supply) {
             console.error('Invalid token data from Solscan:', tokenData);
             throw new Error('Invalid token data from Solscan API');
         }
 
         console.log('Solscan token data:', tokenData);
-        const totalSupply = tokenData.supply / 1e9; // Convert from raw to display units
+        const totalSupply = tokenData.data.supply / 1e9; // Convert from raw to display units
 
         // Get exempt wallet balances from Solscan
         let exemptBalance = 0;
         for (const wallet of EXEMPT_WALLETS) {
             try {
-                const walletRes = await fetch(`https://public-api.solscan.io/account/tokens?account=${wallet}`, {
+                const walletRes = await fetch(`https://api.solscan.io/v2/account/tokens?address=${wallet}`, {
                     headers: {
-                        'token': process.env.SOLSCAN_API_KEY,
+                        'Authorization': `Bearer ${process.env.SOLSCAN_API_KEY}`,
                         'Accept': 'application/json'
                     }
                 });
@@ -728,10 +728,10 @@ async function showBUXInfo(message) {
                 const rawWalletResponse = await walletRes.text();
                 console.log(`Solscan wallet ${wallet} raw response:`, rawWalletResponse);
                 
-                const walletTokens = JSON.parse(rawWalletResponse);
-                const buxToken = walletTokens.find(t => t.tokenAddress === BUX_TOKEN_MINT);
+                const walletData = JSON.parse(rawWalletResponse);
+                const buxToken = walletData?.data?.tokens?.find(t => t.tokenAddress === BUX_TOKEN_MINT);
                 if (buxToken) {
-                    const balance = buxToken.tokenAmount.uiAmount;
+                    const balance = buxToken.amount / 1e9; // Convert from raw to display units
                     console.log(`Exempt wallet ${wallet} balance:`, balance);
                     exemptBalance += balance;
                 }
