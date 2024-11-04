@@ -64,6 +64,20 @@ async function loadHashlist(filename) {
   }
 }
 
+// Initialize logger first
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.Console(),  // Add console transport
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'combined.log' })
+  ]
+});
+
 async function startApp() {
   try {
     const port = process.env.PORT || 3000;
@@ -186,12 +200,12 @@ async function startApp() {
       ]
     });
 
-    client.on('error', error => {
-      console.error('Discord error:', error.message);
+    client.on('ready', () => {
+      logger.info(`Logged in as ${client.user.tag}`);
     });
 
-    client.on('ready', () => {
-      console.log('Discord bot logged in');
+    client.on('error', (error) => {
+      logger.error('Discord client error:', error);
     });
 
     client.on('messageCreate', async message => {
@@ -205,7 +219,7 @@ async function startApp() {
     global.discordClient = client;
 
   } catch (error) {
-    console.error('Startup error:', error.message);
+    logger.error('Startup error:', error);
     process.exit(1);
   }
 }
@@ -215,29 +229,13 @@ startApp().catch(error => {
   process.exit(1);
 });
 
-// Add Winston logger
-import winston from 'winston';
-
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
-  transports: [
-    new winston.transports.File({ filename: 'error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'combined.log' })
-  ]
-});
-
-// Add global error handlers
+// Global error handlers
 process.on('unhandledRejection', (error) => {
   logger.error('Unhandled promise rejection:', error);
 });
 
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught exception:', error);
-  // Gracefully shutdown
   process.exit(1);
 });
 
