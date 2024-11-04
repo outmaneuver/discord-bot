@@ -42,7 +42,7 @@ async function verifyWallet(userId, walletAddress) {
         }
 
         // Add delay between wallet checks to avoid rate limits
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 5000));
 
         console.log(`Checking wallet ${walletAddress} for user ${userId}`);
         
