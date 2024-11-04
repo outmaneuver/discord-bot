@@ -8,7 +8,10 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // Fix admin role check helper
 function isAdmin(member) {
-    return member.roles.cache.has(process.env.ADMIN_ROLE_ID);
+    // Check if member has the admin role ID from .env
+    const hasAdminRole = member.roles.cache.has('948256376793235507');
+    console.log(`Checking admin role for ${member.user.username}: ${hasAdminRole}`);
+    return hasAdminRole;
 }
 
 // Command handler
