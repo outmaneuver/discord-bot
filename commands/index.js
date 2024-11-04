@@ -415,98 +415,63 @@ async function showRoles(message, targetUser, targetMember) {
     }
 }
 
-async function showBUX(message, targetUser) {
+async function showBUX(message) {
     try {
-        const userId = targetUser.id;
-        const wallets = await redis.smembers(`wallets:${userId}`);
-        
-        if (wallets.length === 0) {
-            const embed = new EmbedBuilder()
-                .setColor('#FFD700')
-                .setTitle(`${targetUser.username}'s BUX Info`)
-                .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
-                .setDescription('No wallets connected. Please connect your wallet at https://buxdao-verify-d1faffc83da7.herokuapp.com/holder-verify')
-                .setFooter({ 
-                    text: 'BUXDAO - Putting community first',
-                    iconURL: 'https://buxdao.io/logo.png'
-                });
+        // Get SOL price first
+        const solPriceRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+        const solPriceData = await solPriceRes.json();
+        const solPrice = solPriceData.solana.usd;
 
-            await message.channel.send({ embeds: [embed] });
-            return;
-        }
+        // Get liquidity info to calculate BUX value
+        const connection = new Connection(process.env.SOLANA_RPC_URL);
+        const liquidityBalance = await connection.getBalance(new PublicKey(LIQUIDITY_WALLET));
+        const liquiditySol = (liquidityBalance / 1e9) + 17.75567;
 
-        let totalBalance = 0;
-        let nftCounts = {
-            fcked_catz: 0,
-            celebcatz: 0,
-            money_monsters: 0,
-            money_monsters3d: 0,
-            ai_bitbots: 0,
-            warriors: 0,
-            squirrels: 0,
-            rjctd_bots: 0,
-            energy_apes: 0,
-            doodle_bots: 0,
-            candy_bots: 0
-        };
+        // Get total supply and exempt balances
+        const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
+        const totalSupply = tokenSupply.value.uiAmount;
 
-        // Process each wallet
-        for (const wallet of wallets) {
+        let exemptBalance = 0;
+        for (const wallet of EXEMPT_WALLETS) {
             try {
-                console.log(`Checking wallet ${wallet} for BUX balance...`);
-                const result = await verifyWallet(userId, wallet);
-                if (result?.success) {
-                    console.log(`Got balance for ${wallet}:`, result.data.buxBalance);
-                    totalBalance += result.data.buxBalance || 0;
-                    Object.keys(nftCounts).forEach(key => {
-                        nftCounts[key] += result.data.nftCounts[key] || 0;
-                    });
-                }
-                await sleep(2000); // Add delay between wallets
+                const balance = await getBUXBalance(wallet);
+                exemptBalance += balance;
             } catch (error) {
-                console.error(`Error checking wallet ${wallet}:`, error);
-                // Continue with next wallet, don't reset totalBalance
+                console.error(`Error getting exempt wallet balance: ${error}`);
             }
         }
 
-        console.log('Total BUX balance:', totalBalance);
-        const dailyReward = await calculateDailyReward(nftCounts);
-        const displayBalance = (totalBalance / 1e9).toLocaleString(undefined, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 3
-        });
+        const publicSupply = totalSupply - exemptBalance;
+        const buxValueSol = liquiditySol / publicSupply;
+        const buxValueUsd = buxValueSol * solPrice;
+
+        // Get user's BUX balance
+        const wallets = await redis.smembers(`wallets:${message.author.id}`);
+        let totalBalance = 0;
+
+        for (const wallet of wallets) {
+            try {
+                const balance = await getBUXBalance(wallet);
+                totalBalance += balance;
+            } catch (error) {
+                console.error(`Error getting wallet balance: ${error}`);
+            }
+        }
+
+        const balanceUsdValue = totalBalance * buxValueUsd;
 
         const embed = new EmbedBuilder()
-            .setColor('#FFD700')
-            .setTitle(`${targetUser.username}'s BUX Info`)
-            .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
-            .addFields(
-                { 
-                    name: '💰 BUX Balance', 
-                    value: `${displayBalance} BUX\n---------------------------------------------------------------`,
-                    inline: false 
-                },
-                { 
-                    name: '🎁 Daily Rewards', 
-                    value: `${dailyReward} BUX per day\n---------------------------------------------------------------`,
-                    inline: false 
-                },
-                {
-                    name: '💵 BUX Claim',
-                    value: '0 BUX available',
-                    inline: false
-                }
-            )
-            .setFooter({ 
-                text: 'BUXDAO - Putting community first',
-                iconURL: 'https://buxdao.io/logo.png'
-            })
-            .setTimestamp();
+            .setColor('#0099ff')
+            .setTitle('Your BUX Balance')
+            .addFields({
+                name: 'Balance',
+                value: `${totalBalance.toLocaleString()} BUX ($${balanceUsdValue.toFixed(2)})`
+            });
 
         await message.channel.send({ embeds: [embed] });
     } catch (error) {
-        console.error('BUX command error:', error);
-        await message.reply('An error occurred while fetching your BUX info. Please try again later.');
+        console.error('Error in showBUX:', error);
+        await message.reply('An error occurred while fetching your BUX balance.');
     }
 }
 
