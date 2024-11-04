@@ -43,46 +43,21 @@ async function verifyWallet(userId, walletAddress) {
 
         console.log(`Checking wallet ${walletAddress} for user ${userId}`);
         
-        // Get all token accounts with retries
+        // Get all token accounts in one RPC call
         const connection = new Connection(process.env.SOLANA_RPC_URL);
-        const maxRetries = 5;
-        let attempt = 0;
-        let tokenAccounts;
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+            new PublicKey(walletAddress),
+            { programId: TOKEN_PROGRAM_ID }
+        );
 
-        while (attempt < maxRetries) {
-            try {
-                tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-                    new PublicKey(walletAddress),
-                    { programId: TOKEN_PROGRAM_ID }
-                );
-                break;
-            } catch (error) {
-                attempt++;
-                if (error.message.includes('429') && attempt < maxRetries) {
-                    const delay = 2000;
-                    console.log(`Rate limited getting NFTs for ${walletAddress}, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    continue;
-                }
-                throw error;
-            }
-        }
-
-        if (!tokenAccounts) {
-            throw new Error('Failed to get token accounts after retries');
-        }
-
-        // Get BUX balance from token accounts we already have
+        // Get BUX balance
         const buxAccount = tokenAccounts.value.find(account => 
             account.account.data.parsed.info.mint === BUX_TOKEN_MINT
         );
         const buxBalance = buxAccount ? parseInt(buxAccount.account.data.parsed.info.tokenAmount.amount) : 0;
         console.log(`BUX balance for ${walletAddress}:`, buxBalance);
-        
-        // Store balance for this verification session
-        currentVerificationBalances.set(walletAddress, buxBalance);
 
-        // Initialize NFT counts
+        // Check NFTs
         const nftCounts = {
             fcked_catz: 0,
             celebcatz: 0,
@@ -97,7 +72,6 @@ async function verifyWallet(userId, walletAddress) {
             candy_bots: 0
         };
 
-        // Check NFTs using the same token accounts data
         for (const account of tokenAccounts.value) {
             const mint = account.account.data.parsed.info.mint;
             if (account.account.data.parsed.info.tokenAmount.amount === "1") {
