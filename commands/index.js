@@ -679,44 +679,30 @@ async function showBUXInfo(message) {
         const solPriceData = await solPriceRes.json();
         const solPrice = solPriceData.solana.usd;
 
-        // Get BUX token info from Solscan
-        const solscanRes = await fetch(`https://public-api.solscan.io/token/meta/${BUX_TOKEN_MINT}`, {
-            headers: {
-                'token': process.env.SOLSCAN_API_KEY
-            }
-        });
-        const tokenData = await solscanRes.json();
-        const totalSupply = tokenData.supply / 1e9; // Convert from raw to display units
-
         // Get liquidity wallet SOL balance
         const connection = new Connection(process.env.SOLANA_RPC_URL);
         const liquidityBalance = await connection.getBalance(new PublicKey(LIQUIDITY_WALLET));
         const liquiditySol = (liquidityBalance / 1e9) + 17.75567; // Add fixed SOL amount
 
-        // Get exempt wallet balances from Solscan
+        // Get total supply from token mint
+        const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
+        const totalSupply = tokenSupply.value.uiAmount;
+        console.log('Total supply:', totalSupply);
+
+        // Get exempt wallet balances
         let exemptBalance = 0;
         for (const wallet of EXEMPT_WALLETS) {
             try {
-                const walletRes = await fetch(`https://public-api.solscan.io/account/tokens?account=${wallet}`, {
-                    headers: {
-                        'token': process.env.SOLSCAN_API_KEY
-                    }
-                });
-                const walletTokens = await walletRes.json();
-                const buxToken = walletTokens.find(t => t.tokenAddress === BUX_TOKEN_MINT);
-                if (buxToken) {
-                    const balance = buxToken.tokenAmount.uiAmount;
-                    console.log(`Exempt wallet ${wallet} balance:`, balance);
-                    exemptBalance += balance;
-                }
-                await sleep(500); // Small delay between API calls
+                const balance = await getBUXBalance(wallet);
+                console.log(`Exempt wallet ${wallet} balance:`, balance);
+                exemptBalance += balance;
+                await sleep(2000); // Add longer delay between wallets
             } catch (error) {
-                console.error(`Error getting balance for ${wallet}:`, error);
+                console.error(`Error getting balance for exempt wallet ${wallet}:`, error);
             }
         }
 
         const publicSupply = totalSupply - exemptBalance;
-        console.log('Total supply:', totalSupply);
         console.log('Total exempt balance:', exemptBalance);
         console.log('Calculated public supply:', publicSupply);
 
