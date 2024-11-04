@@ -55,44 +55,57 @@ async function handleCommand(message) {
                     return message.reply('No wallets connected. Please verify your wallet first.');
                 }
 
-                const nftData = await updateDiscordRoles(targetUser.id, message.client);
-                const buxBalance = await getBUXBalance(wallets[0]); // Get BUX balance of first wallet
-                const buxValue = await getBUXValue();
-                const usdValue = (buxBalance * buxValue).toFixed(2);
+                // Add loading message
+                const loadingMsg = await message.reply('Loading profile data...');
 
-                const embed = new EmbedBuilder()
-                    .setTitle(`${targetUser.username}'s BUXDAO Profile`)
-                    .setColor('#0099ff')
-                    .addFields(
-                        { name: '🏦 Connected Wallets', value: wallets.join('\n') || 'None' },
-                        { name: '\u200B', value: '---------------------------------------------------------------' },
-                        { name: '🎨 Main Collections', value: 
-                            `Fcked Catz: ${nftData.nftCounts.fcked_catz}\n` +
-                            `Celeb Catz: ${nftData.nftCounts.celebcatz}\n` +
-                            `Money Monsters: ${nftData.nftCounts.money_monsters}\n` +
-                            `Money Monsters 3D: ${nftData.nftCounts.money_monsters3d}\n` +
-                            `AI Bitbots: ${nftData.nftCounts.ai_bitbots}`
-                        },
-                        { name: '\u200B', value: '---------------------------------------------------------------' },
-                        { name: '🤖 A.I. Collabs', value:
-                            `A.I. Warriors: ${nftData.nftCounts.warriors}\n` +
-                            `A.I. Squirrels: ${nftData.nftCounts.squirrels}\n` +
-                            `A.I. Energy Apes: ${nftData.nftCounts.energy_apes}\n` +
-                            `RJCTD bots: ${nftData.nftCounts.rjctd_bots}\n` +
-                            `Candy bots: ${nftData.nftCounts.candy_bots}\n` +
-                            `Doodle bots: ${nftData.nftCounts.doodle_bots}`
-                        },
-                        { name: '\u200B', value: '---------------------------------------------------------------' },
-                        { name: '🎭 Server', value: 
-                            `Member Since: ${targetMember.joinedAt.toLocaleDateString()}\n` +
-                            `Roles: ${targetMember.roles.cache.size}`
-                        },
-                        { name: '\u200B', value: '---------------------------------------------------------------' },
-                        { name: '💰 BUX Balance', value: `${buxBalance.toLocaleString()} BUX ($${usdValue})` }
-                    )
-                    .setFooter({ text: 'BUXDAO - Putting community first' });
+                try {
+                    const nftData = await updateDiscordRoles(targetUser.id, message.client);
+                    if (!nftData || !nftData.nftCounts) {
+                        await loadingMsg.edit('Error loading NFT data. Please try again later.');
+                        return;
+                    }
 
-                await message.reply({ embeds: [embed] });
+                    const buxBalance = await getBUXBalance(wallets[0]);
+                    const buxValue = await getBUXValue();
+                    const usdValue = (buxBalance * buxValue).toFixed(2);
+
+                    const embed = new EmbedBuilder()
+                        .setTitle(`${targetUser.username}'s BUXDAO Profile`)
+                        .setColor('#0099ff')
+                        .addFields(
+                            { name: '🏦 Connected Wallets', value: wallets.join('\n') || 'None' },
+                            { name: '\u200B', value: '---------------------------------------------------------------' },
+                            { name: '🎨 Main Collections', value: 
+                                `Fcked Catz: ${nftData.nftCounts.fcked_catz || 0}\n` +
+                                `Celeb Catz: ${nftData.nftCounts.celebcatz || 0}\n` +
+                                `Money Monsters: ${nftData.nftCounts.money_monsters || 0}\n` +
+                                `Money Monsters 3D: ${nftData.nftCounts.money_monsters3d || 0}\n` +
+                                `AI Bitbots: ${nftData.nftCounts.ai_bitbots || 0}`
+                            },
+                            { name: '\u200B', value: '---------------------------------------------------------------' },
+                            { name: '🤖 A.I. Collabs', value:
+                                `A.I. Warriors: ${nftData.nftCounts.warriors || 0}\n` +
+                                `A.I. Squirrels: ${nftData.nftCounts.squirrels || 0}\n` +
+                                `A.I. Energy Apes: ${nftData.nftCounts.energy_apes || 0}\n` +
+                                `RJCTD bots: ${nftData.nftCounts.rjctd_bots || 0}\n` +
+                                `Candy bots: ${nftData.nftCounts.candy_bots || 0}\n` +
+                                `Doodle bots: ${nftData.nftCounts.doodle_bots || 0}`
+                            },
+                            { name: '\u200B', value: '---------------------------------------------------------------' },
+                            { name: '🎭 Server', value: 
+                                `Member Since: ${targetMember.joinedAt.toLocaleDateString()}\n` +
+                                `Roles: ${targetMember.roles.cache.size}`
+                            },
+                            { name: '\u200B', value: '---------------------------------------------------------------' },
+                            { name: '💰 BUX Balance', value: `${buxBalance.toLocaleString()} BUX ($${usdValue})` }
+                        )
+                        .setFooter({ text: 'BUXDAO - Putting community first' });
+
+                    await loadingMsg.edit({ content: null, embeds: [embed] });
+                } catch (error) {
+                    console.error('Profile error:', error);
+                    await loadingMsg.edit('Error loading profile. Please try again later.');
+                }
                 break;
 
             // Add other commands here
