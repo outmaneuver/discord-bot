@@ -687,32 +687,9 @@ async function showBUXInfo(message) {
         // Get total supply from token mint
         const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
         const totalSupply = tokenSupply.value.uiAmount;
-        console.log('Total supply:', totalSupply);
-
-        // Get exempt wallet balances
-        let exemptBalance = 0;
-        for (const wallet of EXEMPT_WALLETS) {
-            try {
-                const balance = await getBUXBalanceWithRetry(wallet);
-                console.log(`Exempt wallet ${wallet} balance:`, balance);
-                exemptBalance += balance;
-                await sleep(2000); // Add longer delay between wallets
-            } catch (error) {
-                console.error(`Error getting balance for exempt wallet ${wallet}:`, error);
-                // Use cached/known balance if available
-                if (EXEMPT_WALLET_BALANCES[wallet]) {
-                    console.log(`Using known balance for ${wallet}:`, EXEMPT_WALLET_BALANCES[wallet]);
-                    exemptBalance += EXEMPT_WALLET_BALANCES[wallet];
-                }
-            }
-        }
-
-        const publicSupply = totalSupply - exemptBalance;
-        console.log('Total exempt balance:', exemptBalance);
-        console.log('Calculated public supply:', publicSupply);
 
         // Calculate BUX value
-        const buxValueSol = liquiditySol / publicSupply;
+        const buxValueSol = liquiditySol / totalSupply;
         const buxValueUsd = buxValueSol * solPrice;
 
         const embed = new EmbedBuilder()
@@ -722,23 +699,23 @@ async function showBUXInfo(message) {
             .addFields(
                 { 
                     name: 'Token Address', 
-                    value: '[FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK](https://solscan.io/token/FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK#holders)',
+                    value: `[${BUX_TOKEN_MINT}](https://solscan.io/token/${BUX_TOKEN_MINT}#holders)`,
                     inline: false 
                 },
                 { 
                     name: 'Public Supply', 
-                    value: `${Math.floor(publicSupply).toLocaleString()} BUX`,
-                    inline: true 
+                    value: `${Math.floor(totalSupply).toLocaleString()} BUX`,
+                    inline: false 
                 },
                 { 
                     name: 'Liquidity', 
                     value: `${liquiditySol.toFixed(2)} SOL ($${(liquiditySol * solPrice).toFixed(2)})`,
-                    inline: true 
+                    inline: false 
                 },
                 { 
                     name: 'BUX Value', 
                     value: `${buxValueSol.toFixed(8)} SOL ($${buxValueUsd.toFixed(8)})`,
-                    inline: true 
+                    inline: false 
                 }
             )
             .setFooter({ 
