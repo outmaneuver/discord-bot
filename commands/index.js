@@ -345,29 +345,68 @@ async function displayProfile(message) {
             return message.reply('No wallets found. Please verify a wallet first using =verify');
         }
 
-        // Get first wallet data
-        const result = await verifyWallet(userId, wallets[0]);
-        let totalBuxBalance = result.data.buxBalance;
-        let totalNftCounts = result.data.nftCounts;
+        let totalBuxBalance = 0;
+        let totalNftCounts = {
+            fcked_catz: 0,
+            celebcatz: 0,
+            money_monsters: 0,
+            money_monsters3d: 0,
+            ai_bitbots: 0,
+            warriors: 0,
+            squirrels: 0,
+            rjctd_bots: 0,
+            energy_apes: 0,
+            doodle_bots: 0,
+            candy_bots: 0
+        };
 
-        // Get BUX value
+        // Process all wallets
+        for (const wallet of wallets) {
+            const result = await verifyWallet(userId, wallet);
+            if (result.success) {
+                totalBuxBalance += result.data.buxBalance;
+                for (const [key, count] of Object.entries(result.data.nftCounts)) {
+                    totalNftCounts[key] += count;
+                }
+            }
+        }
+
         const buxValue = await getBUXValue();
         const portfolioValue = (totalBuxBalance / 1e9) * buxValue.buxValueUsd;
+        const memberSince = message.member.joinedAt.toLocaleDateString();
+        const roleCount = message.member.roles.cache.size - 1; // Subtract @everyone role
 
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
-            .setTitle(`Profile for ${message.author.username}`)
+            .setTitle(`${message.author.username}'s BUXDAO Profile`)
             .addFields(
-                { name: '💰 BUX Balance', value: `${(totalBuxBalance / 1e9).toLocaleString()} BUX`, inline: true },
-                { name: '💎 Portfolio Value', value: `$${portfolioValue.toFixed(2)}`, inline: true }
-            );
-
-        // Add NFT fields if any
-        for (const [key, count] of Object.entries(totalNftCounts)) {
-            if (count > 0) {
-                embed.addFields({ name: formatNftName(key), value: count.toString(), inline: true });
-            }
-        }
+                { name: '🏦 Connected Wallets', value: wallets.join('\n') },
+                { name: '\u200B', value: '---------------------------------------------------------------' },
+                { name: '\u200B', value: '🎨 Main Collections' },
+                { name: 'Fcked Catz', value: totalNftCounts.fcked_catz.toString(), inline: true },
+                { name: 'Celeb Catz', value: totalNftCounts.celebcatz.toString(), inline: true },
+                { name: 'Money Monsters', value: totalNftCounts.money_monsters.toString(), inline: true },
+                { name: 'Money Monsters 3D', value: totalNftCounts.money_monsters3d.toString(), inline: true },
+                { name: 'AI Bitbots', value: totalNftCounts.ai_bitbots.toString(), inline: true },
+                { name: '\u200B', value: '---------------------------------------------------------------' },
+                { name: '\u200B', value: '🤖 A.I. Collabs' },
+                { name: 'A.I. Warriors', value: totalNftCounts.warriors.toString(), inline: true },
+                { name: 'A.I. Squirrels', value: totalNftCounts.squirrels.toString(), inline: true },
+                { name: 'A.I. Energy Apes', value: totalNftCounts.energy_apes.toString(), inline: true },
+                { name: 'RJCTD bots', value: totalNftCounts.rjctd_bots.toString(), inline: true },
+                { name: 'Candy bots', value: totalNftCounts.candy_bots.toString(), inline: true },
+                { name: 'Doodle bots', value: totalNftCounts.doodle_bots.toString(), inline: true },
+                { name: '\u200B', value: '---------------------------------------------------------------' },
+                { name: '\u200B', value: '🎭 Server' },
+                { name: 'Member Since', value: memberSince, inline: true },
+                { name: 'Roles', value: roleCount.toString(), inline: true },
+                { name: '\u200B', value: '---------------------------------------------------------------' },
+                { name: '💰 BUX Balance', value: `${(totalBuxBalance / 1e9).toLocaleString()} BUX ($${portfolioValue.toFixed(2)})` }
+            )
+            .setFooter({ 
+                text: 'BUXDAO - Putting community first',
+                iconURL: 'https://buxdao.io/logo.png'
+            });
 
         await message.reply({ embeds: [embed] });
 
