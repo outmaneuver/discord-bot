@@ -17,10 +17,23 @@ function isAdmin(member) {
     return hasAdminRole;
 }
 
+// Add command cooldowns
+const commandCooldowns = new Map();
+
 // Command handler
 async function handleCommand(message) {
+    const command = message.content.slice(1).split(' ')[0];
+    
+    // Check cooldown
+    const cooldown = commandCooldowns.get(`${message.author.id}-${command}`);
+    if (cooldown && Date.now() < cooldown) {
+        return message.reply('Please wait before using this command again');
+    }
+
+    // Set cooldown (30 seconds)
+    commandCooldowns.set(`${message.author.id}-${command}`, Date.now() + 30000);
+
     const args = message.content.toLowerCase().split(' ');
-    const command = args[0];
     const mentionedUser = message.mentions.users.first();
 
     // Check if admin is trying to view someone else's data

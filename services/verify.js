@@ -34,8 +34,19 @@ const CACHE_TTL = 60 * 1000; // 1 minute
 // Add a cache for the current verification session
 let currentVerificationBalances = new Map();
 
+// Add rate limiting for wallet verification
+const verificationRateLimit = new Map();
+
 // Simple function to verify NFTs from hashlists
 async function verifyWallet(userId, walletAddress) {
+    // Check rate limit
+    const now = Date.now();
+    const lastVerify = verificationRateLimit.get(userId) || 0;
+    if (now - lastVerify < 60000) { // 1 minute cooldown
+        throw new Error('Please wait before verifying another wallet');
+    }
+    verificationRateLimit.set(userId, now);
+
     try {
         if (!userId || !walletAddress) {
             throw new Error('Invalid input parameters');

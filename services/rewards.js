@@ -6,34 +6,35 @@ const redis = new Redis(process.env.REDIS_URL, {
   }
 });
 
-async function calculateDailyReward(nftCounts, buxBalance) {
-  try {
-    const rewardRates = {
-      fcked_catz: 5,
-      celebcatz: 15,
-      money_monsters: 5,
-      money_monsters3d: 10,
-      ai_bitbots: 3,
-      warriors: 1,
-      squirrels: 1,
-      rjctd_bots: 1,
-      energy_apes: 1,
-      doodle_bots: 1,
-      candy_bots: 1
-    };
-
-    let totalReward = 0;
-    for (const [collection, count] of Object.entries(nftCounts)) {
-      if (rewardRates[collection]) {
-        totalReward += count * rewardRates[collection];
-      }
-    }
-
-    return totalReward;
-  } catch (error) {
-    console.error('Error calculating daily reward:', error.message);
-    return 0;
+const REWARD_TIERS = {
+  WHALE: {
+    minNFTs: 25,
+    multiplier: 1.5
+  },
+  HOLDER: {
+    minNFTs: 1,
+    multiplier: 1
   }
+};
+
+async function calculateDailyReward(nftCounts, buxBalance) {
+  let totalReward = 0;
+  
+  // Calculate base rewards
+  for (const [collection, count] of Object.entries(nftCounts)) {
+    const baseRate = rewardRates[collection] || 0;
+    
+    // Apply tier multiplier
+    const tier = count >= REWARD_TIERS.WHALE.minNFTs ? REWARD_TIERS.WHALE : REWARD_TIERS.HOLDER;
+    totalReward += count * baseRate * tier.multiplier;
+  }
+
+  // Add BUX balance bonus
+  if (buxBalance > 1000) {
+    totalReward *= 1.1; // 10% bonus for BUX holders
+  }
+
+  return Math.floor(totalReward);
 }
 
 async function startOrUpdateDailyTimer(userId, nftCounts, buxBalance) {
