@@ -1,5 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
-import { verifyWallet, getBUXBalance, updateDiscordRoles } from '../services/verify.js';
+import { verifyWallet, getBUXBalance, updateDiscordRoles, getBUXValue } from '../services/verify.js';
 import { redis } from '../config/redis.js';
 import { calculateDailyReward } from '../services/rewards.js';
 import { Connection, PublicKey } from '@solana/web3.js';
@@ -417,33 +417,7 @@ async function showRoles(message, targetUser, targetMember) {
 
 async function showBUX(message) {
     try {
-        // Get SOL price and BUX value calculations
-        const solPriceRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
-        const solPriceData = await solPriceRes.json();
-        const solPrice = solPriceData.solana.usd;
-
-        const connection = new Connection(process.env.SOLANA_RPC_URL);
-        const liquidityBalance = await connection.getBalance(new PublicKey(LIQUIDITY_WALLET));
-        const liquiditySol = (liquidityBalance / 1e9) + 17.75567;
-
-        const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
-        const totalSupply = tokenSupply.value.uiAmount;
-
-        let exemptBalance = 0;
-        for (const wallet of EXEMPT_WALLETS) {
-            try {
-                const balance = await getBUXBalance(wallet);
-                exemptBalance += balance;
-            } catch (error) {
-                console.error(`Error getting exempt wallet balance: ${error}`);
-            }
-        }
-
-        const publicSupply = totalSupply - exemptBalance;
-        const buxValueSol = liquiditySol / publicSupply;
-        const buxValueUsd = buxValueSol * solPrice;
-
-        // Get user's BUX balance
+        const buxValue = await getBUXValue();
         const wallets = await redis.smembers(`wallets:${message.author.id}`);
         let totalBalance = 0;
 
@@ -456,7 +430,7 @@ async function showBUX(message) {
             }
         }
 
-        const balanceUsdValue = totalBalance * buxValueUsd;
+        const balanceUsdValue = totalBalance * buxValue.buxValueUsd;
 
         // Get daily rewards
         const { nftCounts } = await verifyWallet(message.author.id, wallets[0] || '');
@@ -668,141 +642,10 @@ async function showBotsInfo(message) {
     await message.channel.send({ embeds: [embed] });
 }
 
-// Add constants
-const EXEMPT_WALLETS = [
-    'DXM1SKEbtDVFJcqLDJvSBSh83CeHkYv4qM88JG9BwJ5t', // Team wallet
-    'BX1PEe4FJiWuHjFnYuYFB8edZsFg39BWggi65yTH52or', // Marketing wallet
-    '95vRUfprVqvURhPryNdEsaBrSNmbE1uuufYZkyrxyjir', // Development wallet
-    'FAEjAsCtpoapdsCF1DDhj71vdjQjSeAJt8gt9uYxL7gz', // Treasury wallet
-    'He7HLAH2v8pnVafzxmfkqZUVefy4DUGiHmpetQFZNjrg', // Staking wallet
-    'FFfTserUJGZEFLKB7ffqxaXvoHfdRJDtNYgXu7NEn8an', // Rewards wallet
-    '9pRsKWUw2nQBfdVhfknyWQ4KEiDiYvahRXCf9an4kpW4', // Burn wallet
-    'FYfLzXckAf2JZoMYBz2W4fpF9vejqpA6UFV17d1A7C75', // Burn wallet 2
-    'H4RPEi5Sfpapy1B233b4DUhh6hsmFTTKx4pXqWnpW637'  // Burn wallet 3
-];
-
-const LIQUIDITY_WALLET = '3WNHW6sr1sQdbRjovhPrxgEJdWASZ43egGWMMNrhgoRR';
-const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
-
-// Add constants for retry logic
-const MAX_RETRIES = 5;
-const INITIAL_RETRY_DELAY = 2000;
-
-// Add cache for BUX balances
-const buxBalanceCache = new Map();
-const BUX_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-// Add initial exempt wallet balances
-const EXEMPT_WALLET_BALANCES = {
-    'DXM1SKEbtDVFJcqLDJvSBSh83CeHkYv4qM88JG9BwJ5t': 4136196, // Team wallet
-    'BX1PEe4FJiWuHjFnYuYFB8edZsFg39BWggi65yTH52or': 1000300, // Marketing wallet
-    '95vRUfprVqvURhPryNdEsaBrSNmbE1uuufYZkyrxyjir': 499528,  // Development wallet
-    'FAEjAsCtpoapdsCF1DDhj71vdjQjSeAJt8gt9uYxL7gz': 494960,  // Treasury wallet
-    'He7HLAH2v8pnVafzxmfkqZUVefy4DUGiHmpetQFZNjrg': 472070,  // Staking wallet
-    'FFfTserUJGZEFLKB7ffqxaXvoHfdRJDtNYgXu7NEn8an': 467532,  // Rewards wallet
-    '9pRsKWUw2nQBfdVhfknyWQ4KEiDiYvahRXCf9an4kpW4': 452008,  // Burn wallet
-    'FYfLzXckAf2JZoMYBz2W4fpF9vejqpA6UFV17d1A7C75': 199100,  // Burn wallet 2
-    'H4RPEi5Sfpapy1B233b4DUhh6hsmFTTKx4pXqWnpW637': 199100   // Burn wallet 3
-};
-
-// Initialize cache with known balances
-for (const [wallet, balance] of Object.entries(EXEMPT_WALLET_BALANCES)) {
-    buxBalanceCache.set(wallet, {
-        balance,
-        timestamp: Date.now()
-    });
-}
-
-async function getBUXBalanceWithRetry(wallet) {
-    // Check cache first
-    const cached = buxBalanceCache.get(wallet);
-    if (cached && (Date.now() - cached.timestamp) < BUX_CACHE_TTL) {
-        console.log(`Using cached balance for ${wallet}:`, cached.balance);
-        return cached.balance;
-    }
-
-    // For exempt wallets, use known balance if cache expired
-    if (EXEMPT_WALLET_BALANCES[wallet]) {
-        console.log(`Using known balance for exempt wallet ${wallet}:`, EXEMPT_WALLET_BALANCES[wallet]);
-        return EXEMPT_WALLET_BALANCES[wallet];
-    }
-
-    let retryCount = 0;
-    let delay = INITIAL_RETRY_DELAY;
-
-    while (retryCount < MAX_RETRIES) {
-        try {
-            const balance = await getBUXBalance(wallet);
-            // Cache successful response
-            buxBalanceCache.set(wallet, {
-                balance,
-                timestamp: Date.now()
-            });
-            return balance;
-        } catch (error) {
-            if (error.message.includes('429 Too Many Requests')) {
-                console.log(`Retry ${retryCount + 1} for wallet ${wallet}, waiting ${delay}ms`);
-                await sleep(delay);
-                retryCount++;
-                delay *= 2; // Double the delay for next retry
-            } else {
-                throw error; // Throw non-429 errors
-            }
-        }
-    }
-
-    // If we have a cached value, use it even if expired
-    if (cached) {
-        console.log(`Using expired cache for ${wallet} after retries failed:`, cached.balance);
-        return cached.balance;
-    }
-
-    throw new Error(`Failed to get balance for ${wallet} after ${MAX_RETRIES} retries`);
-}
-
 async function showBUXInfo(message) {
     try {
-        // Get SOL price
-        const solPriceRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
-        const solPriceData = await solPriceRes.json();
-        const solPrice = solPriceData.solana.usd;
-
-        // Get liquidity wallet SOL balance
-        const connection = new Connection(process.env.SOLANA_RPC_URL);
-        const liquidityBalance = await connection.getBalance(new PublicKey(LIQUIDITY_WALLET));
-        const liquiditySol = (liquidityBalance / 1e9) + 17.75567; // Add fixed SOL amount
-
-        // Get total supply from token mint
-        const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
-        const totalSupply = tokenSupply.value.uiAmount;
-        console.log('Total supply:', totalSupply);
-
-        // Get exempt wallet balances
-        let exemptBalance = 0;
-        for (const wallet of EXEMPT_WALLETS) {
-            try {
-                const balance = await getBUXBalance(wallet);
-                console.log(`Exempt wallet ${wallet} balance:`, balance);
-                exemptBalance += balance;
-                await sleep(2000); // Add delay between wallets
-            } catch (error) {
-                console.error(`Error getting balance for exempt wallet ${wallet}:`, error);
-                // Use cached/known balance if available
-                if (EXEMPT_WALLET_BALANCES[wallet]) {
-                    console.log(`Using known balance for ${wallet}:`, EXEMPT_WALLET_BALANCES[wallet]);
-                    exemptBalance += EXEMPT_WALLET_BALANCES[wallet];
-                }
-            }
-        }
-
-        const publicSupply = totalSupply - exemptBalance;
-        console.log('Total exempt balance:', exemptBalance);
-        console.log('Calculated public supply:', publicSupply);
-
-        // Calculate BUX value
-        const buxValueSol = liquiditySol / publicSupply;
-        const buxValueUsd = buxValueSol * solPrice;
-
+        const buxValue = await getBUXValue();
+        
         const embed = new EmbedBuilder()
             .setColor('#FFD700')
             .setTitle('BUX Token Info')
@@ -815,17 +658,17 @@ async function showBUXInfo(message) {
                 },
                 { 
                     name: 'Public Supply', 
-                    value: `${Math.floor(publicSupply).toLocaleString()} BUX`,
+                    value: `${Math.floor(buxValue.publicSupply).toLocaleString()} BUX`,
                     inline: false 
                 },
                 { 
                     name: 'Liquidity', 
-                    value: `${liquiditySol.toFixed(2)} SOL ($${(liquiditySol * solPrice).toFixed(2)})`,
+                    value: `${buxValue.liquiditySol.toFixed(2)} SOL ($${(buxValue.liquiditySol * buxValue.solPrice).toFixed(2)})`,
                     inline: false 
                 },
                 { 
                     name: 'BUX Value', 
-                    value: `${buxValueSol.toFixed(8)} SOL ($${buxValueUsd.toFixed(8)})`,
+                    value: `${buxValue.buxValueSol.toFixed(8)} SOL ($${buxValue.buxValueUsd.toFixed(8)})`,
                     inline: false 
                 }
             )
@@ -838,7 +681,7 @@ async function showBUXInfo(message) {
         await message.channel.send({ embeds: [embed] });
     } catch (error) {
         console.error('Error in showBUXInfo:', error);
-        await message.reply('An error occurred while fetching BUX info. Please try again later.');
+        await message.reply('An error occurred while fetching BUX info.');
     }
 }
 

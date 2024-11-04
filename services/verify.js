@@ -315,11 +315,54 @@ async function updateDiscordRoles(userId, client, existingData = null) {
     }
 }
 
+// Add this function to services/verify.js
+async function getBUXValue() {
+    // Get SOL price
+    const solPriceRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+    const solPriceData = await solPriceRes.json();
+    const solPrice = solPriceData.solana.usd;
+
+    // Get liquidity wallet SOL balance
+    const connection = new Connection(process.env.SOLANA_RPC_URL);
+    const liquidityBalance = await connection.getBalance(new PublicKey(LIQUIDITY_WALLET));
+    const liquiditySol = (liquidityBalance / 1e9) + 17.75567;
+
+    // Get total supply and exempt balances
+    const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
+    const totalSupply = tokenSupply.value.uiAmount;
+
+    let exemptBalance = 0;
+    for (const wallet of EXEMPT_WALLETS) {
+        try {
+            const balance = await getBUXBalance(wallet);
+            exemptBalance += balance;
+        } catch (error) {
+            console.error(`Error getting exempt wallet balance: ${error}`);
+            throw error;
+        }
+    }
+
+    const publicSupply = totalSupply - exemptBalance;
+    const buxValueSol = liquiditySol / publicSupply;
+    const buxValueUsd = buxValueSol * solPrice;
+
+    return {
+        solPrice,
+        liquiditySol,
+        totalSupply,
+        exemptBalance,
+        publicSupply,
+        buxValueSol,
+        buxValueUsd
+    };
+}
+
 export {
     verifyWallet,
     hashlists,
     updateHashlists,
     getBUXBalance,
     storeWalletAddress,
-    updateDiscordRoles
+    updateDiscordRoles,
+    getBUXValue
 };
