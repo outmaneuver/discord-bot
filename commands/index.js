@@ -684,65 +684,30 @@ async function showBUXInfo(message) {
         const liquidityBalance = await connection.getBalance(new PublicKey(LIQUIDITY_WALLET));
         const liquiditySol = (liquidityBalance / 1e9) + 17.75567; // Add fixed SOL amount
 
-        // Get BUX token info from Solscan v2 API
-        const solscanRes = await fetch(`https://api.solscan.io/v2/token/meta/${BUX_TOKEN_MINT}`, {
-            headers: {
-                'Authorization': `Bearer ${process.env.SOLSCAN_API_KEY}`,
-                'Accept': 'application/json'
-            }
-        });
-        
-        // Log the raw response for debugging
-        const rawResponse = await solscanRes.text();
-        console.log('Solscan raw response:', rawResponse);
-        
-        let tokenData;
-        try {
-            tokenData = JSON.parse(rawResponse);
-        } catch (error) {
-            console.error('Failed to parse Solscan response:', error);
-            console.error('Raw response:', rawResponse);
-            throw new Error('Invalid response from Solscan API');
-        }
+        // Get total supply from token mint
+        const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
+        const totalSupply = tokenSupply.value.uiAmount;
+        console.log('Total supply:', totalSupply);
 
-        if (!tokenData?.data?.supply) {
-            console.error('Invalid token data from Solscan:', tokenData);
-            throw new Error('Invalid token data from Solscan API');
-        }
-
-        console.log('Solscan token data:', tokenData);
-        const totalSupply = tokenData.data.supply / 1e9; // Convert from raw to display units
-
-        // Get exempt wallet balances from Solscan
+        // Get exempt wallet balances
         let exemptBalance = 0;
         for (const wallet of EXEMPT_WALLETS) {
             try {
-                const walletRes = await fetch(`https://api.solscan.io/v2/account/tokens?address=${wallet}`, {
-                    headers: {
-                        'Authorization': `Bearer ${process.env.SOLSCAN_API_KEY}`,
-                        'Accept': 'application/json'
-                    }
-                });
-                
-                // Log raw response for debugging
-                const rawWalletResponse = await walletRes.text();
-                console.log(`Solscan wallet ${wallet} raw response:`, rawWalletResponse);
-                
-                const walletData = JSON.parse(rawWalletResponse);
-                const buxToken = walletData?.data?.tokens?.find(t => t.tokenAddress === BUX_TOKEN_MINT);
-                if (buxToken) {
-                    const balance = buxToken.amount / 1e9; // Convert from raw to display units
-                    console.log(`Exempt wallet ${wallet} balance:`, balance);
-                    exemptBalance += balance;
-                }
-                await sleep(500); // Small delay between API calls
+                const balance = await getBUXBalanceWithRetry(wallet);
+                console.log(`Exempt wallet ${wallet} balance:`, balance);
+                exemptBalance += balance;
+                await sleep(2000); // Add longer delay between wallets
             } catch (error) {
-                console.error(`Error getting balance for ${wallet} from Solscan:`, error);
+                console.error(`Error getting balance for exempt wallet ${wallet}:`, error);
+                // Use cached/known balance if available
+                if (EXEMPT_WALLET_BALANCES[wallet]) {
+                    console.log(`Using known balance for ${wallet}:`, EXEMPT_WALLET_BALANCES[wallet]);
+                    exemptBalance += EXEMPT_WALLET_BALANCES[wallet];
+                }
             }
         }
 
         const publicSupply = totalSupply - exemptBalance;
-        console.log('Total supply:', totalSupply);
         console.log('Total exempt balance:', exemptBalance);
         console.log('Calculated public supply:', publicSupply);
 
