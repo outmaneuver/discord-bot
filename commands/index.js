@@ -414,8 +414,6 @@ async function showRoles(message, targetUser, targetMember) {
 
 async function showBUX(message, targetUser) {
     try {
-        await verifyAndUpdateRoles(message);
-        
         const userId = targetUser.id;
         const wallets = await redis.smembers(`wallets:${userId}`);
         
@@ -449,24 +447,26 @@ async function showBUX(message, targetUser) {
             candy_bots: 0
         };
 
-        // Process one wallet at a time with delay
+        // Process each wallet
         for (const wallet of wallets) {
             try {
+                console.log(`Checking wallet ${wallet} for BUX balance...`);
                 const result = await verifyWallet(userId, wallet);
                 if (result?.success) {
+                    console.log(`Got balance for ${wallet}:`, result.data.buxBalance);
                     totalBalance += result.data.buxBalance || 0;
                     Object.keys(nftCounts).forEach(key => {
                         nftCounts[key] += result.data.nftCounts[key] || 0;
                     });
                 }
-                // Add delay between wallets
-                await sleep(2000);
+                await sleep(2000); // Add delay between wallets
             } catch (error) {
                 console.error(`Error checking wallet ${wallet}:`, error);
                 // Continue with next wallet, don't reset totalBalance
             }
         }
 
+        console.log('Total BUX balance:', totalBalance);
         const dailyReward = await calculateDailyReward(nftCounts);
         const displayBalance = (totalBalance / 1e9).toLocaleString(undefined, {
             minimumFractionDigits: 0,
@@ -503,7 +503,7 @@ async function showBUX(message, targetUser) {
         await message.channel.send({ embeds: [embed] });
     } catch (error) {
         console.error('BUX command error:', error);
-        await message.reply('An error occurred while fetching the BUX info. Please try again later.');
+        await message.reply('An error occurred while fetching your BUX info. Please try again later.');
     }
 }
 
