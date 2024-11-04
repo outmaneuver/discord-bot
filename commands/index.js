@@ -579,14 +579,41 @@ async function showBotsInfo(message) {
 
 async function showBUXInfo(message) {
     const embed = new EmbedBuilder()
-        .setColor('#0099ff')
+        .setColor('#FFD700')
         .setTitle('BUX Token Info')
+        .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/bux.jpg')
         .addFields(
-            { name: 'Token Address', value: 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK' },
-            { name: 'Total Supply', value: '1,000,000,000' },
-            { name: 'Decimals', value: '9' },
-            { name: 'Jupiter', value: '[Trade BUX](https://jup.ag/swap/SOL-BUX)' }
-        );
+            { 
+                name: 'Token Address', 
+                value: 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK',
+                inline: false 
+            },
+            { 
+                name: 'Public Supply', 
+                value: '1,000,000,000 BUX',
+                inline: true 
+            },
+            { 
+                name: 'Liquidity', 
+                value: '~$50,000',
+                inline: true 
+            },
+            { 
+                name: 'BUX Value', 
+                value: '$0.00005',
+                inline: true 
+            },
+            { 
+                name: 'Trade BUX', 
+                value: '[Jupiter](https://jup.ag/swap/SOL-BUX)\n[Raydium](https://raydium.io/swap/?inputCurrency=sol&outputCurrency=FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK&fixed=in)',
+                inline: false 
+            }
+        )
+        .setFooter({ 
+            text: 'BUXDAO - Putting community first',
+            iconURL: 'https://buxdao.io/logo.png'
+        })
+        .setTimestamp();
 
     await message.channel.send({ embeds: [embed] });
 }
