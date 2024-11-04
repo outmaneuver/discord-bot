@@ -4,6 +4,7 @@ import { redis } from '../config/redis.js';
 import { calculateDailyReward } from './rewards.js';
 
 const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
+const LIQUIDITY_WALLET = 'BXQdPJNGXkDdQEgM6gMAxNu9YLhZJfBc9Y3qdJgpJ1Lw';
 
 // Hashlists for NFT verification
 let hashlists = {
