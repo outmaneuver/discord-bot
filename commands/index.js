@@ -276,15 +276,20 @@ async function showRoles(message, targetUser, targetMember) {
 
 async function showBUX(message) {
     try {
-        const buxValue = await getBUXValue();
         const wallets = await redis.smembers(`wallets:${message.author.id}`);
-        let totalBalance = 0;
+        if (!wallets || wallets.length === 0) {
+            return message.reply('No wallets found. Please verify a wallet first using =verify');
+        }
 
-        // Process wallets one at a time with delay
-        for (const wallet of wallets) {
+        // Get first wallet data once
+        const firstWalletData = await verifyWallet(message.author.id, wallets[0]);
+        let totalBalance = firstWalletData.data.buxBalance;
+        const dailyReward = calculateDailyReward(firstWalletData.data.nftCounts);
+
+        // Process remaining wallets
+        for (let i = 1; i < wallets.length; i++) {
             try {
-                // Use verifyWallet which has built-in delay and rate limit handling
-                const result = await verifyWallet(message.author.id, wallet);
+                const result = await verifyWallet(message.author.id, wallets[i]);
                 if (result.success) {
                     totalBalance += result.data.buxBalance;
                 }
@@ -293,16 +298,10 @@ async function showBUX(message) {
             }
         }
 
+        const buxValue = await getBUXValue();
         const balanceUsdValue = (totalBalance / 1e9) * buxValue.buxValueUsd;
-
-        // Get daily rewards using first wallet
-        const { nftCounts } = await verifyWallet(message.author.id, wallets[0] || '');
-        const dailyReward = calculateDailyReward(nftCounts);
-
-        // Get claimable amount
         const claimable = await getClaimableAmount(message.author.id);
 
-        // Keep existing embed layout
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle(`${message.author.username}'s BUX Info`)
