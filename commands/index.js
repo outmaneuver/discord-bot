@@ -600,13 +600,29 @@ const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
 const MAX_RETRIES = 5;
 const INITIAL_RETRY_DELAY = 2000;
 
+// Add cache for BUX balances
+const buxBalanceCache = new Map();
+const BUX_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 async function getBUXBalanceWithRetry(wallet) {
+    // Check cache first
+    const cached = buxBalanceCache.get(wallet);
+    if (cached && (Date.now() - cached.timestamp) < BUX_CACHE_TTL) {
+        console.log(`Using cached balance for ${wallet}:`, cached.balance);
+        return cached.balance;
+    }
+
     let retryCount = 0;
     let delay = INITIAL_RETRY_DELAY;
 
     while (retryCount < MAX_RETRIES) {
         try {
             const balance = await getBUXBalance(wallet);
+            // Cache successful response
+            buxBalanceCache.set(wallet, {
+                balance,
+                timestamp: Date.now()
+            });
             return balance;
         } catch (error) {
             if (error.message.includes('429 Too Many Requests')) {
@@ -619,6 +635,13 @@ async function getBUXBalanceWithRetry(wallet) {
             }
         }
     }
+
+    // If we have a cached value, use it even if expired
+    if (cached) {
+        console.log(`Using expired cache for ${wallet} after retries failed:`, cached.balance);
+        return cached.balance;
+    }
+
     throw new Error(`Failed to get balance for ${wallet} after ${MAX_RETRIES} retries`);
 }
 
