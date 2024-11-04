@@ -83,3 +83,20 @@ export async function getTimeUntilNextClaim(userId) {
     return '00:00:00';
   }
 }
+
+// Add this function to get claimable BUX amount
+async function getClaimableAmount(userId) {
+    try {
+        const claimable = await redis.get(`claimable:${userId}`);
+        return claimable ? parseInt(claimable) : 0;
+    } catch (error) {
+        console.error('Error getting claimable amount:', error);
+        return 0;
+    }
+}
+
+// Add getClaimableAmount to exports
+export {
+    calculateDailyReward,
+    getClaimableAmount
+};
