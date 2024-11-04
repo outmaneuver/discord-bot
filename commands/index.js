@@ -613,15 +613,16 @@ async function showBUXInfo(message) {
         for (const wallet of EXEMPT_WALLETS) {
             try {
                 const balance = await getBUXBalance(wallet);
-                console.log(`Exempt wallet ${wallet} balance:`, balance);
-                exemptBalance += balance;
+                const displayBalance = balance / 1e9; // Convert from raw units to display units
+                console.log(`Exempt wallet ${wallet} balance:`, displayBalance);
+                exemptBalance += displayBalance;
                 await sleep(1000); // Add delay between RPC calls
             } catch (error) {
                 console.error(`Error getting balance for exempt wallet ${wallet}:`, error);
             }
         }
 
-        const publicSupply = TOTAL_SUPPLY - exemptBalance;
+        const publicSupply = (TOTAL_SUPPLY / 1e9) - exemptBalance; // Convert total supply to display units
         console.log('Total exempt balance:', exemptBalance);
         console.log('Calculated public supply:', publicSupply);
 
@@ -641,7 +642,7 @@ async function showBUXInfo(message) {
                 },
                 { 
                     name: 'Public Supply', 
-                    value: `${publicSupply.toLocaleString()} BUX`,
+                    value: `${Math.floor(publicSupply).toLocaleString()} BUX`,
                     inline: true 
                 },
                 { 
