@@ -24,7 +24,7 @@ let hashlists = {
 
 // Add cache for NFT counts and BUX balance
 const userDataCache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 60 * 1000; // 1 minute
 
 // Simple function to verify NFTs from hashlists
 async function verifyWallet(userId, walletAddress) {
@@ -129,7 +129,8 @@ async function getBUXBalance(walletAddress) {
             totalBalance += Number(account.account.data.parsed.info.tokenAmount.amount);
         }
 
-        await redis.setex(cacheKey, 300, totalBalance.toString());
+        // Update Redis cache TTL to 1 minute (60 seconds)
+        await redis.setex(cacheKey, 60, totalBalance.toString());
         return totalBalance / Math.pow(10, 9);
     } catch (error) {
         console.error('Error getting BUX balance:', error);
