@@ -117,18 +117,16 @@ async function verifyWallet(userId, walletAddress) {
 // Get BUX balance with retries but no caching
 async function getBUXBalance(walletAddress) {
     const connection = new Connection(process.env.SOLANA_RPC_URL);
-    const maxAttempts = 5;
-    const baseDelay = 1000;
+    const maxRetries = 5;
     let attempt = 0;
 
-    while (attempt < maxAttempts) {
+    while (attempt < maxRetries) {
         try {
             const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
                 new PublicKey(walletAddress),
                 { mint: new PublicKey(BUX_TOKEN_MINT) }
             );
 
-            // Find BUX token account
             const buxAccount = tokenAccounts.value.find(account => 
                 account.account.data.parsed.info.mint === BUX_TOKEN_MINT
             );
@@ -137,10 +135,9 @@ async function getBUXBalance(walletAddress) {
 
         } catch (error) {
             attempt++;
-            if (error.message.includes('429') && attempt < maxAttempts) {
-                // Calculate exponential backoff delay
-                const delay = Math.min(baseDelay * Math.pow(2, attempt), 8000);
-                console.log(`Rate limited getting balance for ${walletAddress}, retrying in ${delay}ms (attempt ${attempt}/${maxAttempts})`);
+            if (error.message.includes('429') && attempt < maxRetries) {
+                const delay = 2000; // Simple 2 second delay between retries
+                console.log(`Rate limited getting balance for ${walletAddress}, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
             }
@@ -148,7 +145,7 @@ async function getBUXBalance(walletAddress) {
         }
     }
     
-    throw new Error(`Failed to get BUX balance after ${maxAttempts} attempts`);
+    throw new Error(`Failed to get BUX balance after ${maxRetries} attempts`);
 }
 
 // Store wallet address with validation
