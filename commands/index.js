@@ -6,11 +6,9 @@ import { calculateDailyReward } from '../services/rewards.js';
 // Add sleep helper function
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// Add admin role check helper
+// Fix admin role check helper
 function isAdmin(member) {
-    return member.roles.cache.some(role => 
-        role.id === process.env.ADMIN_ROLE_ID
-    );
+    return member.roles.cache.has(process.env.ADMIN_ROLE_ID);
 }
 
 // Command handler
