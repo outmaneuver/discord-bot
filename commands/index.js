@@ -4,6 +4,7 @@ import { redis } from '../config/redis.js';
 import { calculateDailyReward } from '../services/rewards.js';
 import { Connection, PublicKey } from '@solana/web3.js';
 import fetch from 'node-fetch';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 // Add sleep helper function
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -593,8 +594,7 @@ const EXEMPT_WALLETS = [
 ];
 
 const LIQUIDITY_WALLET = '3WNHW6sr1sQdbRjovhPrxgEJdWASZ43egGWMMNrhgoRR';
-const TOTAL_SUPPLY = 1_000_000_000;
-const PUBLIC_SUPPLY = 500_000_000; // Set fixed public supply
+const BUX_TOKEN_MINT = 'FMiRxSbLqRTWiBszt1DZmXd7SrscWCccY7fcXNtwWxHK';
 
 async function showBUXInfo(message) {
     try {
@@ -608,20 +608,25 @@ async function showBUXInfo(message) {
         const liquidityBalance = await connection.getBalance(new PublicKey(LIQUIDITY_WALLET));
         const liquiditySol = (liquidityBalance / 1e9) + 17.75567; // Add fixed SOL amount
 
+        // Get total supply from token mint
+        const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
+        const totalSupply = tokenSupply.value.uiAmount;
+        console.log('Total supply:', totalSupply);
+
         // Calculate public supply by fetching exempt wallet balances
         let exemptBalance = 0;
         for (const wallet of EXEMPT_WALLETS) {
             try {
                 const balance = await getBUXBalance(wallet);
                 console.log(`Exempt wallet ${wallet} balance:`, balance);
-                exemptBalance += balance; // Don't divide by 1e9 since getBUXBalance already returns display units
+                exemptBalance += balance;
                 await sleep(1000); // Add delay between RPC calls
             } catch (error) {
                 console.error(`Error getting balance for exempt wallet ${wallet}:`, error);
             }
         }
 
-        const publicSupply = TOTAL_SUPPLY - exemptBalance; // TOTAL_SUPPLY is already in display units
+        const publicSupply = totalSupply - exemptBalance;
         console.log('Total exempt balance:', exemptBalance);
         console.log('Calculated public supply:', publicSupply);
 
