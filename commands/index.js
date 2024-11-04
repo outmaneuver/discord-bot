@@ -374,35 +374,12 @@ async function displayProfile(message) {
         const buxValue = await getBUXValue();
         const portfolioValue = (totalBuxBalance / 1e9) * buxValue.buxValueUsd;
         const memberSince = message.member.joinedAt.toLocaleDateString();
-        const roleCount = message.member.roles.cache.size - 1; // Subtract @everyone role
+        const roleCount = message.member.roles.cache.size - 1;
 
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle(`${message.author.username}'s BUXDAO Profile`)
-            .addFields(
-                { name: '🏦 Connected Wallets', value: wallets.join('\n') },
-                { name: '\u200B', value: '---------------------------------------------------------------' },
-                { name: '\u200B', value: '🎨 Main Collections' },
-                { name: 'Fcked Catz', value: totalNftCounts.fcked_catz.toString(), inline: true },
-                { name: 'Celeb Catz', value: totalNftCounts.celebcatz.toString(), inline: true },
-                { name: 'Money Monsters', value: totalNftCounts.money_monsters.toString(), inline: true },
-                { name: 'Money Monsters 3D', value: totalNftCounts.money_monsters3d.toString(), inline: true },
-                { name: 'AI Bitbots', value: totalNftCounts.ai_bitbots.toString(), inline: true },
-                { name: '\u200B', value: '---------------------------------------------------------------' },
-                { name: '\u200B', value: '🤖 A.I. Collabs' },
-                { name: 'A.I. Warriors', value: totalNftCounts.warriors.toString(), inline: true },
-                { name: 'A.I. Squirrels', value: totalNftCounts.squirrels.toString(), inline: true },
-                { name: 'A.I. Energy Apes', value: totalNftCounts.energy_apes.toString(), inline: true },
-                { name: 'RJCTD bots', value: totalNftCounts.rjctd_bots.toString(), inline: true },
-                { name: 'Candy bots', value: totalNftCounts.candy_bots.toString(), inline: true },
-                { name: 'Doodle bots', value: totalNftCounts.doodle_bots.toString(), inline: true },
-                { name: '\u200B', value: '---------------------------------------------------------------' },
-                { name: '\u200B', value: '🎭 Server' },
-                { name: 'Member Since', value: memberSince, inline: true },
-                { name: 'Roles', value: roleCount.toString(), inline: true },
-                { name: '\u200B', value: '---------------------------------------------------------------' },
-                { name: '💰 BUX Balance', value: `${(totalBuxBalance / 1e9).toLocaleString()} BUX ($${portfolioValue.toFixed(2)})` }
-            )
+            .setDescription(`🏦 Connected Wallets\n${wallets.join('\n')}\n\n---------------------------------------------------------------\n\n🎨 Main Collections\nFcked Catz: ${totalNftCounts.fcked_catz}\nCeleb Catz: ${totalNftCounts.celebcatz}\nMoney Monsters: ${totalNftCounts.money_monsters}\nMoney Monsters 3D: ${totalNftCounts.money_monsters3d}\nAI Bitbots: ${totalNftCounts.ai_bitbots}\n\n---------------------------------------------------------------\n\n🤖 A.I. Collabs\nA.I. Warriors: ${totalNftCounts.warriors}\nA.I. Squirrels: ${totalNftCounts.squirrels}\nA.I. Energy Apes: ${totalNftCounts.energy_apes}\nRJCTD bots: ${totalNftCounts.rjctd_bots}\nCandy bots: ${totalNftCounts.candy_bots}\nDoodle bots: ${totalNftCounts.doodle_bots}\n\n---------------------------------------------------------------\n\n🎭 Server\nMember Since: ${memberSince}\nRoles: ${roleCount}\n\n---------------------------------------------------------------\n\n💰 BUX Balance\n${(totalBuxBalance / 1e9).toLocaleString()} BUX ($${portfolioValue.toFixed(2)})`)
             .setFooter({ 
                 text: 'BUXDAO - Putting community first',
                 iconURL: 'https://buxdao.io/logo.png'
