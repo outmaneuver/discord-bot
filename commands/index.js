@@ -581,19 +581,20 @@ async function showBotsInfo(message) {
 
 // Add constants
 const EXEMPT_WALLETS = [
-    'DXM1SKEbtDVFJcqLDJvSBSh83CeHkYv4qM88JG9BwJ5t',
-    'BX1PEe4FJiWuHjFnYuYFB8edZsFg39BWggi65yTH52or',
-    '95vRUfprVqvURhPryNdEsaBrSNmbE1uuufYZkyrxyjir',
-    'FAEjAsCtpoapdsCF1DDhj71vdjQjSeAJt8gt9uYxL7gz',
-    'He7HLAH2v8pnVafzxmfkqZUVefy4DUGiHmpetQFZNjrg',
-    'FFfTserUJGZEFLKB7ffqxaXvoHfdRJDtNYgXu7NEn8an',
-    '9pRsKWUw2nQBfdVhfknyWQ4KEiDiYvahRXCf9an4kpW4',
-    'FYfLzXckAf2JZoMYBz2W4fpF9vejqpA6UFV17d1A7C75',
-    'H4RPEi5Sfpapy1B233b4DUhh6hsmFTTKx4pXqWnpW637'
+    'DXM1SKEbtDVFJcqLDJvSBSh83CeHkYv4qM88JG9BwJ5t', // Team wallet
+    'BX1PEe4FJiWuHjFnYuYFB8edZsFg39BWggi65yTH52or', // Marketing wallet
+    '95vRUfprVqvURhPryNdEsaBrSNmbE1uuufYZkyrxyjir', // Development wallet
+    'FAEjAsCtpoapdsCF1DDhj71vdjQjSeAJt8gt9uYxL7gz', // Treasury wallet
+    'He7HLAH2v8pnVafzxmfkqZUVefy4DUGiHmpetQFZNjrg', // Staking wallet
+    'FFfTserUJGZEFLKB7ffqxaXvoHfdRJDtNYgXu7NEn8an', // Rewards wallet
+    '9pRsKWUw2nQBfdVhfknyWQ4KEiDiYvahRXCf9an4kpW4', // Burn wallet
+    'FYfLzXckAf2JZoMYBz2W4fpF9vejqpA6UFV17d1A7C75', // Burn wallet 2
+    'H4RPEi5Sfpapy1B233b4DUhh6hsmFTTKx4pXqWnpW637'  // Burn wallet 3
 ];
 
 const LIQUIDITY_WALLET = '3WNHW6sr1sQdbRjovhPrxgEJdWASZ43egGWMMNrhgoRR';
 const TOTAL_SUPPLY = 1_000_000_000;
+const PUBLIC_SUPPLY = 500_000_000; // Set fixed public supply
 
 async function showBUXInfo(message) {
     try {
@@ -610,10 +611,19 @@ async function showBUXInfo(message) {
         // Calculate public supply by fetching exempt wallet balances
         let exemptBalance = 0;
         for (const wallet of EXEMPT_WALLETS) {
-            const tokenBalance = await getBUXBalance(wallet);
-            exemptBalance += tokenBalance;
+            try {
+                const balance = await getBUXBalance(wallet);
+                console.log(`Exempt wallet ${wallet} balance:`, balance);
+                exemptBalance += balance;
+                await sleep(1000); // Add delay between RPC calls
+            } catch (error) {
+                console.error(`Error getting balance for exempt wallet ${wallet}:`, error);
+            }
         }
+
         const publicSupply = TOTAL_SUPPLY - exemptBalance;
+        console.log('Total exempt balance:', exemptBalance);
+        console.log('Calculated public supply:', publicSupply);
 
         // Calculate BUX value
         const buxValueSol = liquiditySol / publicSupply;
