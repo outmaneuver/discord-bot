@@ -687,9 +687,32 @@ async function showBUXInfo(message) {
         // Get total supply from token mint
         const tokenSupply = await connection.getTokenSupply(new PublicKey(BUX_TOKEN_MINT));
         const totalSupply = tokenSupply.value.uiAmount;
+        console.log('Total supply:', totalSupply);
+
+        // Get exempt wallet balances
+        let exemptBalance = 0;
+        for (const wallet of EXEMPT_WALLETS) {
+            try {
+                const balance = await getBUXBalance(wallet);
+                console.log(`Exempt wallet ${wallet} balance:`, balance);
+                exemptBalance += balance;
+                await sleep(2000); // Add delay between wallets
+            } catch (error) {
+                console.error(`Error getting balance for exempt wallet ${wallet}:`, error);
+                // Use cached/known balance if available
+                if (EXEMPT_WALLET_BALANCES[wallet]) {
+                    console.log(`Using known balance for ${wallet}:`, EXEMPT_WALLET_BALANCES[wallet]);
+                    exemptBalance += EXEMPT_WALLET_BALANCES[wallet];
+                }
+            }
+        }
+
+        const publicSupply = totalSupply - exemptBalance;
+        console.log('Total exempt balance:', exemptBalance);
+        console.log('Calculated public supply:', publicSupply);
 
         // Calculate BUX value
-        const buxValueSol = liquiditySol / totalSupply;
+        const buxValueSol = liquiditySol / publicSupply;
         const buxValueUsd = buxValueSol * solPrice;
 
         const embed = new EmbedBuilder()
@@ -704,7 +727,7 @@ async function showBUXInfo(message) {
                 },
                 { 
                     name: 'Public Supply', 
-                    value: `${Math.floor(totalSupply).toLocaleString()} BUX`,
+                    value: `${Math.floor(publicSupply).toLocaleString()} BUX`,
                     inline: false 
                 },
                 { 
