@@ -250,8 +250,6 @@ async function showNFTs(message, targetUser) {
 
 async function showRoles(message, targetUser, targetMember) {
     try {
-        await verifyAndUpdateRoles(message);
-        
         const roles = targetMember.roles.cache
             .filter(role => role.name !== '@everyone')
             .map(role => role.name)
