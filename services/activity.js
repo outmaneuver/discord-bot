@@ -12,60 +12,84 @@ class ActivityService {
     async initialize() {
         try {
             const guild = await this.client.guilds.fetch(process.env.GUILD_ID);
+            if (!guild) {
+                console.error('Guild not found');
+                return;
+            }
+
+            // Fetch channels using the correct IDs from .env
             this.nftActivityChannel = await guild.channels.fetch(process.env.NFT_ACTIVITY_CHANNEL_ID);
             this.buxActivityChannel = await guild.channels.fetch(process.env.BUX_ACTIVITY_CHANNEL_ID);
+
             console.log('Activity channels initialized:', {
                 nft: this.nftActivityChannel?.id,
-                bux: this.buxActivityChannel?.id
+                bux: this.buxActivityChannel?.id,
+                nftName: this.nftActivityChannel?.name,
+                buxName: this.buxActivityChannel?.name
             });
+
         } catch (error) {
             console.error('Error initializing activity channels:', error);
         }
     }
 
     async postNFTActivity(event) {
-        if (!this.nftActivityChannel) return;
-
-        const embed = new EmbedBuilder()
-            .setColor('#0099ff')
-            .setTitle('NFT Activity')
-            .addFields(
-                { name: 'Type', value: event.type },
-                { name: 'Collection', value: event.collection },
-                { name: 'NFT', value: `[${event.mint}](https://solscan.io/token/${event.mint})` },
-                { name: 'New Owner', value: `[${event.newOwner}](https://solscan.io/account/${event.newOwner})` }
-            )
-            .setTimestamp();
-
-        if (event.oldOwner) {
-            embed.addFields({ 
-                name: 'Previous Owner', 
-                value: `[${event.oldOwner}](https://solscan.io/account/${event.oldOwner})` 
-            });
+        if (!this.nftActivityChannel) {
+            console.error('NFT activity channel not initialized');
+            return;
         }
 
-        if (event.price) {
-            embed.addFields({ name: 'Price', value: `${event.price} SOL` });
-        }
+        try {
+            const embed = new EmbedBuilder()
+                .setColor('#0099ff')
+                .setTitle('NFT Activity')
+                .addFields(
+                    { name: 'Type', value: event.type },
+                    { name: 'Collection', value: event.collection },
+                    { name: 'NFT', value: `[${event.mint}](https://solscan.io/token/${event.mint})` },
+                    { name: 'New Owner', value: `[${event.newOwner}](https://solscan.io/account/${event.newOwner})` }
+                )
+                .setTimestamp();
 
-        await this.nftActivityChannel.send({ embeds: [embed] });
+            if (event.oldOwner) {
+                embed.addFields({ 
+                    name: 'Previous Owner', 
+                    value: `[${event.oldOwner}](https://solscan.io/account/${event.oldOwner})` 
+                });
+            }
+
+            if (event.price) {
+                embed.addFields({ name: 'Price', value: `${event.price} SOL` });
+            }
+
+            await this.nftActivityChannel.send({ embeds: [embed] });
+        } catch (error) {
+            console.error('Error posting NFT activity:', error);
+        }
     }
 
     async postBUXActivity(event) {
-        if (!this.buxActivityChannel) return;
+        if (!this.buxActivityChannel) {
+            console.error('BUX activity channel not initialized');
+            return;
+        }
 
-        const embed = new EmbedBuilder()
-            .setColor('#0099ff')
-            .setTitle('BUX Activity')
-            .addFields(
-                { name: 'Type', value: event.type },
-                { name: 'Wallet', value: `[${event.wallet}](https://solscan.io/account/${event.wallet})` },
-                { name: 'Amount', value: `${(event.change / 1e9).toLocaleString()} BUX` },
-                { name: 'New Balance', value: `${(event.newBalance / 1e9).toLocaleString()} BUX` }
-            )
-            .setTimestamp();
+        try {
+            const embed = new EmbedBuilder()
+                .setColor('#0099ff')
+                .setTitle('BUX Activity')
+                .addFields(
+                    { name: 'Type', value: event.type },
+                    { name: 'Wallet', value: `[${event.wallet}](https://solscan.io/account/${event.wallet})` },
+                    { name: 'Amount', value: `${(event.change / 1e9).toLocaleString()} BUX` },
+                    { name: 'New Balance', value: `${(event.newBalance / 1e9).toLocaleString()} BUX` }
+                )
+                .setTimestamp();
 
-        await this.buxActivityChannel.send({ embeds: [embed] });
+            await this.buxActivityChannel.send({ embeds: [embed] });
+        } catch (error) {
+            console.error('Error posting BUX activity:', error);
+        }
     }
 }
 
