@@ -1,4 +1,4 @@
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, ChannelType } from 'discord.js';
 import { redis } from '../config/redis.js';
 
 class ActivityService {
@@ -17,15 +17,32 @@ class ActivityService {
                 return;
             }
 
-            // Fetch channels using the correct IDs from .env
-            this.nftActivityChannel = await guild.channels.fetch(process.env.NFT_ACTIVITY_CHANNEL_ID);
-            this.buxActivityChannel = await guild.channels.fetch(process.env.BUX_ACTIVITY_CHANNEL_ID);
+            // Force fetch all channels
+            await guild.channels.fetch();
+
+            // Get channels by ID
+            this.nftActivityChannel = guild.channels.cache.get(process.env.NFT_ACTIVITY_CHANNEL_ID);
+            this.buxActivityChannel = guild.channels.cache.get(process.env.BUX_ACTIVITY_CHANNEL_ID);
+
+            // Verify channels exist and are text channels
+            if (!this.nftActivityChannel?.isTextBased()) {
+                console.error('NFT activity channel not found or not a text channel');
+            }
+            if (!this.buxActivityChannel?.isTextBased()) {
+                console.error('BUX activity channel not found or not a text channel');
+            }
 
             console.log('Activity channels initialized:', {
-                nft: this.nftActivityChannel?.id,
-                bux: this.buxActivityChannel?.id,
-                nftName: this.nftActivityChannel?.name,
-                buxName: this.buxActivityChannel?.name
+                nft: {
+                    id: this.nftActivityChannel?.id,
+                    name: this.nftActivityChannel?.name,
+                    type: this.nftActivityChannel?.type
+                },
+                bux: {
+                    id: this.buxActivityChannel?.id,
+                    name: this.buxActivityChannel?.name,
+                    type: this.buxActivityChannel?.type
+                }
             });
 
         } catch (error) {
