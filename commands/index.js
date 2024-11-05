@@ -318,6 +318,7 @@ async function handleCommand(message) {
                     // Get data for all NFTs
                     for (const key of keys) {
                         const data = await redis.hgetall(key);
+                        // Only include NFTs that have rarity data
                         if (data.rarity) {
                             nftData.push({
                                 mint: key.split(':')[2],
@@ -327,11 +328,15 @@ async function handleCommand(message) {
                         }
                     }
 
+                    console.log(`Found ${nftData.length} NFTs with rarity data`);
+
                     // Sort by rarity rank (lowest to highest)
                     nftData.sort((a, b) => a.rarity - b.rarity);
 
-                    // Find NFT with requested rank (array is 0-based, ranks are 1-based)
-                    const nft = nftData[rankNumber - 1];
+                    console.log(`First 5 rarity ranks:`, nftData.slice(0, 5).map(nft => nft.rarity));
+
+                    // Find NFT with requested rank
+                    const nft = nftData.find(n => n.rarity === rankNumber);
                     if (!nft) {
                         return message.reply(`No NFT found with rank ${rankNumber}`);
                     }
@@ -340,7 +345,7 @@ async function handleCommand(message) {
                     const traitText = traits.map(t => `${t.trait_type}: ${t.value}`).join('\n');
 
                     const embed = new EmbedBuilder()
-                        .setTitle(`Fcked Cat #${nft.tokenId} (Rank #${rankNumber})`)
+                        .setTitle(`Fcked Cat #${nft.tokenId} (Rank #${nft.rarity})`)
                         .setColor('#0099ff')
                         .setImage(nft.image)
                         .addFields(
