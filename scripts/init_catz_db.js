@@ -8,27 +8,8 @@ import { fileURLToPath } from 'url';
 
 dotenv.config();
 
-// Configure Redis with proper SSL settings
-const redis = new Redis(process.env.REDIS_URL, {
-    tls: {
-        rejectUnauthorized: false,
-        requestCert: true,
-        ca: null
-    },
-    retryStrategy(times) {
-        const delay = Math.min(times * 50, 2000);
-        return delay;
-    },
-    maxRetriesPerRequest: null
-});
-
-redis.on('error', (error) => {
-    console.error('Redis connection error:', error);
-});
-
-redis.on('connect', () => {
-    console.log('Redis connected successfully');
-});
+// Use the same Redis config that works in main app
+const redis = new Redis(process.env.REDIS_URL);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -47,6 +28,7 @@ async function initializeCatzDatabase() {
         const keys = await redis.keys('nft:fcked_catz:*');
         if (keys.length > 0) {
             await redis.del(keys);
+            console.log('Cleared existing Fcked Catz data');
         }
         await redis.del('collection:fcked_catz:holders');
         
