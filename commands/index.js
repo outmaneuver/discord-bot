@@ -260,6 +260,110 @@ async function handleCommand(message) {
                 await message.reply('Test activity messages sent!');
                 break;
 
+            case 'rank.catz': {
+                const rankNumber = parseInt(args[1]);
+                if (isNaN(rankNumber)) {
+                    return message.reply('Please provide a valid rank number (e.g. =rank.catz.1)');
+                }
+
+                try {
+                    // Get all NFT keys
+                    const keys = await redis.keys('nft:fcked_catz:*');
+                    let nftData = [];
+
+                    // Get data for all NFTs
+                    for (const key of keys) {
+                        const data = await redis.hgetall(key);
+                        if (data.rarity) {
+                            nftData.push({
+                                mint: key.split(':')[2],
+                                ...data,
+                                rarity: parseInt(data.rarity)
+                            });
+                        }
+                    }
+
+                    // Sort by rarity rank
+                    nftData.sort((a, b) => a.rarity - b.rarity);
+
+                    // Find NFT with requested rank
+                    const nft = nftData[rankNumber - 1];
+                    if (!nft) {
+                        return message.reply(`No NFT found with rank ${rankNumber}`);
+                    }
+
+                    const traits = JSON.parse(nft.traits);
+                    const traitText = traits.map(t => `${t.trait_type}: ${t.value}`).join('\n');
+
+                    const embed = new EmbedBuilder()
+                        .setTitle(`Fcked Cat Rank #${rankNumber}`)
+                        .setColor('#0099ff')
+                        .setImage(nft.image)
+                        .addFields(
+                            { name: 'Cat Number', value: `#${nft.tokenId}`, inline: true },
+                            { name: 'Rarity Rank', value: `#${nft.rarity}`, inline: true },
+                            { name: 'Owner', value: nft.owner },
+                            { name: 'Traits', value: traitText }
+                        )
+                        .setFooter({ text: 'BUXDAO - Putting community first' });
+
+                    await message.reply({ embeds: [embed] });
+                } catch (error) {
+                    console.error('Error fetching rank data:', error);
+                    await message.reply('Error fetching NFT data');
+                }
+                break;
+            }
+
+            case 'rarity.catz': {
+                const catNumber = parseInt(args[1]);
+                if (isNaN(catNumber)) {
+                    return message.reply('Please provide a valid cat number (e.g. =rarity.catz.25)');
+                }
+
+                try {
+                    // Get all NFT keys
+                    const keys = await redis.keys('nft:fcked_catz:*');
+                    let targetNft = null;
+
+                    // Find NFT with matching number
+                    for (const key of keys) {
+                        const data = await redis.hgetall(key);
+                        if (parseInt(data.tokenId) === catNumber) {
+                            targetNft = {
+                                mint: key.split(':')[2],
+                                ...data
+                            };
+                            break;
+                        }
+                    }
+
+                    if (!targetNft) {
+                        return message.reply(`No NFT found with number #${catNumber}`);
+                    }
+
+                    const traits = JSON.parse(targetNft.traits);
+                    const traitText = traits.map(t => `${t.trait_type}: ${t.value}`).join('\n');
+
+                    const embed = new EmbedBuilder()
+                        .setTitle(`Fcked Cat #${catNumber}`)
+                        .setColor('#0099ff')
+                        .setImage(targetNft.image)
+                        .addFields(
+                            { name: 'Rarity Rank', value: `#${targetNft.rarity}`, inline: true },
+                            { name: 'Owner', value: targetNft.owner },
+                            { name: 'Traits', value: traitText }
+                        )
+                        .setFooter({ text: 'BUXDAO - Putting community first' });
+
+                    await message.reply({ embeds: [embed] });
+                } catch (error) {
+                    console.error('Error fetching cat data:', error);
+                    await message.reply('Error fetching NFT data');
+                }
+                break;
+            }
+
             default:
                 await message.reply('Unknown command. Use =help to see available commands.');
                 break;

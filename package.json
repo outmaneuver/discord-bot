@@ -7,6 +7,12 @@
     "start": "node main.js",
     "dev": "nodemon main.js",
     "init-catz": "node scripts/init_catz_db.js",
+    "update-rarity": "node scripts/update_catz_rarity.js",
+    "find-missing": "node scripts/find_missing_catz.js",
+    "add-missing": "node scripts/add_missing_catz.js",
+    "add-missing-rarity": "node scripts/add_missing_rarity.js",
+    "check-entry": "node scripts/check_catz_entry.js",
+    "update-metadata": "node scripts/update_catz_metadata.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint ."
   },
