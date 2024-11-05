@@ -311,7 +311,7 @@ async function handleCommand(message) {
                 }
 
                 try {
-                    // Get all Fcked Catz NFTs using imported Redis client
+                    // Get all Fcked Catz NFTs
                     const keys = await redis.keys('nft:fcked_catz:*');
                     console.log(`Found ${keys.length} total NFTs`);
 
@@ -319,7 +319,7 @@ async function handleCommand(message) {
                     const nftData = [];
                     for (const key of keys) {
                         const data = await redis.hgetall(key);
-                        if (data.rarity) { // Only include NFTs with rarity data
+                        if (data.rarity) {
                             nftData.push({
                                 mint: key.split(':')[2],
                                 ...data,
@@ -328,15 +328,11 @@ async function handleCommand(message) {
                         }
                     }
 
-                    console.log(`Found ${nftData.length} NFTs with rarity data`);
-                    console.log('First 5 NFTs after sorting:', nftData.slice(0, 5));
-
                     // Sort by rarity rank (lowest to highest)
                     nftData.sort((a, b) => a.rarity - b.rarity);
 
                     // Find NFT with matching rank
                     const nft = nftData.find(n => n.rarity === rankNumber);
-                    console.log('Found NFT:', nft);
                     
                     if (!nft) {
                         return message.reply(`No NFT found with rank ${rankNumber}`);
@@ -365,7 +361,6 @@ async function handleCommand(message) {
                     console.error('Error in rank command:', error);
                     return message.reply('Error fetching NFT data');
                 }
-                break;
             }
 
             default:

@@ -3,12 +3,20 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Use the same Redis config that works
-const redis = new Redis(process.env.REDIS_URL, {
-    tls: {
-        rejectUnauthorized: false
-    }
-});
+// Parse Redis URL to determine if TLS is needed
+const redisUrl = new URL(process.env.REDIS_URL);
+console.log('Redis protocol:', redisUrl.protocol);
+
+// Configure Redis options based on URL
+const redisOptions = {
+    ...(redisUrl.protocol === 'rediss:' && {
+        tls: {
+            rejectUnauthorized: false
+        }
+    })
+};
+
+const redis = new Redis(process.env.REDIS_URL, redisOptions);
 
 redis.on('error', (err) => {
     console.error('Redis connection error:', err);
