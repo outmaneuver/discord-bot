@@ -227,11 +227,14 @@ async function handleCommand(message) {
                 }
 
                 await global.activityService.postNFTActivity({
-                    type: 'transfer',
+                    type: 'sale',
                     collection: 'Fcked Catz',
                     mint: 'ABC123...',
+                    nftNumber: '1234',
+                    price: 69,
                     newOwner: 'NewOwner123...',
-                    oldOwner: 'OldOwner123...'
+                    oldOwner: 'OldOwner123...',
+                    image: 'https://buxdao.io/images/catz.jpg'  // Example image URL
                 });
 
                 await global.activityService.postBUXActivity({

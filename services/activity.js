@@ -61,25 +61,56 @@ class ActivityService {
                 return;
             }
 
+            // Get action title based on type
+            const actionTitles = {
+                'transfer': '🔄 TRANSFERRED',
+                'sale': '💰 SOLD',
+                'list': '📋 LISTED',
+                'burn': '🔥 BURNED'
+            };
+
+            const title = actionTitles[event.type] || 'ACTIVITY';
+
             const embed = new EmbedBuilder()
                 .setColor('#0099ff')
-                .setTitle('NFT Activity')
-                .setDescription(`New ${event.type} activity detected!`)
+                .setTitle(title)
+                .setThumbnail(event.image || null) // Add NFT image if available
                 .addFields(
-                    { name: 'Type', value: event.type, inline: true },
                     { name: 'Collection', value: event.collection, inline: true },
-                    { name: 'NFT', value: `[View on Solscan](https://solscan.io/token/${event.mint})`, inline: true },
-                    { name: 'New Owner', value: `[${event.newOwner.slice(0, 4)}...${event.newOwner.slice(-4)}](https://solscan.io/account/${event.newOwner})` }
+                    { name: 'NFT', value: `#${event.nftNumber || '???'}`, inline: true }
                 )
                 .setTimestamp()
                 .setFooter({ text: 'BUXDAO NFT Activity' });
 
+            // Add price field for sales/listings
+            if (event.price) {
+                embed.addFields({ 
+                    name: event.type === 'list' ? 'List Price' : 'Sale Price', 
+                    value: `${event.price} SOL`, 
+                    inline: true 
+                });
+            }
+
+            // Add wallet fields with shortened addresses and links
+            if (event.newOwner) {
+                embed.addFields({ 
+                    name: event.type === 'list' ? 'Seller' : 'New Owner', 
+                    value: `[${event.newOwner.slice(0, 4)}...${event.newOwner.slice(-4)}](https://solscan.io/account/${event.newOwner})` 
+                });
+            }
+
             if (event.oldOwner) {
                 embed.addFields({ 
-                    name: 'Previous Owner', 
+                    name: event.type === 'sale' ? 'Seller' : 'Previous Owner', 
                     value: `[${event.oldOwner.slice(0, 4)}...${event.oldOwner.slice(-4)}](https://solscan.io/account/${event.oldOwner})` 
                 });
             }
+
+            // Add Solscan link
+            embed.addFields({ 
+                name: 'View on Solscan', 
+                value: `[${event.mint.slice(0, 4)}...${event.mint.slice(-4)}](https://solscan.io/token/${event.mint})` 
+            });
 
             const message = await this.nftActivityChannel.send({ embeds: [embed] });
             console.log('NFT activity message sent:', message.id);
