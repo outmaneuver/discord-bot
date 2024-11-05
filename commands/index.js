@@ -65,8 +65,8 @@ async function handleCommand(message) {
                         return;
                     }
 
-                    const buxBalance = await getBUXBalance(wallets[0]);
-                    const dailyReward = await calculateDailyReward(nftData.nftCounts, buxBalance);
+                    const buxBalance = nftData.buxBalance;
+                    const dailyReward = await calculateDailyReward(nftData.nftCounts);
                     const claimableAmount = await getClaimableAmount(targetUser.id);
 
                     const embed = new EmbedBuilder()
