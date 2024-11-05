@@ -4,12 +4,8 @@ import fetch from 'node-fetch';
 
 dotenv.config();
 
-// Update Redis config to handle self-signed certs
-const redis = new Redis(process.env.REDIS_URL, {
-    tls: {
-        rejectUnauthorized: false
-    }
-});
+// Create direct Redis connection with working URL
+const redis = new Redis('redis://default:9hCbki3tfd8scLZRTdGbN4FPHwUSLXyH@redis-15042.c82.us-east-1-2.ec2.redns.redis-cloud.com:15042');
 
 const COLLECTION_SLUG = 'fckedcatz';
 const BATCH_SIZE = 1000;
@@ -35,69 +31,52 @@ async function fetchRarityData(page = 1) {
 async function updateCatzRarity() {
     try {
         console.log('Starting Fcked Catz rarity update...');
-        
-        // Get all NFT keys from Redis
+
+        // Get all NFT keys
         const keys = await redis.keys('nft:fcked_catz:*');
         console.log(`Found ${keys.length} NFTs in database`);
 
-        // Get initial data to determine total pages
-        const initialData = await fetchRarityData(1);
-        const totalPages = Math.ceil(1422 / BATCH_SIZE); // Total supply is 1422
-        
-        console.log(`Found ${totalPages} pages of rarity data to process`);
-        
         let updated = 0;
         let failed = 0;
-        let rarityMap = new Map();
 
-        // Fetch all pages
-        for (let page = 1; page <= totalPages; page++) {
-            console.log(`Fetching page ${page}/${totalPages}`);
-            
+        // Fetch rarity data in batches
+        let page = 1;
+        let hasMore = true;
+
+        while (hasMore) {
             try {
-                const data = await fetchRarityData(page);
+                console.log(`Fetching page ${page}...`);
+                const rarityData = await fetchRarityData(page);
                 
-                // Store rarity data
-                for (const item of data.items) {
-                    rarityMap.set(item.mint, {
-                        rank: item.rank,
-                        rankAlgo: item.rank_algo
-                    });
+                if (!rarityData || !rarityData.items || rarityData.items.length === 0) {
+                    hasMore = false;
+                    continue;
                 }
 
-                // Add delay between pages
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            } catch (error) {
-                console.error(`Error fetching page ${page}:`, error);
-                continue;
-            }
-        }
-
-        console.log(`Fetched rarity data for ${rarityMap.size} NFTs`);
-
-        // Update Redis database
-        for (const key of keys) {
-            try {
-                const mint = key.split(':')[2];
-                const rarityData = rarityMap.get(mint);
-                
-                if (rarityData) {
-                    // Only update rarity fields, preserve other data
-                    await redis.hset(key, {
-                        rarity: rarityData.rank.toString(),
-                        rankAlgo: rarityData.rankAlgo
-                    });
-                    updated++;
-                    
-                    if (updated % 100 === 0) {
-                        console.log(`Updated ${updated} NFTs...`);
+                // Update each NFT in this batch
+                for (const item of rarityData.items) {
+                    try {
+                        const key = `nft:fcked_catz:${item.mint}`;
+                        await redis.hset(key, {
+                            rarity: item.rank.toString(),
+                            rankAlgo: 'howrare.is'
+                        });
+                        updated++;
+                        console.log(`Updated rarity for ${item.mint} to rank ${item.rank}`);
+                    } catch (error) {
+                        console.error(`Failed to update ${item.mint}:`, error);
+                        failed++;
                     }
-                } else {
-                    failed++;
                 }
+
+                page++;
+                // Add delay between batches
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
             } catch (error) {
-                console.error(`Error updating NFT ${key}:`, error);
+                console.error(`Error processing page ${page}:`, error);
                 failed++;
+                hasMore = false;
             }
         }
 

@@ -70,7 +70,8 @@ async function getRarityData(mint, retries = 3) {
                 throw new Error(`HowRare API error: ${response.status}`);
             }
             const data = await response.json();
-            return data.result.data.items[0];
+            console.log('Rarity data for', mint, ':', data.result?.data?.items[0]);
+            return data.result?.data?.items[0];
         } catch (error) {
             if (i === retries - 1) return null;
             await new Promise(resolve => setTimeout(resolve, 2000));
