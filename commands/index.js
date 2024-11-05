@@ -66,12 +66,13 @@ async function handleCommand(message) {
                     }
 
                     const buxBalance = await getBUXBalance(wallets[0]);
-                    const buxValue = await getBUXValue();
-                    const usdValue = (buxBalance * buxValue).toFixed(2);
+                    const dailyReward = await calculateDailyReward(nftData.nftCounts, buxBalance);
+                    const claimableAmount = await getClaimableAmount(targetUser.id);
 
                     const embed = new EmbedBuilder()
                         .setTitle(`${targetUser.username}'s BUXDAO Profile`)
                         .setColor('#0099ff')
+                        .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
                         .addFields(
                             { name: '🏦 Connected Wallets', value: wallets.join('\n') || 'None' },
                             { name: '\u200B', value: '---------------------------------------------------------------' },
@@ -97,7 +98,9 @@ async function handleCommand(message) {
                                 `Roles: ${targetMember.roles.cache.size}`
                             },
                             { name: '\u200B', value: '---------------------------------------------------------------' },
-                            { name: '💰 BUX Balance', value: `${buxBalance.toLocaleString()} BUX ($${usdValue})` }
+                            { name: '💰 BUX Balance', value: `${buxBalance.toLocaleString()} BUX` },
+                            { name: '🎁 Daily Rewards', value: `${dailyReward} BUX per day` },
+                            { name: '💵 BUX Claim', value: `${claimableAmount} BUX available` }
                         )
                         .setFooter({ text: 'BUXDAO - Putting community first' });
 
