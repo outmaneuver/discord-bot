@@ -74,7 +74,7 @@ class ActivityService {
             const embed = new EmbedBuilder()
                 .setColor('#0099ff')
                 .setTitle(title)
-                .setThumbnail(event.image || null) // Add NFT image if available
+                .setImage(event.image || null)
                 .addFields(
                     { name: 'Collection', value: event.collection, inline: true },
                     { name: 'NFT', value: `#${event.nftNumber || '???'}`, inline: true }
@@ -132,6 +132,7 @@ class ActivityService {
             const embed = new EmbedBuilder()
                 .setColor('#0099ff')
                 .setTitle('BUX Activity')
+                .setThumbnail('https://buxdao-verify-d1faffc83da7.herokuapp.com/bux.jpg')
                 .setDescription(`New ${event.type} detected!`)
                 .addFields(
                     { name: 'Type', value: event.type, inline: true },
