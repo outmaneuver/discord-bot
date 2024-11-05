@@ -327,10 +327,10 @@ async function handleCommand(message) {
                         }
                     }
 
-                    // Sort by rarity rank
-                    nftData.sort((a, b) => parseInt(a.rarity) - parseInt(b.rarity));
+                    // Sort by rarity rank (lowest to highest)
+                    nftData.sort((a, b) => a.rarity - b.rarity);
 
-                    // Find NFT with requested rank
+                    // Find NFT with requested rank (array is 0-based, ranks are 1-based)
                     const nft = nftData[rankNumber - 1];
                     if (!nft) {
                         return message.reply(`No NFT found with rank ${rankNumber}`);
@@ -340,7 +340,7 @@ async function handleCommand(message) {
                     const traitText = traits.map(t => `${t.trait_type}: ${t.value}`).join('\n');
 
                     const embed = new EmbedBuilder()
-                        .setTitle(`Fcked Cat Rank #${rankNumber}`)
+                        .setTitle(`Fcked Cat #${nft.tokenId} (Rank #${rankNumber})`)
                         .setColor('#0099ff')
                         .setImage(nft.image)
                         .addFields(
