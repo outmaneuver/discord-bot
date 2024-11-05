@@ -1,6 +1,6 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { redis } from '../config/redis.js';
+import Redis from 'ioredis';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
@@ -8,15 +8,24 @@ import { fileURLToPath } from 'url';
 
 dotenv.config();
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Direct Redis connection without config dependency
+const redis = new Redis(process.env.REDIS_URL, {
+    tls: {
+        rejectUnauthorized: false
+    }
+});
 
-// Load Fcked Catz hashlist
-const hashlistPath = path.join(__dirname, '..', 'config', 'hashlists', 'fcked_catz.json');
-const hashlist = JSON.parse(fs.readFileSync(hashlistPath, 'utf8'));
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function initializeCatzDatabase() {
     try {
         console.log('Starting Fcked Catz database initialization...');
+        
+        // Load hashlist directly
+        const hashlistPath = path.join(__dirname, '..', 'config', 'hashlists', 'fcked_catz.json');
+        const hashlist = JSON.parse(fs.readFileSync(hashlistPath, 'utf8'));
+        
+        console.log(`Found ${hashlist.length} Fcked Catz tokens in hashlist`);
         const connection = new Connection(process.env.SOLANA_RPC_URL);
         
         // Clear existing data
@@ -26,9 +35,8 @@ async function initializeCatzDatabase() {
         }
         await redis.del('collection:fcked_catz:holders');
         
-        console.log(`Processing ${hashlist.length} Fcked Catz NFTs...`);
         let processed = 0;
-
+        
         for (const mint of hashlist) {
             try {
                 // Get current owner
@@ -60,7 +68,7 @@ async function initializeCatzDatabase() {
                 }
 
                 // Add delay to avoid rate limits
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(resolve, 250));
 
             } catch (error) {
                 console.error(`Error processing mint ${mint}:`, error);
@@ -70,13 +78,16 @@ async function initializeCatzDatabase() {
 
         console.log('Fcked Catz database initialized successfully');
         console.log(`Total NFTs processed: ${processed}`);
+        
+        await redis.quit();
         process.exit(0);
 
     } catch (error) {
         console.error('Error initializing Fcked Catz database:', error);
+        await redis.quit();
         process.exit(1);
     }
 }
 
 // Run the initialization
-initializeCatzDatabase(); 
+initializeCatzDatabase();
