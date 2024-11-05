@@ -312,8 +312,14 @@ async function handleCommand(message) {
                 }
 
                 try {
-                    // Create direct Redis connection
+                    // Log full Redis URL (but hide password)
                     const redisUrl = new URL(process.env.REDIS_URL);
+                    console.log('Redis full URL:', redisUrl.protocol + '//' + redisUrl.host);
+                    console.log('Redis protocol:', redisUrl.protocol);
+                    console.log('Redis hostname:', redisUrl.hostname);
+                    console.log('Redis port:', redisUrl.port);
+
+                    // Create direct Redis connection
                     const redisOptions = {
                         ...(redisUrl.protocol === 'rediss:' && {
                             tls: {
@@ -323,7 +329,6 @@ async function handleCommand(message) {
                     };
 
                     const directRedis = new Redis(process.env.REDIS_URL, redisOptions);
-                    console.log('Redis protocol:', redisUrl.protocol);
 
                     // Get all Fcked Catz keys
                     const keys = await directRedis.keys('nft:fcked_catz:*');
