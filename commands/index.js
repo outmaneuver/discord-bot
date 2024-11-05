@@ -333,10 +333,8 @@ async function handleCommand(message) {
                     // Sort by rarity rank (lowest to highest)
                     nftData.sort((a, b) => a.rarity - b.rarity);
 
-                    console.log(`First 5 rarity ranks:`, nftData.slice(0, 5).map(nft => nft.rarity));
-
-                    // Find NFT with requested rank
-                    const nft = nftData.find(n => n.rarity === rankNumber);
+                    // Get NFT at requested rank index (array is 0-based, ranks are 1-based)
+                    const nft = nftData[rankNumber - 1];
                     if (!nft) {
                         return message.reply(`No NFT found with rank ${rankNumber}`);
                     }
@@ -345,12 +343,12 @@ async function handleCommand(message) {
                     const traitText = traits.map(t => `${t.trait_type}: ${t.value}`).join('\n');
 
                     const embed = new EmbedBuilder()
-                        .setTitle(`Fcked Cat #${nft.tokenId} (Rank #${nft.rarity})`)
+                        .setTitle(`Fcked Cat #${nft.tokenId} (Rank #${rankNumber})`)
                         .setColor('#0099ff')
                         .setImage(nft.image)
                         .addFields(
                             { name: 'Cat Number', value: `#${nft.tokenId}`, inline: true },
-                            { name: 'Rarity Rank', value: `#${nft.rarity}`, inline: true },
+                            { name: 'Rarity Rank', value: `#${rankNumber}`, inline: true },
                             { name: 'Owner', value: nft.owner },
                             { name: 'Traits', value: traitText || 'No traits found' }
                         )

@@ -15,6 +15,7 @@
     "update-metadata": "node scripts/update_catz_metadata.js",
     "update-numbers": "node scripts/update_catz_numbers.js",
     "check-numbers": "node scripts/check_catz_numbers.js",
+    "find-rank-one": "node scripts/find_rank_one.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint ."
   },
