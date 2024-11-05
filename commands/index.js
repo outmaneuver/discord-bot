@@ -1,6 +1,6 @@
 import { EmbedBuilder } from 'discord.js';
-import { verifyWallet, getBUXBalance, updateDiscordRoles, getBUXValue, LIQUIDITY_WALLET, BUX_TOKEN_MINT } from '../services/verify.js';
 import { redis } from '../config/redis.js';
+import { verifyWallet, getBUXBalance, updateDiscordRoles, getBUXValue, LIQUIDITY_WALLET, BUX_TOKEN_MINT } from '../services/verify.js';
 import { calculateDailyReward, getClaimableAmount } from '../services/rewards.js';
 import { Connection, PublicKey } from '@solana/web3.js';
 import fetch from 'node-fetch';
