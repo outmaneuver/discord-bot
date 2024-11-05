@@ -1,10 +1,7 @@
 // Create a centralized config file
 export const config = {
   redis: {
-    url: process.env.REDIS_URL,
-    options: {
-      tls: { rejectUnauthorized: false }
-    }
+    url: process.env.REDIS_URL
   },
   discord: {
     token: process.env.DISCORD_TOKEN,

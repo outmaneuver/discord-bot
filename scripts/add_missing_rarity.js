@@ -4,16 +4,32 @@ import fetch from 'node-fetch';
 
 dotenv.config();
 
-const redis = new Redis(process.env.REDIS_URL);
+const redis = new Redis(process.env.REDIS_URL, {
+    tls: {
+        rejectUnauthorized: false,
+        requestCert: true,
+        minVersion: 'TLSv1.2',
+        maxVersion: 'TLSv1.3'
+    },
+    retryStrategy: function(times) {
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+    },
+    maxRetriesPerRequest: 3,
+    enableReadyCheck: false,
+    connectTimeout: 10000
+});
 
-const MISSING_NFT = {
-    mint: 'EYuctJPZRZ8C4xffzzuYg7FZCzy9EUsGTyLf9LnSW8Rf'
-};
+redis.on('error', (err) => {
+    console.error('Redis connection error:', err);
+});
 
-async function fetchRarityData() {
+const COLLECTION_SLUG = 'fckedcatz';
+
+async function fetchRarityData(mint) {
     try {
         const response = await fetch(
-            `https://api.howrare.is/v0.1/collections/fckedcatz/only_rarity`
+            `https://api.howrare.is/v0.1/collections/${COLLECTION_SLUG}/only_rarity?mint=${mint}`
         );
 
         if (!response.ok) {
@@ -21,7 +37,7 @@ async function fetchRarityData() {
         }
 
         const data = await response.json();
-        return data.result.data.items.find(item => item.mint === MISSING_NFT.mint);
+        return data.result.data;
     } catch (error) {
         console.error('Error fetching rarity data:', error);
         throw error;
@@ -30,33 +46,64 @@ async function fetchRarityData() {
 
 async function addMissingRarity() {
     try {
-        console.log('Adding rarity data for missing Fcked Catz NFT...');
+        console.log('Starting missing rarity check...');
         
-        const rarityData = await fetchRarityData();
-        
-        if (rarityData) {
-            await redis.hset(`nft:fcked_catz:${MISSING_NFT.mint}`, {
-                rarity: rarityData.rank.toString(),
-                rankAlgo: rarityData.rank_algo
-            });
+        // Get all NFT keys from Redis
+        const keys = await redis.keys('nft:fcked_catz:*');
+        console.log(`Found ${keys.length} NFTs in database`);
 
-            console.log('Successfully added rarity data');
-            console.log(`Mint: ${MISSING_NFT.mint}`);
-            console.log(`Rank: ${rarityData.rank}`);
-            console.log(`Algorithm: ${rarityData.rank_algo}`);
-        } else {
-            console.log('No rarity data found for mint:', MISSING_NFT.mint);
+        let updated = 0;
+        let failed = 0;
+
+        // Check each NFT for missing rarity
+        for (const key of keys) {
+            try {
+                const nftData = await redis.hgetall(key);
+                
+                // Skip if rarity already exists
+                if (nftData.rarity && nftData.rankAlgo) {
+                    continue;
+                }
+
+                const mint = key.split(':')[2];
+                console.log(`Fetching rarity for ${mint}...`);
+
+                const rarityData = await fetchRarityData(mint);
+                
+                if (rarityData && rarityData.items[0]) {
+                    await redis.hset(key, {
+                        rarity: rarityData.items[0].rank.toString(),
+                        rankAlgo: rarityData.items[0].rank_algo
+                    });
+                    updated++;
+                    console.log(`Updated rarity for ${mint}`);
+                } else {
+                    failed++;
+                    console.error(`No rarity data found for ${mint}`);
+                }
+
+                // Add delay between requests
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+            } catch (error) {
+                console.error(`Error processing NFT:`, error);
+                failed++;
+            }
         }
+
+        console.log('Rarity update completed');
+        console.log(`Updated: ${updated}`);
+        console.log(`Failed: ${failed}`);
         
         await redis.quit();
         process.exit(0);
 
     } catch (error) {
-        console.error('Error adding rarity data:', error);
+        console.error('Error updating rarity:', error);
         await redis.quit();
         process.exit(1);
     }
 }
 
-// Run the script
+// Run the update
 addMissingRarity(); 
