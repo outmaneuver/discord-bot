@@ -226,22 +226,35 @@ async function handleCommand(message) {
                     return message.reply('Admin only command');
                 }
 
+                // Test NFT sale activity
                 await global.activityService.postNFTActivity({
                     type: 'sale',
                     collection: 'Fcked Catz',
-                    mint: 'ABC123...',
-                    nftNumber: '1234',
+                    mint: 'EPeeeDr21EPJ4GJgjuRJ8SHD4A2d59erMaTtWaTT2hqm',
+                    nftNumber: '1337',
                     price: 69,
-                    newOwner: 'NewOwner123...',
-                    oldOwner: 'OldOwner123...',
-                    image: 'https://buxdao.io/images/catz.jpg'  // Example image URL
+                    newOwner: 'HmgZ2zXYUnpLWMRNuDQaRWWEWERL3MxZn8K1z5iU4tiq',
+                    oldOwner: 'AcWwsEwgcEHz6rzUTXcnSksFZbETtc2JhA4jF7PKjp9T',
+                    image: 'https://buxdao-verify-d1faffc83da7.herokuapp.com/catz.jpg'
                 });
 
+                // Test NFT listing activity
+                await global.activityService.postNFTActivity({
+                    type: 'list',
+                    collection: 'Money Monsters',
+                    mint: '3EyhWtevHSkXg4cGsCurLLJ1NEc3rR3fWrYBx5CVLn7R',
+                    nftNumber: '420',
+                    price: 42.0,
+                    newOwner: 'HmgZ2zXYUnpLWMRNuDQaRWWEWERL3MxZn8K1z5iU4tiq',
+                    image: 'https://buxdao-verify-d1faffc83da7.herokuapp.com/mm.jpg'
+                });
+
+                // Test BUX transfer activity
                 await global.activityService.postBUXActivity({
                     type: 'transfer',
-                    wallet: 'TestWallet123...',
+                    wallet: 'HmgZ2zXYUnpLWMRNuDQaRWWEWERL3MxZn8K1z5iU4tiq',
                     change: 1000 * 1e9,
-                    newBalance: 5000 * 1e9
+                    newBalance: 101046.161 * 1e9
                 });
 
                 await message.reply('Test activity messages sent!');
