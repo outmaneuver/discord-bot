@@ -332,11 +332,20 @@ async function handleCommand(message) {
                         }
                     }
 
+                    console.log('First few NFTs before sorting:', nftData.slice(0, 3));
+
                     // Sort by rarity rank (lowest to highest)
-                    nftData.sort((a, b) => a.rarity - b.rarity);
+                    nftData.sort((a, b) => {
+                        // Convert rarity strings to numbers and compare
+                        const rankA = parseInt(a.rarity);
+                        const rankB = parseInt(b.rarity);
+                        return rankA - rankB;
+                    });
+
+                    console.log('First few NFTs after sorting:', nftData.slice(0, 3));
 
                     // Find NFT with matching rank
-                    const nft = nftData.find(n => n.rarity === rankNumber);
+                    const nft = nftData[rankNumber - 1]; // Adjust index since ranks start at 1
                     
                     if (!nft) {
                         await directRedis.quit();
