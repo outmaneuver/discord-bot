@@ -12,8 +12,12 @@ class ActivityService {
     async initialize() {
         try {
             const guild = await this.client.guilds.fetch(process.env.GUILD_ID);
-            this.nftActivityChannel = await guild.channels.fetch(process.env.NFT_ACTIVITY_CHANNEL);
-            this.buxActivityChannel = await guild.channels.fetch(process.env.BUX_ACTIVITY_CHANNEL);
+            this.nftActivityChannel = await guild.channels.fetch(process.env.NFT_ACTIVITY_CHANNEL_ID);
+            this.buxActivityChannel = await guild.channels.fetch(process.env.BUX_ACTIVITY_CHANNEL_ID);
+            console.log('Activity channels initialized:', {
+                nft: this.nftActivityChannel?.id,
+                bux: this.buxActivityChannel?.id
+            });
         } catch (error) {
             console.error('Error initializing activity channels:', error);
         }
@@ -28,13 +32,16 @@ class ActivityService {
             .addFields(
                 { name: 'Type', value: event.type },
                 { name: 'Collection', value: event.collection },
-                { name: 'NFT', value: event.mint },
-                { name: 'New Owner', value: event.newOwner }
+                { name: 'NFT', value: `[${event.mint}](https://solscan.io/token/${event.mint})` },
+                { name: 'New Owner', value: `[${event.newOwner}](https://solscan.io/account/${event.newOwner})` }
             )
             .setTimestamp();
 
         if (event.oldOwner) {
-            embed.addFields({ name: 'Previous Owner', value: event.oldOwner });
+            embed.addFields({ 
+                name: 'Previous Owner', 
+                value: `[${event.oldOwner}](https://solscan.io/account/${event.oldOwner})` 
+            });
         }
 
         if (event.price) {
@@ -52,7 +59,7 @@ class ActivityService {
             .setTitle('BUX Activity')
             .addFields(
                 { name: 'Type', value: event.type },
-                { name: 'Wallet', value: event.wallet },
+                { name: 'Wallet', value: `[${event.wallet}](https://solscan.io/account/${event.wallet})` },
                 { name: 'Amount', value: `${(event.change / 1e9).toLocaleString()} BUX` },
                 { name: 'New Balance', value: `${(event.newBalance / 1e9).toLocaleString()} BUX` }
             )
