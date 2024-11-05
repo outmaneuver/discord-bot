@@ -324,10 +324,36 @@ async function updateDiscordRoles(userId, client) {
             candy_bots: ['1248417591215784019']
         };
 
-        // Add roles based on NFT counts
+        // Add whale role mappings
+        const whaleRoleMapping = {
+            fcked_catz: {
+                threshold: parseInt(process.env.WHALE_THRESHOLD_FCKED_CATZ),
+                roleId: process.env.WHALE_ROLE_ID_FCKED_CATZ
+            },
+            money_monsters: {
+                threshold: parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS),
+                roleId: process.env.WHALE_ROLE_ID_MONEY_MONSTERS
+            },
+            money_monsters3d: {
+                threshold: parseInt(process.env.WHALE_THRESHOLD_MONEY_MONSTERS3D),
+                roleId: process.env.WHALE_ROLE_ID_MONEY_MONSTERS3D
+            },
+            ai_bitbots: {
+                threshold: parseInt(process.env.WHALE_THRESHOLD_AI_BITBOTS),
+                roleId: process.env.WHALE_ROLE_ID_AI_BITBOTS
+            }
+        };
+
+        // Add roles based on NFT counts and whale status
         for (const [collection, roles] of Object.entries(roleMapping)) {
             if (nftCounts[collection] > 0) {
                 rolesToAdd.push(...roles);
+                
+                // Check for whale status
+                const whaleConfig = whaleRoleMapping[collection];
+                if (whaleConfig && nftCounts[collection] >= whaleConfig.threshold) {
+                    rolesToAdd.push(whaleConfig.roleId);
+                }
             }
         }
 
