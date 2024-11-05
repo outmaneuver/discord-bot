@@ -1,4 +1,4 @@
-import { EmbedBuilder, ChannelType } from 'discord.js';
+import { EmbedBuilder, ChannelType, PermissionFlagsBits } from 'discord.js';
 import { redis } from '../config/redis.js';
 
 class ActivityService {
@@ -13,7 +13,7 @@ class ActivityService {
         try {
             const guild = await this.client.guilds.fetch(process.env.GUILD_ID);
             if (!guild) {
-                console.error('Guild not found');
+                console.error('Guild not found:', process.env.GUILD_ID);
                 return;
             }
 
@@ -24,26 +24,34 @@ class ActivityService {
             this.nftActivityChannel = guild.channels.cache.get(process.env.NFT_ACTIVITY_CHANNEL_ID);
             this.buxActivityChannel = guild.channels.cache.get(process.env.BUX_ACTIVITY_CHANNEL_ID);
 
-            // Verify channels exist and are text channels
-            if (!this.nftActivityChannel?.isTextBased()) {
-                console.error('NFT activity channel not found or not a text channel');
-            }
-            if (!this.buxActivityChannel?.isTextBased()) {
-                console.error('BUX activity channel not found or not a text channel');
+            // Check channel permissions
+            const botMember = await guild.members.fetch(this.client.user.id);
+            
+            if (this.nftActivityChannel) {
+                const nftPerms = this.nftActivityChannel.permissionsFor(botMember);
+                console.log('NFT channel permissions:', {
+                    channelId: this.nftActivityChannel.id,
+                    channelName: this.nftActivityChannel.name,
+                    canSendMessages: nftPerms.has(PermissionFlagsBits.SendMessages),
+                    canEmbedLinks: nftPerms.has(PermissionFlagsBits.EmbedLinks),
+                    canViewChannel: nftPerms.has(PermissionFlagsBits.ViewChannel)
+                });
+            } else {
+                console.error('NFT activity channel not found:', process.env.NFT_ACTIVITY_CHANNEL_ID);
             }
 
-            console.log('Activity channels initialized:', {
-                nft: {
-                    id: this.nftActivityChannel?.id,
-                    name: this.nftActivityChannel?.name,
-                    type: this.nftActivityChannel?.type
-                },
-                bux: {
-                    id: this.buxActivityChannel?.id,
-                    name: this.buxActivityChannel?.name,
-                    type: this.buxActivityChannel?.type
-                }
-            });
+            if (this.buxActivityChannel) {
+                const buxPerms = this.buxActivityChannel.permissionsFor(botMember);
+                console.log('BUX channel permissions:', {
+                    channelId: this.buxActivityChannel.id,
+                    channelName: this.buxActivityChannel.name,
+                    canSendMessages: buxPerms.has(PermissionFlagsBits.SendMessages),
+                    canEmbedLinks: buxPerms.has(PermissionFlagsBits.EmbedLinks),
+                    canViewChannel: buxPerms.has(PermissionFlagsBits.ViewChannel)
+                });
+            } else {
+                console.error('BUX activity channel not found:', process.env.BUX_ACTIVITY_CHANNEL_ID);
+            }
 
         } catch (error) {
             console.error('Error initializing activity channels:', error);
