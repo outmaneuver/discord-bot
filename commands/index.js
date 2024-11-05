@@ -148,6 +148,7 @@ async function handleCommand(message) {
                 const walletEmbed = new EmbedBuilder()
                     .setTitle(`${targetUser.username}'s Connected Wallets`)
                     .setColor('#0099ff')
+                    .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
                     .setDescription(userWallets.join('\n'))
                     .setFooter({ text: 'BUXDAO - Putting community first' });
 
@@ -160,6 +161,7 @@ async function handleCommand(message) {
                 const nftEmbed = new EmbedBuilder()
                     .setTitle(`${targetUser.username}'s NFT Holdings`)
                     .setColor('#0099ff')
+                    .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
                     .addFields(
                         { name: '🎨 Main Collections', value: 
                             `Fcked Catz: ${nftData.nftCounts.fcked_catz || 0}\n` +
@@ -185,6 +187,7 @@ async function handleCommand(message) {
                 const roleEmbed = new EmbedBuilder()
                     .setTitle(`${targetUser.username}'s Server Roles`)
                     .setColor('#0099ff')
+                    .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
                     .setDescription(targetMember.roles.cache.map(role => role.name).join('\n'))
                     .setFooter({ text: 'BUXDAO - Putting community first' });
                 await message.reply({ embeds: [roleEmbed] });
@@ -195,6 +198,7 @@ async function handleCommand(message) {
                 const buxEmbed = new EmbedBuilder()
                     .setTitle(`${targetUser.username}'s BUX Info`)
                     .setColor('#0099ff')
+                    .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
                     .addFields(
                         { name: '💰 BUX Balance', value: `${buxData.buxBalance.toLocaleString()} BUX` },
                         { name: '🎁 Daily Rewards', value: `${await calculateDailyReward(buxData.nftCounts)} BUX per day` },
