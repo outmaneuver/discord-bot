@@ -3,12 +3,13 @@ import { config } from './config.js';
 
 // Parse Redis URL to determine if TLS is needed
 const redisUrl = new URL(config.redis.url);
-const useTLS = redisUrl.protocol === 'rediss:';
+console.log('Redis URL protocol:', redisUrl.protocol);
+console.log('Redis URL hostname:', redisUrl.hostname);
 
 // Configure Redis options based on URL
 const redisOptions = {
-    // Only add TLS options if using secure protocol
-    ...(useTLS && {
+    // Add TLS options only for Heroku Redis
+    ...(redisUrl.hostname.includes('compute-1.amazonaws.com') && {
         tls: {
             rejectUnauthorized: false
         }
@@ -22,8 +23,6 @@ const redisOptions = {
     connectTimeout: 10000
 };
 
-console.log('Connecting to Redis with protocol:', redisUrl.protocol);
-
 export const redis = new Redis(config.redis.url, redisOptions);
 
 redis.on('error', (err) => {
@@ -34,7 +33,8 @@ redis.on('connect', () => {
     console.log('Redis connected successfully', {
         timestamp: new Date().toISOString(),
         instance: 'redis-elliptical',
-        connectionState: redis.status
+        connectionState: redis.status,
+        host: redisUrl.hostname
     });
 });
 

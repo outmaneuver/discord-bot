@@ -312,32 +312,14 @@ async function handleCommand(message) {
                 }
 
                 try {
-                    // Log full Redis URL (but hide password)
-                    const redisUrl = new URL(process.env.REDIS_URL);
-                    console.log('Redis full URL:', redisUrl.protocol + '//' + redisUrl.host);
-                    console.log('Redis protocol:', redisUrl.protocol);
-                    console.log('Redis hostname:', redisUrl.hostname);
-                    console.log('Redis port:', redisUrl.port);
-
-                    // Create direct Redis connection
-                    const redisOptions = {
-                        ...(redisUrl.protocol === 'rediss:' && {
-                            tls: {
-                                rejectUnauthorized: false
-                            }
-                        })
-                    };
-
-                    const directRedis = new Redis(process.env.REDIS_URL, redisOptions);
-
                     // Get all Fcked Catz keys
-                    const keys = await directRedis.keys('nft:fcked_catz:*');
+                    const keys = await redis.keys('nft:fcked_catz:*');
                     console.log(`Found ${keys.length} total NFTs`);
 
                     // Get data for all NFTs
                     const nftData = [];
                     for (const key of keys) {
-                        const data = await directRedis.hgetall(key);
+                        const data = await redis.hgetall(key);
                         if (data.rarity) {
                             nftData.push({
                                 mint: key.split(':')[2],
@@ -354,7 +336,6 @@ async function handleCommand(message) {
                     const nft = nftData.find(n => n.rarity === rankNumber);
                     
                     if (!nft) {
-                        await directRedis.quit();
                         return message.reply(`No NFT found with rank ${rankNumber}`);
                     }
 
@@ -375,7 +356,6 @@ async function handleCommand(message) {
                         );
                     }
 
-                    await directRedis.quit();
                     return message.reply({ embeds: [embed] });
 
                 } catch (error) {
