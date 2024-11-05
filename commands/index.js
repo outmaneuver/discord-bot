@@ -21,33 +21,20 @@ const commandCooldowns = new Map();
 
 // Command handler
 async function handleCommand(message) {
-    const command = message.content.slice(1).split(' ')[0];
+    // Split the full command by dots
+    const [baseCommand, ...args] = message.content.slice(1).split('.');
     
-    // Check cooldown
-    const cooldown = commandCooldowns.get(`${message.author.id}-${command}`);
+    // Check cooldown using the base command
+    const cooldown = commandCooldowns.get(`${message.author.id}-${baseCommand}`);
     if (cooldown && Date.now() < cooldown) {
         return message.reply('Please wait before using this command again');
     }
 
     // Set cooldown (30 seconds)
-    commandCooldowns.set(`${message.author.id}-${command}`, Date.now() + 30000);
-
-    const args = message.content.toLowerCase().split(' ');
-    const mentionedUser = message.mentions.users.first();
-
-    // Check if admin is trying to view someone else's data
-    if (mentionedUser && !isAdmin(message.member)) {
-        await message.reply('You do not have permission to view other users\' data.');
-        return;
-    }
-
-    // Use mentioned user if admin, otherwise use message author
-    const targetUser = mentionedUser && isAdmin(message.member) ? mentionedUser : message.author;
-    const targetMember = mentionedUser && isAdmin(message.member) ? 
-        await message.guild.members.fetch(mentionedUser.id) : message.member;
+    commandCooldowns.set(`${message.author.id}-${baseCommand}`, Date.now() + 30000);
 
     try {
-        switch(command) {
+        switch(baseCommand) {
             case 'help':
                 const helpEmbed = new EmbedBuilder()
                     .setTitle('BUXDAO Bot Commands')
@@ -77,7 +64,7 @@ async function handleCommand(message) {
                 break;
 
             case 'my.profile': {
-                const connectedWallets = await redis.smembers(`wallets:${targetUser.id}`);
+                const connectedWallets = await redis.smembers(`wallets:${message.author.id}`);
                 if (!connectedWallets || connectedWallets.length === 0) {
                     return message.reply('No wallets connected. Please verify your wallet first.');
                 }
@@ -86,7 +73,7 @@ async function handleCommand(message) {
                 const loadingMsg = await message.reply('Loading profile data...');
 
                 try {
-                    const nftData = await updateDiscordRoles(targetUser.id, message.client);
+                    const nftData = await updateDiscordRoles(message.author.id, message.client);
                     if (!nftData || !nftData.nftCounts) {
                         await loadingMsg.edit('Error loading NFT data. Please try again later.');
                         return;
@@ -94,12 +81,12 @@ async function handleCommand(message) {
 
                     const buxBalance = nftData.buxBalance;
                     const dailyReward = await calculateDailyReward(nftData.nftCounts);
-                    const claimableAmount = await getClaimableAmount(targetUser.id);
+                    const claimableAmount = await getClaimableAmount(message.author.id);
 
                     const embed = new EmbedBuilder()
-                        .setTitle(`${targetUser.username}'s BUXDAO Profile`)
+                        .setTitle(`${message.author.username}'s BUXDAO Profile`)
                         .setColor('#0099ff')
-                        .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
+                        .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
                         .addFields(
                             { name: '🏦 Connected Wallets', value: connectedWallets.join('\n') || 'None' },
                             { name: '\u200B', value: '---------------------------------------------------------------' },
@@ -121,8 +108,8 @@ async function handleCommand(message) {
                             },
                             { name: '\u200B', value: '---------------------------------------------------------------' },
                             { name: '🎭 Server', value: 
-                                `Member Since: ${targetMember.joinedAt.toLocaleDateString()}\n` +
-                                `Roles: ${targetMember.roles.cache.size}`
+                                `Member Since: ${message.member.joinedAt.toLocaleDateString()}\n` +
+                                `Roles: ${message.member.roles.cache.size}`
                             },
                             { name: '\u200B', value: '---------------------------------------------------------------' },
                             { name: '💰 BUX Balance', value: `${(buxBalance / 1e9).toLocaleString()} BUX` },
@@ -140,15 +127,15 @@ async function handleCommand(message) {
             }
 
             case 'my.wallet': {
-                const userWallets = await redis.smembers(`wallets:${targetUser.id}`);
+                const userWallets = await redis.smembers(`wallets:${message.author.id}`);
                 if (!userWallets || userWallets.length === 0) {
                     return message.reply('No wallets connected. Please verify your wallet first.');
                 }
 
                 const walletEmbed = new EmbedBuilder()
-                    .setTitle(`${targetUser.username}'s Connected Wallets`)
+                    .setTitle(`${message.author.username}'s Connected Wallets`)
                     .setColor('#0099ff')
-                    .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
+                    .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
                     .setDescription(userWallets.join('\n'))
                     .setFooter({ text: 'BUXDAO - Putting community first' });
 
@@ -157,11 +144,11 @@ async function handleCommand(message) {
             }
 
             case 'my.nfts':
-                const nftData = await updateDiscordRoles(targetUser.id, message.client);
+                const nftData = await updateDiscordRoles(message.author.id, message.client);
                 const nftEmbed = new EmbedBuilder()
-                    .setTitle(`${targetUser.username}'s NFT Holdings`)
+                    .setTitle(`${message.author.username}'s NFT Holdings`)
                     .setColor('#0099ff')
-                    .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
+                    .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
                     .addFields(
                         { name: '🎨 Main Collections', value: 
                             `Fcked Catz: ${nftData.nftCounts.fcked_catz || 0}\n` +
@@ -185,24 +172,24 @@ async function handleCommand(message) {
 
             case 'my.roles':
                 const roleEmbed = new EmbedBuilder()
-                    .setTitle(`${targetUser.username}'s Server Roles`)
+                    .setTitle(`${message.author.username}'s Server Roles`)
                     .setColor('#0099ff')
-                    .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
-                    .setDescription(targetMember.roles.cache.map(role => role.name).join('\n'))
+                    .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+                    .setDescription(message.member.roles.cache.map(role => role.name).join('\n'))
                     .setFooter({ text: 'BUXDAO - Putting community first' });
                 await message.reply({ embeds: [roleEmbed] });
                 break;
 
             case 'my.bux':
-                const buxData = await updateDiscordRoles(targetUser.id, message.client);
+                const buxData = await updateDiscordRoles(message.author.id, message.client);
                 const buxEmbed = new EmbedBuilder()
-                    .setTitle(`${targetUser.username}'s BUX Info`)
+                    .setTitle(`${message.author.username}'s BUX Info`)
                     .setColor('#0099ff')
-                    .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
+                    .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
                     .addFields(
                         { name: '💰 BUX Balance', value: `${buxData.buxBalance.toLocaleString()} BUX` },
                         { name: '🎁 Daily Rewards', value: `${await calculateDailyReward(buxData.nftCounts)} BUX per day` },
-                        { name: '💵 BUX Claim', value: `${await getClaimableAmount(targetUser.id)} BUX available` }
+                        { name: '💵 BUX Claim', value: `${await getClaimableAmount(message.author.id)} BUX available` }
                     )
                     .setFooter({ text: 'BUXDAO - Putting community first' });
                 await message.reply({ embeds: [buxEmbed] });
@@ -214,7 +201,7 @@ async function handleCommand(message) {
             case 'info.mm3d':
             case 'info.bots':
             case 'info.bux':
-                await handleInfoCommand(message, command);
+                await handleInfoCommand(message, baseCommand);
                 break;
 
             case 'rewards':
@@ -260,7 +247,64 @@ async function handleCommand(message) {
                 await message.reply('Test activity messages sent!');
                 break;
 
-            case 'rank.catz': {
+            case 'rarity': {
+                if (args[0] !== 'catz' || !args[1]) {
+                    return message.reply('Please use format: =rarity.catz.<number>');
+                }
+
+                const catNumber = parseInt(args[1]);
+                if (isNaN(catNumber)) {
+                    return message.reply('Please provide a valid cat number (e.g. =rarity.catz.25)');
+                }
+
+                try {
+                    // Get all NFT keys
+                    const keys = await redis.keys('nft:fcked_catz:*');
+                    let targetNft = null;
+
+                    // Find NFT with matching number
+                    for (const key of keys) {
+                        const data = await redis.hgetall(key);
+                        if (parseInt(data.tokenId) === catNumber) {
+                            targetNft = {
+                                mint: key.split(':')[2],
+                                ...data
+                            };
+                            break;
+                        }
+                    }
+
+                    if (!targetNft) {
+                        return message.reply(`No NFT found with number #${catNumber}`);
+                    }
+
+                    const traits = JSON.parse(targetNft.traits);
+                    const traitText = traits.map(t => `${t.trait_type}: ${t.value}`).join('\n');
+
+                    const embed = new EmbedBuilder()
+                        .setTitle(`Fcked Cat #${catNumber}`)
+                        .setColor('#0099ff')
+                        .setImage(targetNft.image)
+                        .addFields(
+                            { name: 'Rarity Rank', value: `#${targetNft.rarity}`, inline: true },
+                            { name: 'Owner', value: targetNft.owner },
+                            { name: 'Traits', value: traitText }
+                        )
+                        .setFooter({ text: 'BUXDAO - Putting community first' });
+
+                    await message.reply({ embeds: [embed] });
+                } catch (error) {
+                    console.error('Error fetching cat data:', error);
+                    await message.reply('Error fetching NFT data');
+                }
+                break;
+            }
+
+            case 'rank': {
+                if (args[0] !== 'catz' || !args[1]) {
+                    return message.reply('Please use format: =rank.catz.<number>');
+                }
+
                 const rankNumber = parseInt(args[1]);
                 if (isNaN(rankNumber)) {
                     return message.reply('Please provide a valid rank number (e.g. =rank.catz.1)');
@@ -315,61 +359,12 @@ async function handleCommand(message) {
                 break;
             }
 
-            case 'rarity.catz': {
-                const catNumber = parseInt(args[1]);
-                if (isNaN(catNumber)) {
-                    return message.reply('Please provide a valid cat number (e.g. =rarity.catz.25)');
-                }
-
-                try {
-                    // Get all NFT keys
-                    const keys = await redis.keys('nft:fcked_catz:*');
-                    let targetNft = null;
-
-                    // Find NFT with matching number
-                    for (const key of keys) {
-                        const data = await redis.hgetall(key);
-                        if (parseInt(data.tokenId) === catNumber) {
-                            targetNft = {
-                                mint: key.split(':')[2],
-                                ...data
-                            };
-                            break;
-                        }
-                    }
-
-                    if (!targetNft) {
-                        return message.reply(`No NFT found with number #${catNumber}`);
-                    }
-
-                    const traits = JSON.parse(targetNft.traits);
-                    const traitText = traits.map(t => `${t.trait_type}: ${t.value}`).join('\n');
-
-                    const embed = new EmbedBuilder()
-                        .setTitle(`Fcked Cat #${catNumber}`)
-                        .setColor('#0099ff')
-                        .setImage(targetNft.image)
-                        .addFields(
-                            { name: 'Rarity Rank', value: `#${targetNft.rarity}`, inline: true },
-                            { name: 'Owner', value: targetNft.owner },
-                            { name: 'Traits', value: traitText }
-                        )
-                        .setFooter({ text: 'BUXDAO - Putting community first' });
-
-                    await message.reply({ embeds: [embed] });
-                } catch (error) {
-                    console.error('Error fetching cat data:', error);
-                    await message.reply('Error fetching NFT data');
-                }
-                break;
-            }
-
             default:
                 await message.reply('Unknown command. Use =help to see available commands.');
                 break;
         }
     } catch (error) {
-        console.error(`Command error: ${command}`, error);
+        console.error(`Command error: ${baseCommand}`, error);
         await message.reply('An error occurred while processing your command');
     }
 }
