@@ -1,8 +1,10 @@
+dotenv.config();
+
 import { Client, GatewayIntentBits } from 'discord.js';
-import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import winston from 'winston';
+import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import session from 'express-session';
@@ -81,8 +83,31 @@ const logger = winston.createLogger({
   ]
 });
 
+function checkRequiredEnvVars() {
+    const required = [
+        'GUILD_ID',
+        'NFT_ACTIVITY_CHANNEL_ID',
+        'BUX_ACTIVITY_CHANNEL_ID'
+    ];
+    
+    const missing = required.filter(key => !process.env[key]);
+    if (missing.length > 0) {
+        console.error('Missing required environment variables:', missing);
+        process.exit(1);
+    }
+
+    console.log('Environment variables loaded:', {
+        GUILD_ID: process.env.GUILD_ID,
+        NFT_CHANNEL: process.env.NFT_ACTIVITY_CHANNEL_ID,
+        BUX_CHANNEL: process.env.BUX_ACTIVITY_CHANNEL_ID
+    });
+}
+
 async function startApp() {
   try {
+    // Check environment variables first
+    checkRequiredEnvVars();
+    
     const port = process.env.PORT || 3000;
     const app = express();
     
