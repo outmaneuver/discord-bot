@@ -244,20 +244,20 @@ async function updateDiscordRoles(userId, client) {
             console.log(`Checking wallet ${wallet}`);
             
             try {
-                // Get BUX balance first with retries
+                // Get BUX balance with retries
                 let retryCount = 0;
-                let buxBalance;
                 while (retryCount < 5) {
                     try {
-                        buxBalance = await getBUXBalance(wallet);
+                        const buxBalance = await getBUXBalance(wallet);
                         console.log(`BUX balance for ${wallet}: ${buxBalance}`);
                         totalBuxBalance += buxBalance;
                         break;
                     } catch (error) {
                         if (error.message.includes('429')) {
                             retryCount++;
-                            console.log(`Rate limited getting balance for ${wallet}, retrying in ${2000 * retryCount}ms (attempt ${retryCount}/5)`);
-                            await new Promise(resolve => setTimeout(resolve, 2000 * retryCount));
+                            const delay = Math.min(2000 * Math.pow(2, retryCount), 32000);
+                            console.log(`Rate limited getting balance for ${wallet}, waiting ${delay}ms (attempt ${retryCount}/5)`);
+                            await new Promise(resolve => setTimeout(resolve, delay));
                         } else {
                             throw error;
                         }
