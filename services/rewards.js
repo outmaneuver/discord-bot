@@ -1,5 +1,9 @@
 import Redis from 'ioredis';
+import dotenv from 'dotenv';
 
+dotenv.config();
+
+// Update Redis config to handle self-signed certs
 const redis = new Redis(process.env.REDIS_URL, {
     tls: {
         rejectUnauthorized: false
