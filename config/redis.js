@@ -1,11 +1,18 @@
 import Redis from 'ioredis';
 import { config } from './config.js';
 
-// Configure Redis with TLS options
+// Parse Redis URL to determine if TLS is needed
+const redisUrl = new URL(config.redis.url);
+const useTLS = redisUrl.protocol === 'rediss:';
+
+// Configure Redis options based on URL
 const redisOptions = {
-    tls: {
-        rejectUnauthorized: false // Allow self-signed certificates
-    },
+    // Only add TLS options if using secure protocol
+    ...(useTLS && {
+        tls: {
+            rejectUnauthorized: false
+        }
+    }),
     retryStrategy: function(times) {
         const delay = Math.min(times * 50, 2000);
         return delay;
@@ -14,6 +21,8 @@ const redisOptions = {
     enableReadyCheck: false,
     connectTimeout: 10000
 };
+
+console.log('Connecting to Redis with protocol:', redisUrl.protocol);
 
 export const redis = new Redis(config.redis.url, redisOptions);
 

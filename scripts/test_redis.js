@@ -3,8 +3,12 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Simple Redis connection
-const redis = new Redis(process.env.REDIS_URL);
+// Use the same Redis config that works
+const redis = new Redis(process.env.REDIS_URL, {
+    tls: {
+        rejectUnauthorized: false
+    }
+});
 
 redis.on('error', (err) => {
     console.error('Redis connection error:', err);
@@ -17,14 +21,25 @@ redis.on('connect', () => {
 // Test the connection
 async function testConnection() {
     try {
+        // List all keys to see what's in Redis
+        const allKeys = await redis.keys('*');
+        console.log('\nAll Redis keys:', allKeys);
+
         // Try to get a Fcked Catz entry
-        const keys = await redis.keys('nft:fcked_catz:*');
-        console.log(`Found ${keys.length} Fcked Catz entries`);
+        const catzKeys = await redis.keys('nft:fcked_catz:*');
+        console.log('\nFcked Catz keys:', catzKeys);
         
-        if (keys.length > 0) {
-            const data = await redis.hgetall(keys[0]);
-            console.log('Sample entry:', data);
+        if (catzKeys.length > 0) {
+            const data = await redis.hgetall(catzKeys[0]);
+            console.log('\nSample entry:', data);
         }
+
+        // Check other collections too
+        const celebKeys = await redis.keys('nft:celebcatz:*');
+        console.log('\nCeleb Catz keys:', celebKeys);
+
+        const mmKeys = await redis.keys('nft:money_monsters:*');
+        console.log('\nMoney Monsters keys:', mmKeys);
         
         await redis.quit();
         process.exit(0);
