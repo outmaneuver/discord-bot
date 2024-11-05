@@ -1,5 +1,9 @@
 import { EmbedBuilder, ChannelType, PermissionFlagsBits } from 'discord.js';
 import { redis } from '../config/redis.js';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 class ActivityService {
     constructor(client) {
@@ -11,17 +15,6 @@ class ActivityService {
 
     async initialize() {
         try {
-            // Log all environment variables for debugging
-            console.log('Environment variables:', {
-                GUILD_ID: process.env.GUILD_ID,
-                NFT_ACTIVITY_CHANNEL_ID: process.env.NFT_ACTIVITY_CHANNEL_ID,
-                BUX_ACTIVITY_CHANNEL_ID: process.env.BUX_ACTIVITY_CHANNEL_ID
-            });
-
-            // Hardcode channel IDs for now
-            const NFT_CHANNEL = '1097864119849320469';
-            const BUX_CHANNEL = '1097864163101003877';
-
             const guild = await this.client.guilds.fetch(process.env.GUILD_ID);
             if (!guild) {
                 console.error('Guild not found:', process.env.GUILD_ID);
@@ -31,9 +24,9 @@ class ActivityService {
             // Force fetch all channels
             await guild.channels.fetch();
 
-            // Get channels using hardcoded IDs
-            this.nftActivityChannel = guild.channels.cache.get(NFT_CHANNEL);
-            this.buxActivityChannel = guild.channels.cache.get(BUX_CHANNEL);
+            // Get channels using environment variables
+            this.nftActivityChannel = guild.channels.cache.get(process.env.NFT_ACTIVITY_CHANNEL_ID);
+            this.buxActivityChannel = guild.channels.cache.get(process.env.BUX_ACTIVITY_CHANNEL_ID);
 
             // Check channel permissions
             const botMember = await guild.members.fetch(this.client.user.id);
@@ -48,7 +41,7 @@ class ActivityService {
                     canViewChannel: nftPerms.has(PermissionFlagsBits.ViewChannel)
                 });
             } else {
-                console.error('NFT activity channel not found:', NFT_CHANNEL);
+                console.error('NFT activity channel not found:', process.env.NFT_ACTIVITY_CHANNEL_ID);
             }
 
             if (this.buxActivityChannel) {
@@ -61,7 +54,7 @@ class ActivityService {
                     canViewChannel: buxPerms.has(PermissionFlagsBits.ViewChannel)
                 });
             } else {
-                console.error('BUX activity channel not found:', BUX_CHANNEL);
+                console.error('BUX activity channel not found:', process.env.BUX_ACTIVITY_CHANNEL_ID);
             }
 
         } catch (error) {
