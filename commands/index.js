@@ -311,9 +311,27 @@ async function handleCommand(message) {
                 }
 
                 try {
-                    // Get all Fcked Catz NFTs
+                    // Log Redis URL protocol
+                    const redisUrl = new URL(process.env.REDIS_URL);
+                    console.log('Redis URL protocol:', redisUrl.protocol);
+                    
+                    // Test Redis connection
+                    const ping = await redis.ping();
+                    console.log('Redis ping response:', ping);
+
+                    // Get all keys (not just Fcked Catz)
+                    const allKeys = await redis.keys('*');
+                    console.log('All Redis keys:', allKeys.length);
+
+                    // Get Fcked Catz keys
                     const keys = await redis.keys('nft:fcked_catz:*');
                     console.log(`Found ${keys.length} total NFTs`);
+
+                    // Try to get one NFT's data
+                    if (keys.length > 0) {
+                        const sampleData = await redis.hgetall(keys[0]);
+                        console.log('Sample NFT data:', sampleData);
+                    }
 
                     // Get data for all NFTs
                     const nftData = [];
