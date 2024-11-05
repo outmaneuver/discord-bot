@@ -16,6 +16,7 @@
     "update-numbers": "node scripts/update_catz_numbers.js",
     "check-numbers": "node scripts/check_catz_numbers.js",
     "find-rank-one": "node scripts/find_rank_one.js",
+    "reconnect": "node scripts/reconnect_redis.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint ."
   },
