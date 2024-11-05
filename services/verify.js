@@ -239,7 +239,7 @@ async function updateDiscordRoles(userId, client) {
             candy_bots: 0
         };
 
-        // Check each wallet
+        // Check each wallet and aggregate counts
         for (const wallet of wallets) {
             console.log(`Checking wallet ${wallet}`);
             
@@ -253,7 +253,7 @@ async function updateDiscordRoles(userId, client) {
                     { programId: TOKEN_PROGRAM_ID }
                 );
 
-                // Process NFTs
+                // Process NFTs and aggregate counts
                 for (const { account } of tokenAccounts.value) {
                     const mint = account.data.parsed.info.mint;
                     const amount = parseInt(account.data.parsed.info.tokenAmount.amount);
@@ -273,12 +273,17 @@ async function updateDiscordRoles(userId, client) {
                     }
                 }
 
-                // Get BUX balance
+                // Get BUX balance for this wallet
                 const buxBalance = await getBUXBalance(wallet);
                 console.log(`BUX balance for ${wallet}: ${buxBalance}`);
                 totalBuxBalance += buxBalance;
 
             } catch (error) {
+                if (error.message.includes('429')) {
+                    console.log(`Rate limit hit for ${wallet}, waiting 5 seconds...`);
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    continue;
+                }
                 console.error(`Error checking wallet ${wallet}:`, error);
                 continue; // Continue with next wallet if one fails
             }
@@ -287,7 +292,7 @@ async function updateDiscordRoles(userId, client) {
         console.log('NFT counts:', nftCounts);
         console.log('Total BUX balance:', totalBuxBalance / 1e9);
 
-        // Update roles
+        // Update roles based on aggregated counts
         const guild = await client.guilds.fetch(process.env.GUILD_ID);
         const member = await guild.members.fetch(userId);
         
