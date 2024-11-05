@@ -311,16 +311,15 @@ async function handleCommand(message) {
                 }
 
                 try {
-                    // Get all NFT keys
+                    // Get all Fcked Catz NFTs
                     const keys = await redis.keys('nft:fcked_catz:*');
-                    console.log(`Found ${keys.length} NFTs in database`);
-                    let nftData = [];
+                    console.log(`Found ${keys.length} total NFTs`);
 
                     // Get data for all NFTs
+                    const nftData = [];
                     for (const key of keys) {
                         const data = await redis.hgetall(key);
-                        // Only include NFTs that have rarity data
-                        if (data.rarity) {
+                        if (data.rarity) { // Only include NFTs with rarity data
                             nftData.push({
                                 mint: key.split(':')[2],
                                 ...data,
@@ -334,38 +333,35 @@ async function handleCommand(message) {
                     // Sort by rarity rank (lowest to highest)
                     nftData.sort((a, b) => a.rarity - b.rarity);
 
-                    console.log('First 5 NFTs after sorting:');
-                    nftData.slice(0, 5).forEach(nft => {
-                        console.log(`Mint: ${nft.mint}, Rarity: ${nft.rarity}, TokenId: ${nft.tokenId}`);
-                    });
-
-                    // Find NFT with requested rank
-                    const nft = nftData.find(n => n.rarity === 1);
-                    console.log('Found NFT:', nft);
-
+                    // Find NFT with matching rank
+                    const nft = nftData.find(n => n.rarity === rankNumber);
+                    
                     if (!nft) {
                         return message.reply(`No NFT found with rank ${rankNumber}`);
                     }
 
-                    const traits = JSON.parse(nft.traits || '[]');
-                    const traitText = traits.map(t => `${t.trait_type}: ${t.value}`).join('\n');
-
+                    // Create embed
                     const embed = new EmbedBuilder()
-                        .setTitle(`Fcked Cat #${nft.tokenId} (Rank #${rankNumber})`)
                         .setColor('#0099ff')
+                        .setTitle(`Fcked Cat #${nft.tokenId}`)
                         .setImage(nft.image)
                         .addFields(
-                            { name: 'Cat Number', value: `#${nft.tokenId}`, inline: true },
                             { name: 'Rarity Rank', value: `#${nft.rarity}`, inline: true },
-                            { name: 'Owner', value: nft.owner },
-                            { name: 'Traits', value: traitText || 'No traits found' }
-                        )
-                        .setFooter({ text: 'BUXDAO - Putting community first' });
+                            { name: 'Owner', value: nft.owner, inline: true }
+                        );
 
-                    await message.reply({ embeds: [embed] });
+                    if (nft.traits) {
+                        const traits = JSON.parse(nft.traits);
+                        embed.addFields(
+                            { name: 'Traits', value: traits.map(t => `${t.trait_type}: ${t.value}`).join('\n') }
+                        );
+                    }
+
+                    return message.reply({ embeds: [embed] });
+
                 } catch (error) {
-                    console.error('Error fetching rank data:', error);
-                    await message.reply('Error fetching NFT data');
+                    console.error('Error in rank command:', error);
+                    return message.reply('Error fetching NFT data');
                 }
                 break;
             }
