@@ -8,11 +8,26 @@ import { fileURLToPath } from 'url';
 
 dotenv.config();
 
-// Direct Redis connection without config dependency
+// Configure Redis with proper SSL settings
 const redis = new Redis(process.env.REDIS_URL, {
     tls: {
-        rejectUnauthorized: false
-    }
+        rejectUnauthorized: false,
+        requestCert: true,
+        ca: null
+    },
+    retryStrategy(times) {
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+    },
+    maxRetriesPerRequest: null
+});
+
+redis.on('error', (error) => {
+    console.error('Redis connection error:', error);
+});
+
+redis.on('connect', () => {
+    console.log('Redis connected successfully');
 });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
