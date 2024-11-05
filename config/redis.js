@@ -1,7 +1,21 @@
 import Redis from 'ioredis';
 import { config } from './config.js';
 
-export const redis = new Redis(config.redis.url);
+// Configure Redis with TLS options
+const redisOptions = {
+    tls: {
+        rejectUnauthorized: false // Allow self-signed certificates
+    },
+    retryStrategy: function(times) {
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+    },
+    maxRetriesPerRequest: 3,
+    enableReadyCheck: false,
+    connectTimeout: 10000
+};
+
+export const redis = new Redis(config.redis.url, redisOptions);
 
 redis.on('error', (err) => {
     console.error('Redis connection error:', err);
