@@ -23,6 +23,8 @@ import {
   storeWalletAddress
 } from './services/verify.js';
 
+import { ActivityService } from './services/activity.js';
+
 // Initialize hashlists with all collections
 let hashlistsData = {
   fckedCatz: new Set(),
@@ -203,6 +205,7 @@ async function startApp() {
 
     client.on('ready', () => {
       logger.info(`Logged in as ${client.user.tag}`);
+      global.activityService = new ActivityService(client);
     });
 
     client.on('error', (error) => {

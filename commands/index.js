@@ -221,6 +221,29 @@ async function handleCommand(message) {
                 await handleRewardsCommand(message);
                 break;
 
+            case 'test.activity':
+                if (!isAdmin(message.member)) {
+                    return message.reply('Admin only command');
+                }
+
+                await global.activityService.postNFTActivity({
+                    type: 'transfer',
+                    collection: 'Fcked Catz',
+                    mint: 'ABC123...',
+                    newOwner: 'NewOwner123...',
+                    oldOwner: 'OldOwner123...'
+                });
+
+                await global.activityService.postBUXActivity({
+                    type: 'transfer',
+                    wallet: 'TestWallet123...',
+                    change: 1000 * 1e9,
+                    newBalance: 5000 * 1e9
+                });
+
+                await message.reply('Test activity messages sent!');
+                break;
+
             default:
                 await message.reply('Unknown command. Use =help to see available commands.');
                 break;
