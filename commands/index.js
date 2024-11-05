@@ -312,14 +312,17 @@ async function handleCommand(message) {
                 }
 
                 try {
+                    // Create direct Redis connection
+                    const directRedis = new Redis('redis://default:9hCbki3tfd8scLZRTdGbN4FPHwUSLXyH@redis-15042.c82.us-east-1-2.ec2.redns.redis-cloud.com:15042');
+
                     // Get all Fcked Catz keys
-                    const keys = await redis.keys('nft:fcked_catz:*');
+                    const keys = await directRedis.keys('nft:fcked_catz:*');
                     console.log(`Found ${keys.length} total NFTs`);
 
                     // Get data for all NFTs
                     const nftData = [];
                     for (const key of keys) {
-                        const data = await redis.hgetall(key);
+                        const data = await directRedis.hgetall(key);
                         if (data.rarity) {
                             nftData.push({
                                 mint: key.split(':')[2],
@@ -336,6 +339,7 @@ async function handleCommand(message) {
                     const nft = nftData.find(n => n.rarity === rankNumber);
                     
                     if (!nft) {
+                        await directRedis.quit();
                         return message.reply(`No NFT found with rank ${rankNumber}`);
                     }
 
@@ -356,6 +360,7 @@ async function handleCommand(message) {
                         );
                     }
 
+                    await directRedis.quit();
                     return message.reply({ embeds: [embed] });
 
                 } catch (error) {
