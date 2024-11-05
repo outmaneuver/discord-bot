@@ -7,7 +7,13 @@ import fetch from 'node-fetch';
 
 dotenv.config();
 
-const redis = new Redis(process.env.REDIS_URL);
+// Update Redis config to handle self-signed certs
+const redis = new Redis(process.env.REDIS_URL, {
+    tls: {
+        rejectUnauthorized: false
+    }
+});
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Collection constants
