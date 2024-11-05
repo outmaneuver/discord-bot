@@ -239,14 +239,34 @@ async function updateDiscordRoles(userId, client) {
             candy_bots: 0
         };
 
-        // Check each wallet and aggregate counts
+        // Check each wallet with better rate limit handling
         for (const wallet of wallets) {
             console.log(`Checking wallet ${wallet}`);
             
-            // Add delay between wallet checks
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            
             try {
+                // Get BUX balance first with retries
+                let retryCount = 0;
+                let buxBalance;
+                while (retryCount < 5) {
+                    try {
+                        buxBalance = await getBUXBalance(wallet);
+                        console.log(`BUX balance for ${wallet}: ${buxBalance}`);
+                        totalBuxBalance += buxBalance;
+                        break;
+                    } catch (error) {
+                        if (error.message.includes('429')) {
+                            retryCount++;
+                            console.log(`Rate limited getting balance for ${wallet}, retrying in ${2000 * retryCount}ms (attempt ${retryCount}/5)`);
+                            await new Promise(resolve => setTimeout(resolve, 2000 * retryCount));
+                        } else {
+                            throw error;
+                        }
+                    }
+                }
+
+                // Add delay between wallet checks
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                
                 const connection = new Connection(process.env.SOLANA_RPC_URL);
                 const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
                     new PublicKey(wallet),
@@ -273,17 +293,7 @@ async function updateDiscordRoles(userId, client) {
                     }
                 }
 
-                // Get BUX balance for this wallet
-                const buxBalance = await getBUXBalance(wallet);
-                console.log(`BUX balance for ${wallet}: ${buxBalance}`);
-                totalBuxBalance += buxBalance;
-
             } catch (error) {
-                if (error.message.includes('429')) {
-                    console.log(`Rate limit hit for ${wallet}, waiting 5 seconds...`);
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-                    continue;
-                }
                 console.error(`Error checking wallet ${wallet}:`, error);
                 continue; // Continue with next wallet if one fails
             }
