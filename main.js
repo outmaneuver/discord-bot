@@ -199,8 +199,12 @@ async function startApp() {
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildPresences
-      ]
+        GatewayIntentBits.GuildPresences,
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.GuildIntegrations
+      ],
+      partials: ['CHANNEL']
     });
 
     client.on('ready', () => {
