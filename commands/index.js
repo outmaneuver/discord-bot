@@ -328,7 +328,7 @@ async function handleCommand(message) {
                     }
 
                     // Sort by rarity rank
-                    nftData.sort((a, b) => a.rarity - b.rarity);
+                    nftData.sort((a, b) => parseInt(a.rarity) - parseInt(b.rarity));
 
                     // Find NFT with requested rank
                     const nft = nftData[rankNumber - 1];
@@ -336,7 +336,7 @@ async function handleCommand(message) {
                         return message.reply(`No NFT found with rank ${rankNumber}`);
                     }
 
-                    const traits = JSON.parse(nft.traits);
+                    const traits = JSON.parse(nft.traits || '[]');
                     const traitText = traits.map(t => `${t.trait_type}: ${t.value}`).join('\n');
 
                     const embed = new EmbedBuilder()
@@ -347,7 +347,7 @@ async function handleCommand(message) {
                             { name: 'Cat Number', value: `#${nft.tokenId}`, inline: true },
                             { name: 'Rarity Rank', value: `#${nft.rarity}`, inline: true },
                             { name: 'Owner', value: nft.owner },
-                            { name: 'Traits', value: traitText }
+                            { name: 'Traits', value: traitText || 'No traits found' }
                         )
                         .setFooter({ text: 'BUXDAO - Putting community first' });
 

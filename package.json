@@ -13,6 +13,8 @@
     "add-missing-rarity": "node scripts/add_missing_rarity.js",
     "check-entry": "node scripts/check_catz_entry.js",
     "update-metadata": "node scripts/update_catz_metadata.js",
+    "update-numbers": "node scripts/update_catz_numbers.js",
+    "check-numbers": "node scripts/check_catz_numbers.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint ."
   },
