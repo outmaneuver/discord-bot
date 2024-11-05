@@ -313,6 +313,7 @@ async function handleCommand(message) {
                 try {
                     // Get all NFT keys
                     const keys = await redis.keys('nft:fcked_catz:*');
+                    console.log(`Found ${keys.length} NFTs in database`);
                     let nftData = [];
 
                     // Get data for all NFTs
@@ -333,8 +334,15 @@ async function handleCommand(message) {
                     // Sort by rarity rank (lowest to highest)
                     nftData.sort((a, b) => a.rarity - b.rarity);
 
-                    // Get NFT at requested rank index (array is 0-based, ranks are 1-based)
-                    const nft = nftData[rankNumber - 1];
+                    console.log('First 5 NFTs after sorting:');
+                    nftData.slice(0, 5).forEach(nft => {
+                        console.log(`Mint: ${nft.mint}, Rarity: ${nft.rarity}, TokenId: ${nft.tokenId}`);
+                    });
+
+                    // Find NFT with requested rank
+                    const nft = nftData.find(n => n.rarity === 1);
+                    console.log('Found NFT:', nft);
+
                     if (!nft) {
                         return message.reply(`No NFT found with rank ${rankNumber}`);
                     }
@@ -348,7 +356,7 @@ async function handleCommand(message) {
                         .setImage(nft.image)
                         .addFields(
                             { name: 'Cat Number', value: `#${nft.tokenId}`, inline: true },
-                            { name: 'Rarity Rank', value: `#${rankNumber}`, inline: true },
+                            { name: 'Rarity Rank', value: `#${nft.rarity}`, inline: true },
                             { name: 'Owner', value: nft.owner },
                             { name: 'Traits', value: traitText || 'No traits found' }
                         )
