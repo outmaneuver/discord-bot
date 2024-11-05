@@ -5,6 +5,7 @@ import { calculateDailyReward, getClaimableAmount } from '../services/rewards.js
 import { Connection, PublicKey } from '@solana/web3.js';
 import fetch from 'node-fetch';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import Redis from 'ioredis';
 
 // Add sleep helper function
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -311,32 +312,27 @@ async function handleCommand(message) {
                 }
 
                 try {
-                    // Log Redis URL protocol
+                    // Create direct Redis connection
                     const redisUrl = new URL(process.env.REDIS_URL);
-                    console.log('Redis URL protocol:', redisUrl.protocol);
-                    
-                    // Test Redis connection
-                    const ping = await redis.ping();
-                    console.log('Redis ping response:', ping);
+                    const redisOptions = {
+                        ...(redisUrl.protocol === 'rediss:' && {
+                            tls: {
+                                rejectUnauthorized: false
+                            }
+                        })
+                    };
 
-                    // Get all keys (not just Fcked Catz)
-                    const allKeys = await redis.keys('*');
-                    console.log('All Redis keys:', allKeys.length);
+                    const directRedis = new Redis(process.env.REDIS_URL, redisOptions);
+                    console.log('Redis protocol:', redisUrl.protocol);
 
-                    // Get Fcked Catz keys
-                    const keys = await redis.keys('nft:fcked_catz:*');
+                    // Get all Fcked Catz keys
+                    const keys = await directRedis.keys('nft:fcked_catz:*');
                     console.log(`Found ${keys.length} total NFTs`);
-
-                    // Try to get one NFT's data
-                    if (keys.length > 0) {
-                        const sampleData = await redis.hgetall(keys[0]);
-                        console.log('Sample NFT data:', sampleData);
-                    }
 
                     // Get data for all NFTs
                     const nftData = [];
                     for (const key of keys) {
-                        const data = await redis.hgetall(key);
+                        const data = await directRedis.hgetall(key);
                         if (data.rarity) {
                             nftData.push({
                                 mint: key.split(':')[2],
@@ -353,6 +349,7 @@ async function handleCommand(message) {
                     const nft = nftData.find(n => n.rarity === rankNumber);
                     
                     if (!nft) {
+                        await directRedis.quit();
                         return message.reply(`No NFT found with rank ${rankNumber}`);
                     }
 
@@ -373,6 +370,7 @@ async function handleCommand(message) {
                         );
                     }
 
+                    await directRedis.quit();
                     return message.reply({ embeds: [embed] });
 
                 } catch (error) {
